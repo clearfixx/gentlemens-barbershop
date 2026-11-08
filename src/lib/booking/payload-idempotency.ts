@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 import type { BookingQuote } from './booking-request.ts'
 import type { BookingIdempotency } from './idempotency.ts'
+import { throwBookingConflictIfApplicable } from './booking-errors.ts'
 import { replayOrCreateBooking } from './idempotent-replay.ts'
 import { persistPayloadBooking } from './persist-payload-booking.ts'
 
@@ -16,7 +17,8 @@ export async function persistIdempotentPayloadBooking(
   quote: BookingQuote,
   token: BookingIdempotency,
 ) {
-  return replayOrCreateBooking({
+  try {
+    return await replayOrCreateBooking({
     token,
     findExisting: async ({ scope, key }) => {
       const result = await payload.find({
@@ -38,6 +40,6 @@ export async function persistIdempotentPayloadBooking(
         idempotency_request_hash: existing.idempotencyRequestHash ?? null,
       }
     },
-    insert: async () => persistPayloadBooking(payload, quote, token),
+    insert: async () => persistPayloadBooking(payload, quote, token, { deferConflictTranslation: true }),
   })
 }
