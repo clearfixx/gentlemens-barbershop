@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "generate:importmap": "payload generate:importmap",
-    "bootstrap:admin": "payload run scripts/bootstrap-admin.ts"
+    "bootstrap:admin": "node --import tsx scripts/bootstrap-admin.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.0.0",
