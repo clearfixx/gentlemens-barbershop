@@ -5,7 +5,9 @@ export const Users: CollectionConfig = {
   auth: true,
   admin: { useAsTitle: 'email' },
   access: {
+    // Public registration creates customers only; role changes are admin-only.
     create: () => true,
+    admin: ({ req }) => req.user?.role === 'admin',
     read: ({ req }) =>
       req.user?.role === 'admin'
         ? true
