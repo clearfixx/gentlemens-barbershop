@@ -163,6 +163,48 @@ jobs:
               process.exit(1);
             }
           '
+          # Verify that a barber can be associated with an existing location and service.
+          location_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-location-true.json", "utf8")).doc.id')
+          service_status=$(curl --silent --show-error --output /tmp/barbershop-service-created.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" \
+            --header 'Content-Type: application/json' \
+            --data '{"name":"CI Haircut","slug":"ci-haircut","durationMinutes":45,"price":500,"isActive":true}' \
+            http://localhost:3000/api/services)
+          if [ "$service_status" != "201" ]; then
+            echo "Admin service creation failed: HTTP $service_status"
+            cat /tmp/barbershop-service-created.json
+            exit 1
+          fi
+          service_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-service-created.json", "utf8")).doc.id')
+          LOCATION_ID="$location_id" SERVICE_ID="$service_id" node -e '
+            const fs = require("node:fs");
+            fs.writeFileSync("/tmp/barbershop-barber-payload.json", JSON.stringify({
+              name: "CI Barber", slug: "ci-barber", location: Number(process.env.LOCATION_ID),
+              isActive: true,
+              serviceOfferings: [{ service: Number(process.env.SERVICE_ID), priceOverride: 650, durationOverrideMinutes: 60 }],
+            }));
+          '
+          barber_status=$(curl --silent --show-error --output /tmp/barbershop-barber-created.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" \
+            --header 'Content-Type: application/json' \
+            --data-binary @/tmp/barbershop-barber-payload.json \
+            http://localhost:3000/api/barbers)
+          if [ "$barber_status" != "201" ]; then
+            echo "Admin barber creation failed: HTTP $barber_status"
+            cat /tmp/barbershop-barber-created.json
+            exit 1
+          fi
+          curl --fail --silent --show-error 'http://localhost:3000/api/barbers?depth=0' > /tmp/barbershop-public-barbers.json
+          node -e '
+            const fs = require("node:fs");
+            const result = JSON.parse(fs.readFileSync("/tmp/barbershop-public-barbers.json", "utf8"));
+            const doc = (result.docs ?? []).find((entry) => entry.slug === "ci-barber");
+            const offering = doc?.serviceOfferings?.[0];
+            if (!doc || !doc.location || !offering?.service || offering.priceOverride !== 650 || offering.durationOverrideMinutes !== 60) {
+              console.error("Barber relations or overrides were not persisted correctly");
+              process.exit(1);
+            }
+          '
           # A public signup must never be able to assign the administrator role.
           signup_status=$(curl --silent --show-error --output /tmp/barbershop-signup.json --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \
