@@ -87,6 +87,12 @@ jobs:
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
             -Atc "SELECT conname FROM pg_constraint WHERE conname IN ('bookings_valid_time_range', 'bookings_no_active_overlap')" \
             | grep -Fx 'bookings_no_active_overlap'
+      - name: Verify booking database integrity is installed
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
+            -f db/constraints/verify-booking-integrity.sql
       - name: Smoke test production HTTP routes
         shell: bash
         run: |
