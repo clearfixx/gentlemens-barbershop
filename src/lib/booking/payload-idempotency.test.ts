@@ -64,3 +64,25 @@ test('unique-index race recovers the winner through a second Payload read', asyn
   assert.equal(result.replayed, true)
   assert.equal(reads, 2)
 })
+
+test('slot exclusion race replays the same key when the winner committed', async () => {
+  let reads = 0
+  const payload = {
+    find: async () => ({ docs: ++reads === 1 ? [] : [
+      { id: 42, idempotencyRequestHash: token.requestHash },
+    ] }),
+    create: async () => { throw { code: '23P01', constraint: 'bookings_no_active_overlap' } },
+  } as unknown as Payload
+  const result = await persistIdempotentPayloadBooking(payload, quote, token)
+  assert.equal(result.booking.id, 42)
+  assert.equal(result.replayed, true)
+})
+
+test('unrelated slot exclusion remains a booking conflict', async () => {
+  const payload = {
+    find: async () => ({ docs: [] }),
+    create: async () => { throw { code: '23P01', constraint: 'bookings_no_active_overlap' } },
+  } as unknown as Payload
+  await assert.rejects(persistIdempotentPayloadBooking(payload, quote, token),
+    { name: 'BookingSlotConflictError' })
+})
