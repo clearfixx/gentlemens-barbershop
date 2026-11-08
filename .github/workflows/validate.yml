@@ -71,6 +71,14 @@ jobs:
             exit 1
           fi
           curl --fail --silent --show-error --output /dev/null http://localhost:3000/
+          # Unauthenticated clients must never receive user records.
+          users_status=$(curl --silent --output /tmp/barbershop-users-response.json --write-out '%{http_code}' http://localhost:3000/api/users)
+          echo "Unauthenticated users API HTTP status: $users_status"
+          if [[ "$users_status" != "401" && "$users_status" != "403" ]]; then
+            echo "Unexpected public access to users collection"
+            cat /tmp/barbershop-server.log
+            exit 1
+          fi
           admin_status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:3000/admin)
           echo "Admin route HTTP status: $admin_status"
           if [[ "$admin_status" != "200" && "$admin_status" != "302" && "$admin_status" != "307" && "$admin_status" != "308" ]]; then
