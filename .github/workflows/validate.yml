@@ -305,6 +305,18 @@ jobs:
               exit 1
             fi
           done
+          # Reject impossible and overlapping working hours, including through the REST API.
+          for shifts in '[{"weekday":"1","startMinute":1080,"endMinute":540}]' '[{"weekday":"1","startMinute":540,"endMinute":720},{"weekday":"1","startMinute":700,"endMinute":900}]'; do
+            invalid_schedule_payload=$(SHIFTS="$shifts" BARBER_ID="$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-barber-created.json","utf8")).doc.id')" node -e 'process.stdout.write(JSON.stringify({label:"Invalid shift",barber:Number(process.env.BARBER_ID),weeklyShifts:JSON.parse(process.env.SHIFTS)}))')
+            invalid_status=$(curl --silent --show-error --output /tmp/barbershop-invalid-shift.json --write-out '%{http_code}' \
+              --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+              --data "$invalid_schedule_payload" http://localhost:3000/api/barber-schedules)
+            if [[ "$invalid_status" == "200" || "$invalid_status" == "201" ]]; then
+              echo "Invalid barber schedule was accepted"
+              cat /tmp/barbershop-invalid-shift.json
+              exit 1
+            fi
+          done
           # A public signup must never be able to assign the administrator role.
           signup_status=$(curl --silent --show-error --output /tmp/barbershop-signup.json --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \
