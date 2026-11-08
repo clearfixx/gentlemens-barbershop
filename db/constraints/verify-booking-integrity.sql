@@ -1,6 +1,6 @@
 -- Run against the target database before enabling booking writes.
 -- This verifies the actual PostgreSQL catalog, not just migration filenames.
-DO $
+DO $$
 DECLARE
   column_name text;
 BEGIN
