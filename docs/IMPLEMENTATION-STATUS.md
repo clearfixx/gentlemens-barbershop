@@ -8,9 +8,9 @@
 - Media collection restricted to admin writes.
 - TypeScript path alias for Payload config.
 
-## Not yet verified
+## Verification
 
-No package install, generated lockfile, lint, typecheck, build, DB connection or end-to-end tests have run. In particular, Payload Next.js admin route/layout imports must be validated against the installed version. Treat this branch as **not runnable until verified**.
+GitHub Actions run #25 passed dependency installation, TypeScript typechecking, ESLint and the Next.js production build on Node.js 24 with PostgreSQL 17 available. This confirms the application compiles, **not** that the Payload admin UI, authentication or database operations work end-to-end. A production-server HTTP smoke test for `/` and `/admin` was added subsequently and must pass CI before it can be considered verified. There is still no committed lockfile or browser-level test.
 
 ## Important outstanding concerns
 
@@ -21,7 +21,7 @@ No package install, generated lockfile, lint, typecheck, build, DB connection or
 5. Configure media storage and migration lifecycle.
 6. Replace placeholder art with approved licensed/generated assets.
 7. Implement booking as transactional domain logic, not direct CRUD from the client.
-8. Add a CI workflow only after package installation and baseline checks succeed.
+8. Add authentication, authorization and booking integration tests before merging domain functionality.
 
 ## Suggested local verification
 
@@ -35,4 +35,4 @@ pnpm build
 pnpm dev
 ```
 
-The commands above are a verification plan, **not** a record of successful execution.
+These are local verification commands; the GitHub Actions checks described above have run, but local and end-to-end verification remain outstanding.
