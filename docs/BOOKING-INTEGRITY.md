@@ -1,48 +1,56 @@
 # Booking integrity: deployment and verification
 
-## Database guarantee
+## Database guarantees
 
 The PostgreSQL exclusion constraint in `db/constraints/booking-no-overlap.sql`
-prevents overlapping `pending` and `confirmed` appointments for the same barber.
-The range uses `[)`, so an appointment ending exactly when the next begins is
-allowed. Cancelled, completed and no-show bookings do not reserve time.
+prevents overlapping `pending` and `confirmed` appointments for one barber.
+Its `[)` range permits adjacent appointments. Cancelled, completed and no-show
+bookings do not reserve time.
 
-This is a **database-level invariant**, not a substitute for availability checks,
-service duration validation, customer identity checks, rate limiting or
-idempotency. In particular, application-level read-then-insert checks alone
-cannot prevent concurrent reservations.
+`db/constraints/booking-idempotency.sql` adds a unique index for the pair
+`(idempotency_scope, idempotency_key)` and a consistency check for all three
+retry-metadata fields. Concurrent retries cannot create two rows with the same
+scope and key.
 
-## Installation
+These constraints are necessary, but do not replace catalog/availability
+validation, customer identity checks, rate limiting, or safe error handling.
 
-1. Back up the database and inspect existing active bookings for overlapping
-   intervals. Resolve conflicting records before adding the constraint.
-2. Initialize/update Payload's database schema first; the `bookings` table and
-   its columns must already exist.
-3. Apply `db/constraints/booking-no-overlap.sql` with `psql -v ON_ERROR_STOP=1`
-   as a privileged migration step.
-4. Verify that `bookings_no_active_overlap` and
-   `bookings_valid_time_range` exist in `pg_constraint`.
-5. Keep the constraint in place across schema migrations. Review any generated
-   Payload/Drizzle migration before production deployment to ensure it does
-   not drop or replace the constraint.
+## Production rollout (booking writes must remain disabled)
 
-The SQL file is **not yet wired into the application's production migration
-lifecycle**. GitHub Actions installs it explicitly in its disposable database.
-Production deployment must not enable booking writes until the constraint is
-installed and verified in the target database.
+1. Back up the target database. Confirm the deployed Payload schema includes
+   the `bookings` table and idempotency columns.
+2. Check existing active bookings for overlaps and existing idempotency keys for
+   duplicates. Resolve bad data before attempting the migration.
+3. During a controlled deployment window, run both scripts against the **target**
+   database, using a privileged migration identity:
+   ```sh
+   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/booking-no-overlap.sql
+   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/booking-idempotency.sql
+   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/verify-booking-integrity.sql
+   ```
+4. Confirm the verification script succeeds. Both installation scripts may be
+   re-run, but the verification script must also run: `IF NOT EXISTS` alone
+   cannot detect a pre-existing constraint with an incorrect definition.
+5. Keep the constraints intact across later Payload/Drizzle schema changes.
+   Inspect generated migrations before applying them.
 
-## Conflict handling
+**Important:** these SQL scripts are currently installed automatically only
+in CI's disposable PostgreSQL instance. They are **not yet part of a managed
+production migration lifecycle**. Do not enable public booking writes merely
+because CI is green.
 
-A conflicting concurrent insert or status change is rejected by PostgreSQL
-with SQLSTATE `23P01` (`exclusion_violation`). The future booking service
-must translate that error into an HTTP 409 response, without exposing SQL
-details. Other database errors must not be silently classified as conflicts.
-Booking creation must also use a durable idempotency key so retries do not
-create duplicate reservations.
+## Failure behavior
+
+PostgreSQL `23P01` on `bookings_no_active_overlap` means the requested slot
+was taken. The booking service should return HTTP 409 without exposing SQL.
+PostgreSQL `23505` on `bookings_idempotency_unique` requires re-reading the
+winning booking and checking its request fingerprint. Reusing the same key with
+different request data must be rejected. Other database errors must propagate
+rather than being mislabeled as conflicts.
 
 ## Tests
 
-`db/constraints/test-booking-no-overlap.sql` tests overlapping, adjacent and
-cancelled appointments in a rollback-only transaction. CI executes it after
-creating catalog fixtures. A separate parallel-transaction integration test
-and the booking API are still required before public launch.
+CI covers SQL constraints, repeatable installation, concurrent SQL inserts,
+Payload REST access restrictions, and Payload Local API idempotent create/replay.
+The public booking API, production migration integration, authentication and
+rate limiting are still required before launch.
