@@ -28,5 +28,10 @@
     "typescript": "^5.0.0",
     "@eslint/eslintrc": "^3.0.0"
   },
-  "packageManager": "pnpm@10.28.2"
+  "packageManager": "pnpm@10.28.2",
+  "pnpm": {
+    "overrides": {
+      "undici": "7.16.0"
+    }
+  }
 }
