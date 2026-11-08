@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { Payload } from 'payload'
-import { createPayloadBooking } from './payload-booking-service.ts'
+import { prepareBookingIdempotency } from './idempotency.ts'
+import { createIdempotentPayloadBooking, createPayloadBooking } from './payload-booking-service.ts'
 
 const request = {
   barberId: 3, locationId: 2, serviceIds: [7],
@@ -46,4 +47,35 @@ test('uses the branch local date and persists a trusted quote', async () => {
   assert.equal(created?.endsAt, '2030-01-01T23:30:00.000Z')
   assert.equal(created?.totalPrice, 650)
   assert.deepEqual(queries.sort(), ['barber-schedules', 'barber-time-off', 'bookings'])
+})
+
+test('replays an existing booking without querying catalog or availability', async () => {
+  const token = prepareBookingIdempotency({ scope: 'customer:42', key: 'retry-1', request })
+  const calls: string[] = []
+  const payload = {
+    find: async ({ collection }: { collection: string }) => {
+      calls.push(collection)
+      assert.equal(collection, 'bookings')
+      return { docs: [{ id: 123, idempotencyRequestHash: token.requestHash }] }
+    },
+    findByID: async () => { throw Error('Catalog must not be queried on replay') },
+    create: async () => { throw Error('Replay must not insert a booking') },
+  } as unknown as Payload
+  const result = await createIdempotentPayloadBooking(payload, request, token.scope, token.key)
+  assert.equal(result.replayed, true)
+  assert.equal(result.booking.id, 123)
+  assert.deepEqual(calls, ['bookings'])
+})
+
+test('rejects a reused key with changed request before catalog lookup', async () => {
+  const token = prepareBookingIdempotency({ scope: 'customer:42', key: 'retry-2', request })
+  const payload = {
+    find: async () => ({ docs: [{ id: 123, idempotencyRequestHash: token.requestHash }] }),
+    findByID: async () => { throw Error('Catalog must not be queried') },
+    create: async () => { throw Error('Booking must not be created') },
+  } as unknown as Payload
+  await assert.rejects(
+    createIdempotentPayloadBooking(payload, { ...request, customerName: 'Changed' }, token.scope, token.key),
+    { name: 'BookingIdempotencyConflictError' },
+  )
 })
