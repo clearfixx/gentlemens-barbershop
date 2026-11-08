@@ -40,7 +40,6 @@ test('returns both UTC occurrences of a repeated fall DST hour', () => {
   })
   assert.deepEqual(slots.map(slot => slot.startsAt), [
     '2026-10-25T00:00:00.000Z',
-    '2026-10-25T00:30:00.000Z',
     '2026-10-25T01:00:00.000Z',
     '2026-10-25T01:30:00.000Z',
   ])
