@@ -55,3 +55,22 @@ test('does not hide unexpected database failures', async () => {
   const payload = { create: async () => { throw failure } } as unknown as Payload
   await assert.rejects(persistPayloadBooking(payload, quote), error => error === failure)
 })
+
+test('writes retry metadata in the same Payload create operation', async () => {
+  let args: { data: Record<string, unknown> } | undefined
+  const payload = {
+    create: async (input: { data: Record<string, unknown> }) => {
+      args = input
+      return { id: 10 }
+    },
+  } as unknown as Payload
+  await persistPayloadBooking(payload, quote, {
+    scope: 'customer:1',
+    key: 'retry-1',
+    requestHash: 'a'.repeat(64),
+  })
+  assert.equal(args?.data.idempotencyScope, 'customer:1')
+  assert.equal(args?.data.idempotencyKey, 'retry-1')
+  assert.equal(args?.data.idempotencyRequestHash, 'a'.repeat(64))
+  assert.equal(args?.data.status, 'pending')
+})
