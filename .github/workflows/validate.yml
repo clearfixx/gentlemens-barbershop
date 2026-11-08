@@ -278,6 +278,41 @@ jobs:
             cat /tmp/barbershop-booking-adjacent-response.json
             exit 1
           fi
+          # Internal idempotency fields must not be writable through REST, even
+          # by an administrator. They are only set by trusted server-side code.
+          LOCATION_ID="$location_id" BARBER_ID="$barber_id" SERVICE_ID="$service_id" \
+            node -e '
+              const fs = require("node:fs");
+              fs.writeFileSync("/tmp/barbershop-booking-injected.json", JSON.stringify({
+                location: Number(process.env.LOCATION_ID),
+                barber: Number(process.env.BARBER_ID),
+                services: [Number(process.env.SERVICE_ID)],
+                customerName: "CI protected metadata",
+                customerPhone: "+380671234567",
+                startsAt: "2033-01-02T09:00:00.000Z",
+                endsAt: "2033-01-02T10:00:00.000Z",
+                totalPrice: 650,
+                idempotencyScope: "attacker:scope",
+                idempotencyKey: "attacker-key",
+                idempotencyRequestHash: "f".repeat(64),
+              }));
+            '
+          injected_status=$(curl --silent --show-error --output /tmp/barbershop-booking-injected-response.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data-binary @/tmp/barbershop-booking-injected.json http://localhost:3000/api/bookings)
+          if [ "$injected_status" = "201" ]; then
+            injected_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-booking-injected-response.json","utf8")).doc.id')
+            leaked=$(PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
+              -d gentlemens_barbershop -c "SELECT count(*) FROM bookings WHERE id = $injected_id AND (idempotency_scope IS NOT NULL OR idempotency_key IS NOT NULL OR idempotency_request_hash IS NOT NULL)")
+            if [ "$leaked" != "0" ]; then
+              echo "REST client was able to write protected booking metadata"
+              exit 1
+            fi
+          elif [[ "$injected_status" != "400" && "$injected_status" != "403" ]]; then
+            echo "Unexpected HTTP status for protected booking fields: $injected_status"
+            cat /tmp/barbershop-booking-injected-response.json
+            exit 1
+          fi
           # Verify two independent transactions cannot reserve an overlapping slot.
           LOCATION_ID="$location_id" BARBER_ID="$barber_id" \
             DATABASE_URL="$DATABASE_URL" bash scripts/test-concurrent-bookings.sh
