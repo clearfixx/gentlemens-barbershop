@@ -264,6 +264,9 @@ jobs:
             cat /tmp/barbershop-booking-adjacent-response.json
             exit 1
           fi
+          # Verify two independent transactions cannot reserve an overlapping slot.
+          LOCATION_ID="$location_id" BARBER_ID="$barber_id" \
+            DATABASE_URL="$DATABASE_URL" bash scripts/test-concurrent-bookings.sh
           # The landing page must render the published CMS records, not static placeholders.
           curl --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-cms-home.html
           for expected in 'CI Location true' 'CI Haircut' 'CI Barber'; do
