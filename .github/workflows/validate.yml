@@ -113,6 +113,27 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
             -f db/constraints/verify-booking-integrity.sql
+      - name: Reject an integrity schema with a renamed unique index
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Rename inside one transaction, expect verification to fail, then
+          # automatically roll back the rename on the SQL error.
+          if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \\
+            -c "ALTER INDEX bookings_idempotency_unique RENAME TO bookings_idempotency_broken" \\
+            -f db/constraints/verify-booking-integrity.sql > /tmp/booking-negative-verify.log 2>&1; then
+            echo "Integrity verification accepted an invalid schema"
+            exit 1
+          fi
+          grep -q "Missing valid partial idempotency unique index" /tmp/booking-negative-verify.log || {
+            cat /tmp/booking-negative-verify.log
+            exit 1
+          }
+          # A failed verification must not leave the database modified.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \\
+            -Atc "SELECT to_regclass('bookings_idempotency_unique') IS NOT NULL" | grep -Fx t
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \\
+            -f db/constraints/verify-booking-integrity.sql
       - name: Smoke test production HTTP routes
         shell: bash
         run: |
