@@ -67,6 +67,36 @@ async function main() {
     },
   })
   assert.equal(concurrentStored.totalDocs, 1)
+  // Racing requests that reuse a key for different payloads must never
+  // silently return the winner's booking as if the requests matched.
+  const mismatchedToken = { ...token, key: 'concurrent-mismatch' }
+  const mismatchQuote: BookingQuote = {
+    ...quote,
+    startsAt: '2036-01-04T09:00:00.000Z',
+    endsAt: '2036-01-04T10:00:00.000Z',
+  }
+  const mismatchResults = await Promise.allSettled([
+    persistIdempotentPayloadBooking(payload, mismatchQuote, mismatchedToken),
+    persistIdempotentPayloadBooking(payload, mismatchQuote, {
+      ...mismatchedToken,
+      requestHash: 'c'.repeat(64),
+    }),
+  ])
+  const mismatchSuccesses = mismatchResults.filter(result => result.status === 'fulfilled')
+  const mismatchFailures = mismatchResults.filter(result => result.status === 'rejected')
+  assert.equal(mismatchSuccesses.length, 1)
+  assert.equal(mismatchFailures.length, 1)
+  assert.ok(mismatchFailures[0].reason instanceof BookingIdempotencyConflictError)
+  const mismatchedStored = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: {
+      and: [
+        { idempotencyScope: { equals: mismatchedToken.scope } },
+        { idempotencyKey: { equals: mismatchedToken.key } },
+      ],
+    },
+  })
+  assert.equal(mismatchedStored.totalDocs, 1)
   console.info('Payload Local API idempotency: persisted, replayed, rejected mismatched hash and converged concurrent retries')
 }
 
