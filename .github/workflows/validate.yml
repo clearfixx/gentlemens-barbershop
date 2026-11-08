@@ -216,6 +216,9 @@ jobs:
               process.exit(1);
             }
           '
+          # Exercise the PostgreSQL constraint against real catalog fixtures.
+          PGPASSWORD=postgres psql -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_barbershop -f db/constraints/test-booking-no-overlap.sql
           # The landing page must render the published CMS records, not static placeholders.
           curl --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-cms-home.html
           for expected in 'CI Location true' 'CI Haircut' 'CI Barber'; do
