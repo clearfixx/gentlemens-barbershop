@@ -53,3 +53,21 @@ test('rejects malformed customer data and ambiguous dates', () => {
   badDate.request.startsAt = '2030-01-02T09:00:00'
   assert.throws(() => prepareBookingRequest(badDate), RangeError)
 })
+
+test('rejects impossible or normalized UTC dates', () => {
+  for (const startsAt of [
+    '2030-02-30T09:00:00.000Z',
+    '2030-01-02T24:00:00.000Z',
+    '2030-01-02T09:00:60.000Z',
+  ]) {
+    const input = fixture()
+    input.request.startsAt = startsAt
+    assert.throws(() => prepareBookingRequest(input), RangeError, startsAt)
+  }
+})
+
+test('accepts valid UTC timestamps with or without zero milliseconds', () => {
+  const input = fixture()
+  input.request.startsAt = '2030-01-02T09:00:00Z'
+  assert.equal(prepareBookingRequest(input).startsAt, '2030-01-02T09:00:00.000Z')
+})
