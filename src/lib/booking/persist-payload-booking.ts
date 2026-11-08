@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 import type { BookingQuote } from './booking-request.ts'
+import type { BookingIdempotency } from './idempotency.ts'
 import { throwBookingConflictIfApplicable } from './booking-errors.ts'
 
 /**
@@ -15,6 +16,7 @@ import { throwBookingConflictIfApplicable } from './booking-errors.ts'
 export async function persistPayloadBooking(
   payload: Payload,
   quote: BookingQuote,
+  idempotency?: BookingIdempotency,
 ) {
   try {
     return await payload.create({
@@ -32,6 +34,11 @@ export async function persistPayloadBooking(
         endsAt: quote.endsAt,
         totalPrice: quote.totalPrice,
         status: 'pending',
+        ...(idempotency ? {
+          idempotencyScope: idempotency.scope,
+          idempotencyKey: idempotency.key,
+          idempotencyRequestHash: idempotency.requestHash,
+        } : {}),
       },
     })
   } catch (error) {
