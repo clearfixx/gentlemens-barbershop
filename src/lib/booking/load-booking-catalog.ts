@@ -19,12 +19,12 @@ export async function loadBookingCatalog(
     throw new RangeError('Invalid booking catalog selection')
   }
 
-  const [barber, location, ...services] = await Promise.all([
+  const [barber, location, services] = await Promise.all([
     payload.findByID({ collection: 'barbers', id: request.barberId, depth: 0, overrideAccess: true }),
     payload.findByID({ collection: 'locations', id: request.locationId, depth: 0, overrideAccess: true }),
-    ...request.serviceIds.map(id =>
+    Promise.all(request.serviceIds.map(id =>
       payload.findByID({ collection: 'services', id, depth: 0, overrideAccess: true }),
-    ),
+    )),
   ])
   const barberLocationId = typeof barber.location === 'number'
     ? barber.location : barber.location.id
