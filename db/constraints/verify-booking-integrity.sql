@@ -30,6 +30,12 @@ BEGIN
     WHERE conrelid = 'bookings'::regclass
       AND conname = 'bookings_no_active_overlap'
       AND contype = 'x'
+      AND convalidated
+      AND pg_get_constraintdef(oid) LIKE '%barber_id WITH =%'
+      AND pg_get_constraintdef(oid) LIKE '%tstzrange(starts_at, ends_at%'
+      AND pg_get_constraintdef(oid) LIKE '%status%'
+      AND pg_get_constraintdef(oid) LIKE '%pending%'
+      AND pg_get_constraintdef(oid) LIKE '%confirmed%'
   ) THEN
     RAISE EXCEPTION 'Missing bookings_no_active_overlap exclusion constraint';
   END IF;
@@ -53,6 +59,9 @@ BEGIN
       AND i.indisvalid
       AND i.indisready
       AND i.indpred IS NOT NULL
+      AND pg_get_indexdef(i.indexrelid) LIKE '%idempotency_scope%'
+      AND pg_get_indexdef(i.indexrelid) LIKE '%idempotency_key%'
+      AND pg_get_expr(i.indpred, i.indrelid) LIKE '%idempotency_scope IS NOT NULL%'
   ) THEN
     RAISE EXCEPTION 'Missing valid partial idempotency unique index';
   END IF;
