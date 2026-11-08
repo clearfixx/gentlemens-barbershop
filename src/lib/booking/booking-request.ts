@@ -58,7 +58,9 @@ export function prepareBookingRequest(input: {
   }
   const start = new Date(request.startsAt)
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(request.startsAt) ||
-      !Number.isFinite(start.getTime()) || start.toISOString() !== new Date(start.getTime()).toISOString()) {
+      !Number.isFinite(start.getTime()) ||
+      (request.startsAt !== start.toISOString() &&
+       request.startsAt !== start.toISOString().replace('.000Z', 'Z'))) {
     throw new RangeError('Start must be an explicit UTC timestamp')
   }
   const selected = request.serviceIds.map(id => {
