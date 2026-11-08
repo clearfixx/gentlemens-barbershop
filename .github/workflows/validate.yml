@@ -218,6 +218,45 @@ jobs:
             echo "Inactive location leaked onto landing page"
             exit 1
           fi
+          # Draft services and barbers must not be exposed via the public API or HTML.
+          inactive_service_status=$(curl --silent --show-error --output /tmp/barbershop-inactive-service.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data '{"name":"CI Hidden Service","slug":"ci-hidden-service","durationMinutes":30,"price":300,"isActive":false}' \
+            http://localhost:3000/api/services)
+          if [ "$inactive_service_status" != "201" ]; then
+            echo "Admin draft service creation failed: HTTP $inactive_service_status"
+            cat /tmp/barbershop-inactive-service.json
+            exit 1
+          fi
+          inactive_barber_status=$(curl --silent --show-error --output /tmp/barbershop-inactive-barber.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data "{\"name\":\"CI Hidden Barber\",\"slug\":\"ci-hidden-barber\",\"location\":$location_id,\"isActive\":false}" \
+            http://localhost:3000/api/barbers)
+          if [ "$inactive_barber_status" != "201" ]; then
+            echo "Admin draft barber creation failed: HTTP $inactive_barber_status"
+            cat /tmp/barbershop-inactive-barber.json
+            exit 1
+          fi
+          for collection in services barbers; do
+            curl --fail --silent --show-error "http://localhost:3000/api/$collection?depth=0" > "/tmp/barbershop-public-$collection-after-drafts.json"
+          done
+          node -e '
+            const fs = require("node:fs");
+            for (const [collection, hiddenSlug] of [["services", "ci-hidden-service"], ["barbers", "ci-hidden-barber"]]) {
+              const data = JSON.parse(fs.readFileSync(`/tmp/barbershop-public-${collection}-after-drafts.json`, "utf8"));
+              if (data.docs?.some((doc) => doc.slug === hiddenSlug)) {
+                console.error("Draft leaked through public API:", hiddenSlug);
+                process.exit(1);
+              }
+            }
+          '
+          curl --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-home-after-drafts.html
+          for hidden in 'CI Hidden Service' 'CI Hidden Barber'; do
+            if grep -Fq "$hidden" /tmp/barbershop-home-after-drafts.html; then
+              echo "Draft leaked onto landing page: $hidden"
+              exit 1
+            fi
+          done
           # A public signup must never be able to assign the administrator role.
           signup_status=$(curl --silent --show-error --output /tmp/barbershop-signup.json --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \
