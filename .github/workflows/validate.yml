@@ -99,6 +99,8 @@ jobs:
         shell: bash
         run: |
           CONFIRM_BOOKING_MIGRATION=apply bash scripts/apply-booking-integrity.sh
+      - name: Verify read-only booking migration preflight
+        run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-integrity.sql
       - name: Verify booking migrations are repeatable
         env:
           PGPASSWORD: postgres
