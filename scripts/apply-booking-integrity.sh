@@ -19,6 +19,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Single transaction: do not leave only half the integrity rules installed.
 # psql -1 wraps all -f inputs in BEGIN/COMMIT and rolls back on SQL errors.
 psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
+  -f "$root/db/constraints/preflight-booking-integrity.sql" \
   -f "$root/db/constraints/booking-no-overlap.sql" \
   -f "$root/db/constraints/booking-idempotency.sql" \
   -f "$root/db/constraints/verify-booking-integrity.sql"
