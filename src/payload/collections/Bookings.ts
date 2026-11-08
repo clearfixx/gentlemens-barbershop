@@ -26,6 +26,23 @@ export const Bookings: CollectionConfig = {
       name: 'status', type: 'select', required: true, defaultValue: 'pending',
       options: ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'],
     },
+    // Internal retry metadata: stored alongside the booking in the same
+    // Payload transaction. Not writable through the public/admin REST API.
+    {
+      name: 'idempotencyScope', type: 'text', maxLength: 160,
+      admin: { hidden: true },
+      access: { create: () => false, update: () => false, read: () => false },
+    },
+    {
+      name: 'idempotencyKey', type: 'text', maxLength: 160,
+      admin: { hidden: true },
+      access: { create: () => false, update: () => false, read: () => false },
+    },
+    {
+      name: 'idempotencyRequestHash', type: 'text', maxLength: 64,
+      admin: { hidden: true },
+      access: { create: () => false, update: () => false, read: () => false },
+    },
     { name: 'notes', type: 'textarea' },
   ],
 }
