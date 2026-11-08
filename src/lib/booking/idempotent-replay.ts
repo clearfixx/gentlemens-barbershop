@@ -1,3 +1,4 @@
+import { isBookingOverlapViolation } from './booking-errors.ts'
 import {
   assertIdempotencyReplay,
   type BookingIdempotency,
@@ -27,10 +28,12 @@ export async function replayOrCreateBooking<T>(input: {
   try {
     return { booking: await input.insert(input.token), replayed: false }
   } catch (error) {
-    if (!isIdempotencyUniqueViolation(error)) throw error
+    if (!isIdempotencyUniqueViolation(error) && !isBookingOverlapViolation(error)) throw error
 
-    // PostgreSQL's unique index serializes racing inserts. Once the losing
-    // transaction fails, query the committed winner on a fresh statement.
+    // PostgreSQL may report either the unique-key conflict or the slot
+    // exclusion conflict for two identical concurrent booking attempts.
+    // Re-read only the exact idempotency key; an unrelated overlap must
+    // retain its original error when no matching winner exists.
     const winner = await input.findExisting(input.token)
     if (!winner) throw error
     assertIdempotencyReplay(input.token, winner)
