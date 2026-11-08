@@ -54,3 +54,23 @@ export function blockedMinutesForLocalDay(
   }
   return result
 }
+
+
+// Resolve a wall-clock start into all matching UTC instants. During spring DST
+// gaps there are no matches; during autumn fall-back there can be two.
+export function utcInstantsForLocalMinute(date: string, minute: number, timeZone: string): Date[] {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !Number.isInteger(minute) || minute < 0 || minute >= 1440) {
+    throw new RangeError('Invalid local date or minute')
+  }
+  const midnight = Date.parse(`${date}T00:00:00.000Z`)
+  if (!Number.isFinite(midnight) || new Date(midnight).toISOString().slice(0, 10) !== date) {
+    throw new RangeError('Invalid local calendar date')
+  }
+  const matches: Date[] = []
+  // All real-world IANA offsets fit within ±24h. Search UTC day ±24h.
+  for (let timestamp = midnight - 86400000; timestamp < midnight + 172800000; timestamp += 60000) {
+    const local = localDayMinute(new Date(timestamp), timeZone)
+    if (local.date === date && local.minute === minute) matches.push(new Date(timestamp))
+  }
+  return matches
+}
