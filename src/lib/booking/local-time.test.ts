@@ -23,7 +23,7 @@ test('includes both repeated local hours on autumn DST transition', () => {
     new Date('2026-10-25T00:30:00Z'), new Date('2026-10-25T01:30:00Z'),
     '2026-10-25', 'Europe/Kyiv',
   )
-  assert.deepEqual(blocked, [{ startMinute: 180, endMinute: 210 }])
+  assert.deepEqual(blocked, [{ startMinute: 180, endMinute: 240 }])
 })
 
 test('marks the entire repeated hour when both UTC occurrences are blocked', () => {
