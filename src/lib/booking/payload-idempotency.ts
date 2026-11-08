@@ -42,4 +42,7 @@ export async function persistIdempotentPayloadBooking(
     },
     insert: async () => persistPayloadBooking(payload, quote, token, { deferConflictTranslation: true }),
   })
+  } catch (error) {
+    return throwBookingConflictIfApplicable(error)
+  }
 }
