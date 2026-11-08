@@ -1,5 +1,5 @@
 import { getPayload } from 'payload'
-import config from '../src/payload.config'
+import config from '../src/payload.config.ts'
 
 async function main() {
   const email = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase()
