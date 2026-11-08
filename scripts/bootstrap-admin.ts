@@ -29,7 +29,10 @@ async function main() {
   payload.logger.info('Initial administrator created. Remove bootstrap credentials from the environment.')
 }
 
-main().catch((error: unknown) => {
-  console.error(error)
-  process.exitCode = 1
-})
+main().then(
+  () => process.exit(0),
+  (error: unknown) => {
+    console.error(error)
+    process.exit(1)
+  },
+)
