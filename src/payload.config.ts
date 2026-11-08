@@ -10,6 +10,7 @@ import { Services } from './payload/collections/Services.ts'
 import { Barbers } from './payload/collections/Barbers.ts'
 import { Bookings } from './payload/collections/Bookings.ts'
 import { BarberSchedules } from './payload/collections/BarberSchedules.ts'
+import { BarberTimeOff } from './payload/collections/BarberTimeOff.ts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -21,7 +22,7 @@ export default buildConfig({
     // Customer and barber accounts never enter the CMS administration UI.
     // First administrator must be provisioned by a trusted server-side bootstrap.
   },
-  collections: [Users, Media, Locations, Services, Barbers, Bookings, BarberSchedules],
+  collections: [Users, Media, Locations, Services, Barbers, Bookings, BarberSchedules, BarberTimeOff],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({ pool: { connectionString: process.env.DATABASE_URL || '' } }),
