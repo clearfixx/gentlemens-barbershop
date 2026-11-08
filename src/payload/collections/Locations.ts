@@ -15,6 +15,19 @@ export const Locations: CollectionConfig = {
     { name: 'city', type: 'text', required: true },
     { name: 'address', type: 'text', required: true },
     { name: 'phone', type: 'text' },
+    {
+      name: 'timeZone', type: 'text', required: true, defaultValue: 'Europe/Kyiv',
+      admin: { description: 'IANA timezone identifier, e.g. Europe/Kyiv.' },
+      validate: (value: unknown) => {
+        if (typeof value !== 'string' || !value.trim()) return 'Enter an IANA timezone.'
+        try {
+          new Intl.DateTimeFormat('en-US', { timeZone: value })
+          return true
+        } catch {
+          return 'Enter a valid IANA timezone, e.g. Europe/Kyiv.'
+        }
+      },
+    },
     { name: 'description', type: 'textarea' },
     { name: 'isActive', type: 'checkbox', defaultValue: false, required: true },
   ],
