@@ -1,0 +1,49 @@
+# Gentlemen's Barbershop — Product Specification (initial)
+
+Status: foundation draft, based on user-supplied requirements and reference mockups. Reference images remain the visual source of truth; this document does not supersede them.
+
+## Brand and visual direction
+
+Premium Gentleman Club: vintage/barbershop heritage aesthetics, parchment texture, warm creams, dark chocolate, muted gold, premium editorial layout. Light and dark theme (designed palettes, not literal CSS inversion). Initial palette: cream `#F2E9DC`, chocolate `#2A1D16`, gold `#C8A86B`. Body text: Inter; decorative/editorial headings may use a compatible serif face to reproduce the references. Responsive mobile/tablet/desktop; keyboard navigation, reduced-motion support, accessible contrast. Glass effects should be subtle, readable and efficient rather than indiscriminate.
+
+## Public website
+
+- Hero: photographic split slide/text layout, premium transitions, slide progress/timer, pause/play, previous/next, CTA; scroll-down button to the next section. Navbar may reveal on scroll rather than obscuring first hero.
+- Navbar: section anchors with smooth scroll + active-section indication; account/notifications/hamburger; mobile navigation and dropdown states.
+- Why choose us; team/barbers; reviews; featured products; locations with three map pins; contact form; social links/feeds (provider API constraints must be respected); large two-part footer and newsletter signup.
+- Additional pages: services, product catalog and detail, news listing and article, FAQ, shop locations, legal/policy.
+- Marketplace: modest catalog, no online payment; product inquiry/order-request flow to be specified before implementation.
+
+## Authentication and customer
+
+Register/login/logout. Profile fields editable inline; booking history; post-visit ratings and moderated reviews; notification inbox; saved products; loyalty/gift certificates are planned scope to prioritize separately.
+
+## Booking (five steps)
+
+1. Choose shop/location.
+2. Choose a barber working at that location (show closest genuinely available slot).
+3. Select service(s), with per-barber price and duration.
+4. Choose a free date/time matching total duration, schedule, breaks, exceptions and reservations.
+5. Contact details and final confirmation. Prefill for authenticated customer; guest flow allowed.
+
+After confirmation, a logged-in customer's account shows location, barber, service(s), date/time and status. Booking statuses and notifications must remain consistent.
+
+## Barber workspace
+
+Day/calendar bookings; accept/decline with proper status transitions; client details with least-privilege access; work hours and blocked slots; review feed; service demand, occupancy and earnings metrics (where data is available). Price editing only when explicitly granted by admin.
+
+## Administration
+
+Premium custom admin interface based on approved mockup. User and role management; shops; barber roster and grades; service catalog and barber-specific price/duration overrides; schedules and bookings; moderated reviews; products/inventory/order requests; news; hero/section/SEO/media/footer content; notifications and settings. Payload Admin can supply CMS management internally; custom operational dashboards must not assume Payload default UI matches the references.
+
+## Roles
+
+Visitor, customer, barber, admin. Additional permissions based on specific actions, not on hidden UI links. Backend checks every protected operation. Authorization, uploads, content moderation and data minimization are mandatory.
+
+## Out-of-scope until individually approved
+
+Online payments, SMS/push provider integrations, real social-feed syncing without API credentials, advanced loyalty/gift-card redemption, external calendar sync. Mockups may illustrate these features but do not constitute ready integrations.
+
+## Core acceptance boundaries
+
+No double booking even under concurrent requests. Server calculates price, duration and available slots. All appointment transitions are validated. User sees only allowed appointments; barber only their own; admin according to scope. Forms validate on client and server. Mobile first, accessibility and performance checks before production.
