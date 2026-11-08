@@ -58,7 +58,7 @@ export async function getBarberAvailability(input: {
   return calculateBarberDayAvailability({
     date, timeZone, durationMinutes,
     weeklyShifts: schedules.docs.flatMap(schedule =>
-      (schedule.weeklyShifts ?? []).map(shift => ({
+      (schedule.weeklyShifts ?? []).map((shift: { weekday: string; startMinute: number; endMinute: number }) => ({
         weekday: shift.weekday,
         startMinute: shift.startMinute,
         endMinute: shift.endMinute,
