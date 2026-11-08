@@ -42,8 +42,6 @@ jobs:
           node-version: "24"
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-      - name: Generate Payload import map
-        run: pnpm generate:importmap
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint
