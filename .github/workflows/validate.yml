@@ -55,8 +55,8 @@ jobs:
           BOOTSTRAP_ADMIN_PASSWORD: ci-only-test-password-not-for-production
         run: |
           set -euo pipefail
-          pnpm bootstrap:admin
-          if pnpm bootstrap:admin; then
+          timeout 90s pnpm bootstrap:admin
+          if timeout 90s pnpm bootstrap:admin; then
             echo "Bootstrap unexpectedly succeeded twice"
             exit 1
           fi
