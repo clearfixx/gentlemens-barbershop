@@ -131,3 +131,53 @@ jobs:
               process.exit(1);
             }
           '
+          # An authenticated customer must not be able to promote their own account.
+          login_status=$(curl --silent --show-error --output /tmp/barbershop-login.json --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"email":"customer-ci@example.invalid","password":"ci-customer-test-password"}' \
+            http://localhost:3000/api/users/login)
+          if [ "$login_status" != "200" ]; then
+            echo "Customer login failed: HTTP $login_status"
+            cat /tmp/barbershop-login.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const login = JSON.parse(fs.readFileSync("/tmp/barbershop-login.json", "utf8"));
+            const signup = JSON.parse(fs.readFileSync("/tmp/barbershop-signup.json", "utf8"));
+            const id = (signup.doc ?? signup).id;
+            if (!login.token || !id) process.exit(1);
+            fs.writeFileSync("/tmp/barbershop-auth-token", login.token);
+            fs.writeFileSync("/tmp/barbershop-customer-id", String(id));
+          '
+          token=$(cat /tmp/barbershop-auth-token)
+          customer_id=$(cat /tmp/barbershop-customer-id)
+          update_status=$(curl --silent --show-error --output /tmp/barbershop-role-update.json --write-out '%{http_code}' \
+            --request PATCH \
+            --header "Authorization: JWT $token" \
+            --header 'Content-Type: application/json' \
+            --data '{"role":"admin"}' \
+            "http://localhost:3000/api/users/$customer_id")
+          echo "Customer role update HTTP status: $update_status"
+          if [[ "$update_status" != "200" && "$update_status" != "403" && "$update_status" != "400" ]]; then
+            echo "Unexpected role update response"
+            cat /tmp/barbershop-role-update.json
+            exit 1
+          fi
+          me_status=$(curl --silent --show-error --output /tmp/barbershop-me.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $token" \
+            http://localhost:3000/api/users/me)
+          if [ "$me_status" != "200" ]; then
+            echo "Could not verify customer role after attempted escalation: HTTP $me_status"
+            cat /tmp/barbershop-me.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const response = JSON.parse(fs.readFileSync("/tmp/barbershop-me.json", "utf8"));
+            const user = response.user ?? response;
+            if (user.role !== "customer") {
+              console.error("Customer role changed unexpectedly:", user.role);
+              process.exit(1);
+            }
+          '
