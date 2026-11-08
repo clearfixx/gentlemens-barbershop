@@ -9,7 +9,7 @@ BEGIN
       SELECT 1 FROM pg_attribute
       WHERE attrelid = 'bookings'::regclass
         AND attname = column_name AND NOT attisdropped
-        AND atttypid = 'text'::regtype
+        AND atttypid IN ('text'::regtype, 'character varying'::regtype)
     ) THEN
       RAISE EXCEPTION 'Missing or incompatible booking column: %', column_name;
     END IF;
