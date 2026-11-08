@@ -17,6 +17,7 @@ export async function persistPayloadBooking(
   payload: Payload,
   quote: BookingQuote,
   idempotency?: BookingIdempotency,
+  options: { deferConflictTranslation?: boolean } = {},
 ) {
   try {
     return await payload.create({
@@ -42,6 +43,7 @@ export async function persistPayloadBooking(
       },
     })
   } catch (error) {
+    if (options.deferConflictTranslation) throw error
     return throwBookingConflictIfApplicable(error)
   }
 }
