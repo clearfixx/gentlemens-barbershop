@@ -317,6 +317,37 @@ jobs:
               exit 1
             fi
           done
+          # Admin can register time off; malformed ranges and anonymous access are denied.
+          time_off_payload=$(BARBER_ID="$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-barber-created.json","utf8")).doc.id')" node -e 'process.stdout.write(JSON.stringify({barber:Number(process.env.BARBER_ID),reason:"CI vacation",startsAt:"2026-12-01T09:00:00.000Z",endsAt:"2026-12-02T09:00:00.000Z"}))')
+          time_off_status=$(curl --silent --show-error --output /tmp/barbershop-time-off-created.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data "$time_off_payload" http://localhost:3000/api/barber-time-off)
+          if [ "$time_off_status" != "201" ]; then
+            echo "Admin time-off creation failed: HTTP $time_off_status"
+            cat /tmp/barbershop-time-off-created.json
+            exit 1
+          fi
+          invalid_time_off=$(BARBER_ID="$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-barber-created.json","utf8")).doc.id')" node -e 'process.stdout.write(JSON.stringify({barber:Number(process.env.BARBER_ID),reason:"Invalid",startsAt:"2026-12-02T09:00:00.000Z",endsAt:"2026-12-01T09:00:00.000Z"}))')
+          invalid_time_off_status=$(curl --silent --show-error --output /tmp/barbershop-time-off-invalid.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data "$invalid_time_off" http://localhost:3000/api/barber-time-off)
+          if [[ "$invalid_time_off_status" == "200" || "$invalid_time_off_status" == "201" ]]; then
+            echo "Invalid time-off interval was accepted"
+            exit 1
+          fi
+          for method in GET POST; do
+            if [ "$method" = "POST" ]; then
+              time_off_public_status=$(curl --silent --show-error --output /tmp/barbershop-time-off-denied.json --write-out '%{http_code}' \
+                --header 'Content-Type: application/json' --data "$time_off_payload" http://localhost:3000/api/barber-time-off)
+            else
+              time_off_public_status=$(curl --silent --show-error --output /tmp/barbershop-time-off-denied.json --write-out '%{http_code}' \
+                http://localhost:3000/api/barber-time-off)
+            fi
+            if [[ "$time_off_public_status" != "401" && "$time_off_public_status" != "403" ]]; then
+              echo "Anonymous $method time-off request was not denied: HTTP $time_off_public_status"
+              exit 1
+            fi
+          done
           # A public signup must never be able to assign the administrator role.
           signup_status=$(curl --silent --show-error --output /tmp/barbershop-signup.json --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \
