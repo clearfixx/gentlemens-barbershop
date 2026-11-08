@@ -76,6 +76,15 @@ jobs:
             cat /tmp/barbershop-second-bootstrap.log
             exit 1
           fi
+      - name: Install database booking integrity constraints
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
+            -f db/constraints/booking-no-overlap.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
+            -Atc "SELECT conname FROM pg_constraint WHERE conname IN ('bookings_valid_time_range', 'bookings_no_active_overlap')" \
+            | grep -Fx 'bookings_no_active_overlap'
       - name: Smoke test production HTTP routes
         shell: bash
         run: |
