@@ -257,6 +257,22 @@ jobs:
               exit 1
             fi
           done
+          # Bookings contain personal information: anonymous access must be denied.
+          for method in GET POST; do
+            if [ "$method" = "POST" ]; then
+              booking_status=$(curl --silent --show-error --output /tmp/barbershop-bookings-denied.json --write-out '%{http_code}' \
+                --header 'Content-Type: application/json' --data '{"customerName":"Anonymous"}' \
+                http://localhost:3000/api/bookings)
+            else
+              booking_status=$(curl --silent --show-error --output /tmp/barbershop-bookings-denied.json --write-out '%{http_code}' \
+                http://localhost:3000/api/bookings)
+            fi
+            if [[ "$booking_status" != "401" && "$booking_status" != "403" ]]; then
+              echo "Anonymous $method bookings request was not denied: HTTP $booking_status"
+              cat /tmp/barbershop-bookings-denied.json
+              exit 1
+            fi
+          done
           # A public signup must never be able to assign the administrator role.
           signup_status=$(curl --silent --show-error --output /tmp/barbershop-signup.json --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \
