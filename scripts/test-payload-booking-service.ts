@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { getPayload } from 'payload'
 import config from '../src/payload.config.ts'
-import { createPayloadBooking } from '../src/lib/booking/payload-booking-service.ts'
+import { createIdempotentPayloadBooking, createPayloadBooking } from '../src/lib/booking/payload-booking-service.ts'
 
 async function main() {
   const locationId = Number(process.env.CI_LOCATION_ID)
@@ -45,6 +45,16 @@ async function main() {
   })
   assert.equal(saved.totalDocs, 1)
   assert.equal(saved.docs[0]?.id, created.id)
+  const retryRequest = { ...request, startsAt: '2037-01-02T11:00:00.000Z' }
+  const firstRetry = await createIdempotentPayloadBooking(payload, retryRequest, 'ci:customer:retry', 'stable-key')
+  assert.equal(firstRetry.replayed, false)
+  const repeated = await createIdempotentPayloadBooking(payload, retryRequest, 'ci:customer:retry', 'stable-key')
+  assert.equal(repeated.replayed, true)
+  assert.equal(repeated.booking.id, firstRetry.booking.id)
+  await assert.rejects(
+    createIdempotentPayloadBooking(payload, { ...retryRequest, customerName: 'Different customer' }, 'ci:customer:retry', 'stable-key'),
+    { name: 'BookingIdempotencyConflictError' },
+  )
   console.info('Trusted booking service: catalog, schedule, persistence and duplicate-slot rejection verified')
 }
 
