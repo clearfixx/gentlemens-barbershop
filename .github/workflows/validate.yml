@@ -97,3 +97,23 @@ jobs:
             cat /tmp/barbershop-server.log
             exit 1
           fi
+          # A public signup must never be able to assign the administrator role.
+          signup_status=$(curl --silent --show-error --output /tmp/barbershop-signup.json --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"email":"customer-ci@example.invalid","password":"ci-customer-test-password","role":"admin"}' \
+            http://localhost:3000/api/users)
+          echo "Public signup HTTP status: $signup_status"
+          if [[ "$signup_status" != "201" && "$signup_status" != "200" ]]; then
+            echo "Public signup failed"
+            cat /tmp/barbershop-signup.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const response = JSON.parse(fs.readFileSync("/tmp/barbershop-signup.json", "utf8"));
+            const user = response.doc ?? response;
+            if (user.role !== "customer") {
+              console.error("Privilege escalation through public signup:", user.role);
+              process.exit(1);
+            }
+          '
