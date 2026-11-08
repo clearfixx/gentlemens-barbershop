@@ -271,6 +271,10 @@ jobs:
             DATABASE_URL="$DATABASE_URL" bash scripts/test-concurrent-bookings.sh
           PGPASSWORD=postgres psql -v ON_ERROR_STOP=1 -h localhost -U postgres \
             -d gentlemens_barbershop -f db/constraints/test-booking-idempotency.sql
+          # Distinct non-overlapping slots with the same idempotency key must
+          # still be serialized by the unique index across concurrent writes.
+          LOCATION_ID="$location_id" BARBER_ID="$barber_id" \
+            DATABASE_URL="$DATABASE_URL" bash scripts/test-concurrent-idempotency.sh
           # The landing page must render the published CMS records, not static placeholders.
           curl --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-cms-home.html
           for expected in 'CI Location true' 'CI Haircut' 'CI Barber'; do
