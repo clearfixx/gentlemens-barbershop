@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { getPayload } from 'payload'
 import config from '../src/payload.config.ts'
 import { createPayloadBooking } from '../src/lib/booking/payload-booking-service.ts'
-import { BookingSlotConflictError } from '../src/lib/booking/booking-errors.ts'
 
 async function main() {
   const locationId = Number(process.env.CI_LOCATION_ID)
@@ -34,7 +33,9 @@ async function main() {
   assert.equal(created.startsAt, request.startsAt)
   assert.equal(created.endsAt, '2037-01-02T10:00:00.000Z')
   assert.equal(created.status, 'pending')
-  await assert.rejects(createPayloadBooking(payload, request), BookingSlotConflictError)
+  await assert.rejects(createPayloadBooking(payload, request), {
+    name: 'RangeError', message: 'Selected booking slot is unavailable',
+  })
   const saved = await payload.find({
     collection: 'bookings', overrideAccess: true, depth: 0,
     where: { and: [
