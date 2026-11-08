@@ -19,8 +19,10 @@ validation, customer identity checks, rate limiting, or safe error handling.
 
 1. Back up the target database. Confirm the deployed Payload schema includes
    the `bookings` table and idempotency columns.
-2. Check existing active bookings for overlaps and existing idempotency keys for
-   duplicates. Resolve bad data before attempting the migration.
+2. The deployment command runs a read-only SQL preflight that rejects invalid
+   appointment ranges, overlapping active bookings and duplicate idempotency
+   tokens. Resolve legacy data conflicts before attempting the migration.
+   This is a safety check, not a substitute for reviewing a backup.
 3. During a controlled deployment window, run both scripts against the **target**
    database, using a privileged migration identity:
    ```sh
@@ -32,7 +34,11 @@ validation, customer identity checks, rate limiting, or safe error handling.
 5. Keep the constraints intact across later Payload/Drizzle schema changes.
    Inspect generated migrations before applying them.
 
-**Important:** the explicit deployment command runs installation and verification
+**Important:** the preflight, installation and verification run together in
+one transaction. The preflight assumes the Payload booking table and retry
+metadata columns already exist; deploy that schema first.
+
+The explicit deployment command runs installation and verification
 in one PostgreSQL transaction, but is not hooked into the application's deployment
 pipeline. It requires operator approval, a backup and a controlled migration window.
 It is **not yet a managed production migration lifecycle**. Do not enable public
