@@ -134,6 +134,26 @@ jobs:
             -Atc "SELECT to_regclass('bookings_idempotency_unique') IS NOT NULL" | grep -Fx t
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
             -f db/constraints/verify-booking-integrity.sql
+      - name: Reject a missing booking overlap constraint
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Deliberately remove the exclusion rule inside a transaction.
+          # Verification must fail, forcing PostgreSQL to roll back the drop.
+          if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
+            -c "ALTER TABLE bookings DROP CONSTRAINT bookings_no_active_overlap" \
+            -f db/constraints/verify-booking-integrity.sql > /tmp/booking-overlap-negative.log 2>&1; then
+            echo "Integrity verification accepted a missing overlap constraint"
+            exit 1
+          fi
+          grep -q "Missing bookings_no_active_overlap exclusion constraint" /tmp/booking-overlap-negative.log || {
+            cat /tmp/booking-overlap-negative.log
+            exit 1
+          }
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM pg_constraint WHERE conrelid = 'bookings'::regclass AND conname = 'bookings_no_active_overlap'" | grep -Fx 1
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -f db/constraints/verify-booking-integrity.sql
       - name: Smoke test production HTTP routes
         shell: bash
         run: |
