@@ -322,6 +322,9 @@ jobs:
           # still be serialized by the unique index across concurrent writes.
           LOCATION_ID="$location_id" BARBER_ID="$barber_id" \
             DATABASE_URL="$DATABASE_URL" bash scripts/test-concurrent-idempotency.sh
+          # Exercise the actual Payload Local API against PostgreSQL, not mocks.
+          CI_LOCATION_ID="$location_id" CI_BARBER_ID="$barber_id" CI_SERVICE_ID="$service_id" \
+            timeout 90s node --experimental-strip-types scripts/test-payload-idempotency.ts
           # The landing page must render the published CMS records, not static placeholders.
           curl --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-cms-home.html
           for expected in 'CI Location true' 'CI Haircut' 'CI Barber'; do
