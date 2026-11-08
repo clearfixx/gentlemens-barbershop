@@ -181,3 +181,22 @@ jobs:
               process.exit(1);
             }
           '
+          # A customer must not be able to enumerate the administrator or other users.
+          customer_list_status=$(curl --silent --show-error --output /tmp/barbershop-customer-list.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $token" \
+            http://localhost:3000/api/users)
+          if [ "$customer_list_status" != "200" ]; then
+            echo "Customer-scoped user listing failed: HTTP $customer_list_status"
+            cat /tmp/barbershop-customer-list.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const result = JSON.parse(fs.readFileSync("/tmp/barbershop-customer-list.json", "utf8"));
+            const customerId = fs.readFileSync("/tmp/barbershop-customer-id", "utf8");
+            const docs = result.docs ?? [];
+            if (docs.length !== 1 || String(docs[0].id) !== customerId || docs[0].role !== "customer") {
+              console.error("Customer can enumerate other users or sees unexpected records");
+              process.exit(1);
+            }
+          '
