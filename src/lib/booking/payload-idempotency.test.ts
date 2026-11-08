@@ -86,3 +86,18 @@ test('unrelated slot exclusion remains a booking conflict', async () => {
   await assert.rejects(persistIdempotentPayloadBooking(payload, quote, token),
     { name: 'BookingSlotConflictError' })
 })
+
+test('slot exclusion race never replays a different request fingerprint', async () => {
+  let reads = 0
+  const payload = {
+    find: async () => ({ docs: ++reads === 1 ? [] : [
+      { id: 42, idempotencyRequestHash: 'b'.repeat(64) },
+    ] }),
+    create: async () => { throw { code: '23P01', constraint: 'bookings_no_active_overlap' } },
+  } as unknown as Payload
+  await assert.rejects(
+    persistIdempotentPayloadBooking(payload, quote, token),
+    BookingIdempotencyConflictError,
+  )
+  assert.equal(reads, 2)
+})
