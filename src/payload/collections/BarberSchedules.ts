@@ -11,6 +11,34 @@ export const BarberSchedules: CollectionConfig = {
     update: ({ req }) => req.user?.role === 'admin',
     delete: ({ req }) => req.user?.role === 'admin',
   },
+  hooks: {
+    beforeValidate: [
+      ({ data }) => {
+        if (!data?.weeklyShifts) return data
+        const shifts = data.weeklyShifts as Array<{ weekday?: string; startMinute?: number; endMinute?: number }>
+        const grouped = new Map<string, Array<{ start: number; end: number }>>()
+        for (const shift of shifts) {
+          const { weekday, startMinute, endMinute } = shift
+          if (weekday === undefined || startMinute === undefined || endMinute === undefined) continue
+          if (!Number.isInteger(startMinute) || !Number.isInteger(endMinute) || startMinute < 0 || endMinute > 1440 || startMinute >= endMinute) {
+            throw new Error('Each shift must have valid whole-minute times, with its end after its start.')
+          }
+          const dayShifts = grouped.get(weekday) ?? []
+          dayShifts.push({ start: startMinute, end: endMinute })
+          grouped.set(weekday, dayShifts)
+        }
+        for (const dayShifts of grouped.values()) {
+          dayShifts.sort((a, b) => a.start - b.start)
+          for (let index = 1; index < dayShifts.length; index++) {
+            if (dayShifts[index].start < dayShifts[index - 1].end) {
+              throw new Error('Shifts for the same weekday must not overlap.')
+            }
+          }
+        }
+        return data
+      },
+    ],
+  },
   fields: [
     { name: 'label', type: 'text', required: true },
     { name: 'barber', type: 'relationship', relationTo: 'barbers', required: true, index: true },
