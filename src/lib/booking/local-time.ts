@@ -59,7 +59,7 @@ export function blockedMinutesForLocalDay(
 // Resolve a wall-clock start into all matching UTC instants. During spring DST
 // gaps there are no matches; during autumn fall-back there can be two.
 export function utcInstantsForLocalMinute(date: string, minute: number, timeZone: string): Date[] {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !Number.isInteger(minute) || minute < 0 || minute >= 1440) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isInteger(minute) || minute < 0 || minute >= 1440) {
     throw new RangeError('Invalid local date or minute')
   }
   const midnight = Date.parse(`${date}T00:00:00.000Z`)
