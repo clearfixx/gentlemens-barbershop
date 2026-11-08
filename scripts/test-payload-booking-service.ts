@@ -73,6 +73,26 @@ async function main() {
     ] },
   })
   assert.equal(racingStored.totalDocs, 1)
+  // A reused key must not turn two different concurrent requests into
+  // a successful replay. Exactly one may create the booking.
+  const mismatchedRequest = { ...request, startsAt: '2037-01-02T15:00:00.000Z' }
+  const mismatchedResults = await Promise.allSettled([
+    createIdempotentPayloadBooking(payload, mismatchedRequest, 'ci:customer:mismatch', 'same-key'),
+    createIdempotentPayloadBooking(payload, { ...mismatchedRequest, customerName: 'Different customer' }, 'ci:customer:mismatch', 'same-key'),
+  ])
+  const mismatchedSuccesses = mismatchedResults.filter(result => result.status === 'fulfilled')
+  const mismatchedFailures = mismatchedResults.filter(result => result.status === 'rejected')
+  assert.equal(mismatchedSuccesses.length, 1)
+  assert.equal(mismatchedFailures.length, 1)
+  assert.equal(mismatchedFailures[0].reason?.name, 'BookingIdempotencyConflictError')
+  const mismatchedStored = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: { and: [
+      { idempotencyScope: { equals: 'ci:customer:mismatch' } },
+      { idempotencyKey: { equals: 'same-key' } },
+    ] },
+  })
+  assert.equal(mismatchedStored.totalDocs, 1)
   console.info('Trusted booking service: catalog, schedule, persistence and duplicate-slot rejection verified')
 }
 
