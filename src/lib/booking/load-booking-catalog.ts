@@ -1,6 +1,21 @@
 import type { Payload } from 'payload'
 import type { BookingCatalog } from './create-booking.ts'
 import type { BookingRequest } from './booking-request.ts'
+import type { BarberOffering } from './resolve-offering.ts'
+
+function numericId(value: unknown): number {
+  const id = typeof value === 'object' && value !== null && 'id' in value
+    ? (value as { id: unknown }).id : value
+  if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0) {
+    throw new RangeError('Invalid catalog relationship ID')
+  }
+  return id
+}
+
+type OfferingRow = { service: unknown; priceOverride?: number | null; durationOverrideMinutes?: number | null }
+type CatalogBarber = { serviceOfferings?: OfferingRow[] | null }
+type CatalogService = { price: number; durationMinutes: number }
+
 
 /**
  * Trusted server-side catalog lookup. Never accept pricing, duration,
@@ -26,25 +41,24 @@ export async function loadBookingCatalog(
       payload.findByID({ collection: 'services', id, depth: 0, overrideAccess: true }),
     )),
   ])
-  const barberLocationId = typeof barber.location === 'number'
-    ? barber.location : barber.location.id
+  const barberLocationId = numericId(barber.location)
   return {
     barber: {
-      id: barber.id,
+      id: numericId(barber.id),
       locationId: barberLocationId,
       isActive: Boolean(barber.isActive),
-      offerings: (barber.serviceOfferings ?? []).map(item => ({
-        service: typeof item.service === 'number' ? item.service : item.service.id,
+      offerings: ((barber as unknown as CatalogBarber).serviceOfferings ?? []).map((item): BarberOffering => ({
+        service: numericId(item.service),
         priceOverride: item.priceOverride,
         durationOverrideMinutes: item.durationOverrideMinutes,
       })),
     },
-    location: { id: location.id, isActive: Boolean(location.isActive) },
+    location: { id: numericId(location.id), isActive: Boolean(location.isActive) },
     services: services.map(service => ({
-      id: service.id,
+      id: numericId(service.id),
       isActive: Boolean(service.isActive),
-      price: service.price,
-      durationMinutes: service.durationMinutes,
+      price: (service as unknown as CatalogService).price,
+      durationMinutes: (service as unknown as CatalogService).durationMinutes,
     })),
   }
 }
