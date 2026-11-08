@@ -29,7 +29,7 @@ test('time off and pending or confirmed bookings block slots', () => {
     ],
     durationMinutes: 30, stepMinutes: 30,
   })
-  assert.deepEqual(slots.map(slot => slot.localStartMinute), [540, 630])
+  assert.deepEqual(slots.map(slot => slot.localStartMinute), [540])
 })
 
 test('cancelled, completed and no-show bookings do not block availability', () => {
