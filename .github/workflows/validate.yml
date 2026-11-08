@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Booking availability unit tests
-        run: node --experimental-strip-types --test src/lib/booking/availability.test.ts src/lib/booking/local-time.test.ts
+        run: node --experimental-strip-types --test src/lib/booking/availability.test.ts src/lib/booking/local-time.test.ts src/lib/booking/zoned-availability.test.ts
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint
