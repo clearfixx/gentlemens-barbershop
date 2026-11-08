@@ -4,7 +4,7 @@ import { buildConfig } from 'payload'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Users } from './payload/collections/Users.ts'
-import { Media } from './payload/collections/Media'
+import { Media } from './payload/collections/Media.ts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
