@@ -56,8 +56,22 @@ jobs:
         run: |
           set -euo pipefail
           timeout 90s pnpm bootstrap:admin
-          if timeout 90s pnpm bootstrap:admin; then
+          set +e
+          timeout 90s pnpm bootstrap:admin > /tmp/barbershop-second-bootstrap.log 2>&1
+          second_status=$?
+          set -e
+          if [ "$second_status" -eq 0 ]; then
             echo "Bootstrap unexpectedly succeeded twice"
+            exit 1
+          fi
+          if [ "$second_status" -eq 124 ] || [ "$second_status" -eq 137 ]; then
+            echo "Second bootstrap timed out instead of refusing existing users"
+            cat /tmp/barbershop-second-bootstrap.log
+            exit 1
+          fi
+          if ! grep -q "Bootstrap refused: users already exist" /tmp/barbershop-second-bootstrap.log; then
+            echo "Second bootstrap failed for an unexpected reason"
+            cat /tmp/barbershop-second-bootstrap.log
             exit 1
           fi
       - name: Smoke test production HTTP routes
