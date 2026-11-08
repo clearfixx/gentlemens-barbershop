@@ -10,11 +10,11 @@
 
 ## Verification
 
-GitHub Actions run #25 passed dependency installation, TypeScript typechecking, ESLint and the Next.js production build on Node.js 24 with PostgreSQL 17 available. This confirms the application compiles, **not** that the Payload admin UI, authentication or database operations work end-to-end. A production-server HTTP smoke test for `/` and `/admin` was added subsequently and must pass CI before it can be considered verified. There is still no committed lockfile or browser-level test.
+GitHub Actions run #25 passed dependency installation, TypeScript typechecking, ESLint and the Next.js production build on Node.js 24 with PostgreSQL 17 available. This confirms the application compiles, **not** that the Payload admin UI, authentication or database operations work end-to-end. A production-server HTTP smoke test for `/` and `/admin` was added subsequently and must pass CI before it can be considered verified. A lockfile is now committed and frozen installation is enabled in CI; browser-level tests remain outstanding.
 
 ## Important outstanding concerns
 
-1. Pin mutually compatible Next.js/Payload/React versions based on the current official Payload starter, not broad major ranges.
+1. Validate the committed Next.js/Payload/React dependency combination on upgrades; the lockfile now pins resolved versions.
 2. Bootstrap the first administrator safely. Do not expose admin creation after initialization.
 3. Review whether Payload's auth-enabled collection grants access to the admin UI for non-admin users; configure admin access explicitly.
 4. Validate role field access under public signup, Local API and REST API.
