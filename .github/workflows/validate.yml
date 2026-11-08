@@ -205,6 +205,19 @@ jobs:
               process.exit(1);
             }
           '
+          # The landing page must render the published CMS records, not static placeholders.
+          curl --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-cms-home.html
+          for expected in 'CI Location true' 'CI Haircut' 'CI Barber'; do
+            if ! grep -Fq "$expected" /tmp/barbershop-cms-home.html; then
+              echo "Published CMS content missing from landing page: $expected"
+              cat /tmp/barbershop-server.log
+              exit 1
+            fi
+          done
+          if grep -Fq 'CI Location false' /tmp/barbershop-cms-home.html; then
+            echo "Inactive location leaked onto landing page"
+            exit 1
+          fi
           # A public signup must never be able to assign the administrator role.
           signup_status=$(curl --silent --show-error --output /tmp/barbershop-signup.json --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \
