@@ -273,6 +273,38 @@ jobs:
               exit 1
             fi
           done
+          # Weekly shifts are operational data: only admins may manage or inspect them.
+          schedule_status=$(curl --silent --show-error --output /tmp/barbershop-schedule-created.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data "{\"label\":\"CI Weekly Schedule\",\"barber\":$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-barber-created.json","utf8")).doc.id'),\"isActive\":true,\"weeklyShifts\":[{\"weekday\":\"1\",\"startMinute\":540,\"endMinute\":1080}]}" \
+            http://localhost:3000/api/barber-schedules)
+          if [ "$schedule_status" != "201" ]; then
+            echo "Admin schedule creation failed: HTTP $schedule_status"
+            cat /tmp/barbershop-schedule-created.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const doc = JSON.parse(fs.readFileSync("/tmp/barbershop-schedule-created.json", "utf8")).doc;
+            if (doc.weeklyShifts?.[0]?.startMinute !== 540 || doc.weeklyShifts?.[0]?.endMinute !== 1080) {
+              console.error("Weekly shift was not saved correctly");
+              process.exit(1);
+            }
+          '
+          for method in GET POST; do
+            if [ "$method" = "POST" ]; then
+              schedule_public_status=$(curl --silent --show-error --output /tmp/barbershop-schedule-denied.json --write-out '%{http_code}' \
+                --header 'Content-Type: application/json' --data '{"label":"Anonymous"}' \
+                http://localhost:3000/api/barber-schedules)
+            else
+              schedule_public_status=$(curl --silent --show-error --output /tmp/barbershop-schedule-denied.json --write-out '%{http_code}' \
+                http://localhost:3000/api/barber-schedules)
+            fi
+            if [[ "$schedule_public_status" != "401" && "$schedule_public_status" != "403" ]]; then
+              echo "Anonymous $method schedule request was not denied: HTTP $schedule_public_status"
+              exit 1
+            fi
+          done
           # A public signup must never be able to assign the administrator role.
           signup_status=$(curl --silent --show-error --output /tmp/barbershop-signup.json --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \
