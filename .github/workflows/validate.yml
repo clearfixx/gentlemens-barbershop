@@ -48,6 +48,18 @@ jobs:
         run: pnpm lint
       - name: Production build
         run: pnpm build
+      - name: Verify first-admin bootstrap is one-time only
+        shell: bash
+        env:
+          BOOTSTRAP_ADMIN_EMAIL: bootstrap-ci@example.invalid
+          BOOTSTRAP_ADMIN_PASSWORD: ci-only-test-password-not-for-production
+        run: |
+          set -euo pipefail
+          pnpm bootstrap:admin
+          if pnpm bootstrap:admin; then
+            echo "Bootstrap unexpectedly succeeded twice"
+            exit 1
+          fi
       - name: Smoke test production HTTP routes
         shell: bash
         run: |
@@ -83,17 +95,5 @@ jobs:
           echo "Admin route HTTP status: $admin_status"
           if [[ "$admin_status" != "200" && "$admin_status" != "302" && "$admin_status" != "307" && "$admin_status" != "308" ]]; then
             cat /tmp/barbershop-server.log
-            exit 1
-          fi
-      - name: Verify first-admin bootstrap is one-time only
-        shell: bash
-        env:
-          BOOTSTRAP_ADMIN_EMAIL: bootstrap-ci@example.invalid
-          BOOTSTRAP_ADMIN_PASSWORD: ci-only-test-password-not-for-production
-        run: |
-          set -euo pipefail
-          pnpm bootstrap:admin
-          if pnpm bootstrap:admin; then
-            echo "Bootstrap unexpectedly succeeded twice"
             exit 1
           fi
