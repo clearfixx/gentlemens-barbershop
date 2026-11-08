@@ -43,7 +43,31 @@ async function main() {
     persistIdempotentPayloadBooking(payload, quote, { ...token, requestHash: 'b'.repeat(64) }),
     BookingIdempotencyConflictError,
   )
-  console.info('Payload Local API idempotency: persisted, replayed and rejected mismatched hash')
+  // Two simultaneous Local API requests with one fresh key must converge on
+  // one persisted booking. The PostgreSQL unique index is the arbiter.
+  const concurrentToken = { ...token, key: 'concurrent-retry' }
+  const concurrentQuote: BookingQuote = {
+    ...quote,
+    startsAt: '2036-01-03T09:00:00.000Z',
+    endsAt: '2036-01-03T10:00:00.000Z',
+  }
+  const concurrent = await Promise.all([
+    persistIdempotentPayloadBooking(payload, concurrentQuote, concurrentToken),
+    persistIdempotentPayloadBooking(payload, concurrentQuote, concurrentToken),
+  ])
+  assert.equal(concurrent[0].booking.id, concurrent[1].booking.id)
+  assert.deepEqual(concurrent.map(item => item.replayed).sort(), [false, true])
+  const concurrentStored = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: {
+      and: [
+        { idempotencyScope: { equals: concurrentToken.scope } },
+        { idempotencyKey: { equals: concurrentToken.key } },
+      ],
+    },
+  })
+  assert.equal(concurrentStored.totalDocs, 1)
+  console.info('Payload Local API idempotency: persisted, replayed, rejected mismatched hash and converged concurrent retries')
 }
 
 main().then(
