@@ -3,7 +3,7 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { buildConfig } from 'payload'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Users } from './payload/collections/Users'
+import { Users } from './payload/collections/Users.ts'
 import { Media } from './payload/collections/Media'
 
 const filename = fileURLToPath(import.meta.url)
