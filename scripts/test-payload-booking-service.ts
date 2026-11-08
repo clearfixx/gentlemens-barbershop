@@ -55,6 +55,24 @@ async function main() {
     createIdempotentPayloadBooking(payload, { ...retryRequest, customerName: 'Different customer' }, 'ci:customer:retry', 'stable-key'),
     { name: 'BookingIdempotencyConflictError' },
   )
+  // Race two complete booking requests, not just direct persistence calls.
+  // The PostgreSQL uniqueness/exclusion constraints must converge them on
+  // exactly one booking, with the other response marked as a replay.
+  const racingRequest = { ...request, startsAt: '2037-01-02T13:00:00.000Z' }
+  const racing = await Promise.all([
+    createIdempotentPayloadBooking(payload, racingRequest, 'ci:customer:race', 'simultaneous-key'),
+    createIdempotentPayloadBooking(payload, racingRequest, 'ci:customer:race', 'simultaneous-key'),
+  ])
+  assert.equal(racing[0].booking.id, racing[1].booking.id)
+  assert.deepEqual(racing.map(item => item.replayed).sort(), [false, true])
+  const racingStored = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: { and: [
+      { idempotencyScope: { equals: 'ci:customer:race' } },
+      { idempotencyKey: { equals: 'simultaneous-key' } },
+    ] },
+  })
+  assert.equal(racingStored.totalDocs, 1)
   console.info('Trusted booking service: catalog, schedule, persistence and duplicate-slot rejection verified')
 }
 
