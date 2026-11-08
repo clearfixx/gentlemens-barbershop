@@ -1,7 +1,20 @@
 -- Run against the target database before enabling booking writes.
 -- This verifies the actual PostgreSQL catalog, not just migration filenames.
-DO $$
+DO $
+DECLARE
+  column_name text;
 BEGIN
+  FOREACH column_name IN ARRAY ARRAY['idempotency_scope', 'idempotency_key', 'idempotency_request_hash'] LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_attribute
+      WHERE attrelid = 'bookings'::regclass
+        AND attname = column_name AND NOT attisdropped
+        AND atttypid = 'text'::regtype
+    ) THEN
+      RAISE EXCEPTION 'Missing or incompatible booking column: %', column_name;
+    END IF;
+  END LOOP;
+
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conrelid = 'bookings'::regclass
