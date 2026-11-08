@@ -24,9 +24,7 @@ validation, customer identity checks, rate limiting, or safe error handling.
 3. During a controlled deployment window, run both scripts against the **target**
    database, using a privileged migration identity:
    ```sh
-   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/booking-no-overlap.sql
-   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/booking-idempotency.sql
-   psql -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/verify-booking-integrity.sql
+   CONFIRM_BOOKING_MIGRATION=apply bash scripts/apply-booking-integrity.sh
    ```
 4. Confirm the verification script succeeds. Both installation scripts may be
    re-run, but the verification script must also run: `IF NOT EXISTS` alone
@@ -34,10 +32,7 @@ validation, customer identity checks, rate limiting, or safe error handling.
 5. Keep the constraints intact across later Payload/Drizzle schema changes.
    Inspect generated migrations before applying them.
 
-**Important:** these SQL scripts are currently installed automatically only
-in CI's disposable PostgreSQL instance. They are **not yet part of a managed
-production migration lifecycle**. Do not enable public booking writes merely
-because CI is green.
+**Important:** the explicit deployment command runs installation and verification\nin one PostgreSQL transaction, but is not hooked into the application's deployment\npipeline. It requires operator approval, a backup and a controlled migration window.\nIt is **not yet a managed production migration lifecycle**. Do not enable public\nbooking writes merely because CI is green.
 
 ## Failure behavior
 
