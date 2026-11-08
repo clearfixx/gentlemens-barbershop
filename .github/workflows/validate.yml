@@ -130,6 +130,39 @@ jobs:
               exit 1
             fi
           done
+          # Inactive catalog records must remain hidden from anonymous readers.
+          admin_login_status=$(curl --silent --show-error --output /tmp/barbershop-admin-login.json --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"email":"bootstrap-ci@example.invalid","password":"ci-only-test-password-not-for-production"}' \
+            http://localhost:3000/api/users/login)
+          if [ "$admin_login_status" != "200" ]; then
+            echo "Bootstrap admin login failed: HTTP $admin_login_status"
+            cat /tmp/barbershop-admin-login.json
+            exit 1
+          fi
+          admin_token=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-admin-login.json", "utf8")).token')
+          for state in false true; do
+            location_status=$(curl --silent --show-error --output "/tmp/barbershop-location-${state}.json" --write-out '%{http_code}' \
+              --header "Authorization: JWT $admin_token" \
+              --header 'Content-Type: application/json' \
+              --data "{\"name\":\"CI Location ${state}\",\"slug\":\"ci-location-${state}\",\"city\":\"Test City\",\"address\":\"Test Address\",\"isActive\":${state}}" \
+              http://localhost:3000/api/locations)
+            if [ "$location_status" != "201" ]; then
+              echo "Admin location creation failed: HTTP $location_status"
+              cat "/tmp/barbershop-location-${state}.json"
+              exit 1
+            fi
+          done
+          curl --fail --silent --show-error 'http://localhost:3000/api/locations?depth=0' > /tmp/barbershop-public-locations.json
+          node -e '
+            const fs = require("node:fs");
+            const result = JSON.parse(fs.readFileSync("/tmp/barbershop-public-locations.json", "utf8"));
+            const slugs = (result.docs ?? []).map((doc) => doc.slug);
+            if (!slugs.includes("ci-location-true") || slugs.includes("ci-location-false")) {
+              console.error("Public locations do not respect publication status:", slugs);
+              process.exit(1);
+            }
+          '
           # A public signup must never be able to assign the administrator role.
           signup_status=$(curl --silent --show-error --output /tmp/barbershop-signup.json --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \
