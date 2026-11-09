@@ -29,7 +29,7 @@ export default async function AvailabilityPage({
   const t = getFallbackMessages(locale)
   const params = await searchParams
   const payload = await getPayload({ config })
-  const catalog = await loadPublicCatalog(payload)
+  const catalog = await loadPublicCatalog(payload, {}, locale)
   let result: Awaited<ReturnType<typeof getPublicAvailability>> = null
   let invalid = false
   if (params.barber || params.service || params.date) {
