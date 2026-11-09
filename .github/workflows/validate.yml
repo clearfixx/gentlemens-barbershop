@@ -996,6 +996,9 @@ jobs:
           test "$(find src/migrations -maxdepth 1 -type f -name '*.json' | wc -l)" -eq 2
           echo "Generated incremental migration candidate from historical Payload snapshot"
           find src/migrations -maxdepth 1 -type f -printf '%f\n'
+      - name: Test migration safety checker against destructive SQL
+        shell: bash
+        run: python3 -m unittest discover -s scripts -p 'test_check_localization_incremental.py'
       - name: Assert incremental migration is additive and scoped to localization
         shell: bash
         run: |
