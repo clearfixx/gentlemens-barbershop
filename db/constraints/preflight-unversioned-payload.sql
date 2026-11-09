@@ -5,6 +5,7 @@ BEGIN READ ONLY;
 DO $$
 DECLARE
   legacy_count integer;
+  ledger_empty boolean;
 BEGIN
   SELECT count(*) INTO legacy_count
   FROM (VALUES ('users'), ('services'), ('locations'), ('barbers'), ('bookings')) AS legacy(name)
@@ -14,12 +15,14 @@ BEGIN
     RAISE EXCEPTION 'UNVERSIONED_PAYLOAD_SCHEMA: existing tables without payload_migrations; stop, back up, validate historical schema, then register baseline explicitly';
   END IF;
 
-  IF legacy_count > 0 AND EXISTS (
-    SELECT 1
-    FROM information_schema.tables
-    WHERE table_schema = current_schema() AND table_name = 'payload_migrations'
-  ) AND NOT EXISTS (SELECT 1 FROM payload_migrations) THEN
-    RAISE EXCEPTION 'UNVERSIONED_PAYLOAD_SCHEMA: existing tables with empty payload_migrations; baseline registration requires verified schema';
+  -- Static SQL referencing an absent relation fails during planning even when
+  -- the Boolean branch is false. Resolve ledger existence before dynamic SQL.
+  IF legacy_count > 0 AND to_regclass(format('%I.%I', current_schema(), 'payload_migrations')) IS NOT NULL THEN
+    EXECUTE format('SELECT NOT EXISTS (SELECT 1 FROM %I.payload_migrations)', current_schema())
+      INTO ledger_empty;
+    IF ledger_empty THEN
+      RAISE EXCEPTION 'UNVERSIONED_PAYLOAD_SCHEMA: existing tables with empty payload_migrations; baseline registration requires verified schema';
+    END IF;
   END IF;
 END $$;
 COMMIT;
