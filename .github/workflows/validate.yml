@@ -85,6 +85,26 @@ jobs:
             exit 1
           fi
           echo "Generated bootstrap correctly blocked pending baseline review"
+      - name: Rehearse generated bootstrap on a disposable empty database
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This database is deliberately empty. Never point this test at
+          # the populated CI database or a production connection string.
+          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_migration_bootstrap_ci
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
+            CI=1 timeout 120s pnpm db:migrate
+          PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_migration_bootstrap_ci -c "
+              DO \$\$ BEGIN
+                IF to_regclass('public.users') IS NULL
+                  OR to_regclass('public.services') IS NULL
+                  OR to_regclass('public.bookings') IS NULL
+                  OR to_regclass('public.translations') IS NULL
+                THEN RAISE EXCEPTION 'Bootstrap migration omitted required tables';
+                END IF;
+              END \$\$;"
+          echo "Bootstrap applied successfully to an isolated empty database only"
       - name: Upload generated migration candidate for manual review
         if: always()
         uses: actions/upload-artifact@v4
