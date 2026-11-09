@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Booking availability unit tests
-        run: node --experimental-strip-types --test src/lib/booking/availability.test.ts src/lib/booking/local-time.test.ts src/lib/booking/zoned-availability.test.ts src/lib/booking/barber-day.test.ts src/lib/booking/interval-conflicts.test.ts src/lib/booking/booking-errors.test.ts src/lib/booking/resolve-offering.test.ts src/lib/booking/booking-request.test.ts src/lib/booking/booking-slot.test.ts src/lib/booking/create-booking.test.ts src/lib/booking/persist-payload-booking.test.ts src/lib/booking/idempotency.test.ts src/lib/booking/idempotent-replay.test.ts src/lib/booking/payload-idempotency.test.ts src/lib/booking/load-booking-catalog.test.ts src/lib/booking/payload-booking-service.test.ts src/lib/catalog/public-catalog.test.ts src/lib/catalog/public-availability.test.ts
+        run: node --experimental-strip-types --test src/lib/booking/availability.test.ts src/lib/booking/local-time.test.ts src/lib/booking/zoned-availability.test.ts src/lib/booking/barber-day.test.ts src/lib/booking/interval-conflicts.test.ts src/lib/booking/booking-errors.test.ts src/lib/booking/resolve-offering.test.ts src/lib/booking/booking-request.test.ts src/lib/booking/booking-slot.test.ts src/lib/booking/create-booking.test.ts src/lib/booking/persist-payload-booking.test.ts src/lib/booking/idempotency.test.ts src/lib/booking/idempotent-replay.test.ts src/lib/booking/payload-idempotency.test.ts src/lib/booking/load-booking-catalog.test.ts src/lib/booking/payload-booking-service.test.ts src/lib/catalog/public-catalog.test.ts src/lib/catalog/public-availability.test.ts src/lib/catalog/availability-limiter.test.ts
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint
@@ -210,6 +210,9 @@ jobs:
           grep -q 'ВІЛЬНИЙ ЧАС' /tmp/barbershop-availability.html
           invalid_availability_status=$(curl --silent --output /tmp/barbershop-availability-invalid.json --write-out '%{http_code}' 'http://localhost:3000/api/availability?barber=1&service=2&date=not-a-date')
           test "$invalid_availability_status" = 400
+          # Valid-but-unavailable catalog IDs must not disclose private records.
+          unavailable_status=$(curl --silent --output /tmp/barbershop-availability-missing.json --write-out '%{http_code}' "http://localhost:3000/api/availability?barber=999999999&service=999999999&date=$(date -u +%F)")
+          test "$unavailable_status" = 404
           # Unauthenticated clients must never receive user records.
           users_status=$(curl --silent --output /tmp/barbershop-users-response.json --write-out '%{http_code}' http://localhost:3000/api/users)
           echo "Unauthenticated users API HTTP status: $users_status"
