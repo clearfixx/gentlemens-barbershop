@@ -1,5 +1,5 @@
 import { localizedCopy } from '@/i18n/localized-copy'
-import type { Locale } from '@/i18n/config'
+import type { Locale } from '../../i18n/config.ts'
 import type { Payload } from 'payload'
 
 export type PublicCatalogFilters = {
