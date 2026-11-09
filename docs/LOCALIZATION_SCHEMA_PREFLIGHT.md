@@ -61,3 +61,7 @@ For the migration rehearsal, initialize a separate disposable PostgreSQL 17 data
 ## Isolated baseline CI job
 
 The separate `prelocalization-baseline` job checks out the exact source commit `78bcb938` with its frozen lockfile, initializes its Payload schema on a **separate disposable PostgreSQL 17 service**, and exports a schema-only `prelocalization-baseline-schema` artifact with the exact dependency versions. It rejects unexpectedly present localized tables. Compare this artifact with `localization-initialized-schema` from the current branch. These jobs use separate databases: comparing their dumps identifies schema changes but **does not** yet demonstrate an in-place migration with preserved records. The baseline job must pass CI before relying on its artifact.
+
+## Verified baseline/current artifact comparison (CI run 42624883836)
+
+Downloaded and compared both schema-only artifacts from the same workflow run. Both environments resolved **Payload 3.93.0** and **@payloadcms/db-postgres 3.93.0**. The baseline contains **18** PostgreSQL tables; the current initialized schema contains **22**. The four additional tables are `barbers_locales`, `locations_locales`, `services_locales` and `translations`. No existing table disappeared from the table-name inventory. This is a table-name comparison, **not** a complete diff of indexes, columns, constraints or foreign keys. The two databases were initialized separately, so this does not validate a populated-data migration or rollback.
