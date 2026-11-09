@@ -21,7 +21,7 @@ class MigrationImportNormalizerTests(unittest.TestCase):
         source = "import { MigrateDownArgs, MigrateUpArgs } from '@payloadcms/db-postgres'\n"
         result, content = self.run_normalizer(source)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("import type { MigrateDownArgs, MigrateUpArgs }", content)
+        self.assertIn("import type { MigrateUpArgs, MigrateDownArgs }", content)
 
     def test_double_quote_reversed_order(self):
         source = 'import { MigrateUpArgs, MigrateDownArgs } from "@payloadcms/db-postgres"\n'
@@ -30,7 +30,7 @@ class MigrationImportNormalizerTests(unittest.TestCase):
         self.assertIn("import type { MigrateUpArgs, MigrateDownArgs }", content)
 
     def test_real_generated_mixed_import_preserves_sql(self):
-        source = "import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'\\n"
+        source = "import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'\n"
         result, content = self.run_normalizer(source)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("import type { MigrateUpArgs, MigrateDownArgs }", content)
