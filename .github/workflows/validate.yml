@@ -59,6 +59,24 @@ jobs:
           set -euo pipefail
           pnpm exec payload migrate:create --disable-transpile --help
           pnpm exec payload migrate:status --disable-transpile --help
+      - name: Generate versioned Payload migration candidate for review
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Generation is schema-only; never apply this candidate to the CI database.
+          # A timeout prevents a hidden interactive prompt from stalling CI.
+          CI=1 timeout 90s pnpm db:migrate:create -- ci-localization-candidate --force-accept-warning
+          test -n "$(find src/migrations -maxdepth 1 -type f -name '*.ts' -print -quit)"
+          echo "Generated migration candidates:"
+          find src/migrations -maxdepth 1 -type f -print
+      - name: Upload generated migration candidate for manual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payload-migration-candidate
+          path: src/migrations/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint
