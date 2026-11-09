@@ -5,11 +5,14 @@
  */
 export class FixedWindowLimiter {
   private readonly buckets = new Map<string, { count: number; resetsAt: number }>()
-  constructor(
-    private readonly limit = 30,
-    private readonly windowMs = 60_000,
-    private readonly maxKeys = 5000,
-  ) {}
+  private readonly limit: number
+  private readonly windowMs: number
+  private readonly maxKeys: number
+  constructor(limit = 30, windowMs = 60_000, maxKeys = 5000) {
+    this.limit = limit
+    this.windowMs = windowMs
+    this.maxKeys = maxKeys
+  }
 
   check(key: string, now = Date.now()): { allowed: boolean; retryAfterSeconds: number } {
     const existing = this.buckets.get(key)
