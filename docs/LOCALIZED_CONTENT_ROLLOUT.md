@@ -44,3 +44,7 @@ The populated-schema CI job now captures a custom-format PostgreSQL 17 backup **
 ## Versioned migration entry points
 
 The PostgreSQL adapter now uses the explicit `src/migrations` directory, with `pnpm db:migrate:create`, `pnpm db:migrate`, and `pnpm db:migrate:status` as the Payload CLI entry points. CI checks that these commands exist in the installed Payload version. **This wiring is not a generated migration**: before any production rollout, create and review a concrete versioned migration against the restored baseline, commit it, test it against populated legacy data, and verify a backup restore. The app's production automatic schema push remains disabled.
+
+## Payload CLI execution issue (CI)
+
+A direct `pnpm exec payload migrate:create --help` probe on the Node 24 GitHub runner failed inside `undici@7.30.1` with `TypeError: Illegal constructor` before CLI help could be displayed. CI now checks the installed package's declared CLI executable without running it; **this does not prove the migration commands execute**. Investigate the Node/undici/tsx initialization conflict and run a real migration CLI smoke test before claiming migration tooling is ready. Do not bypass this failure in production by switching Node versions without testing.
