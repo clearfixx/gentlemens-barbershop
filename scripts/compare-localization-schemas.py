@@ -1,67 +1,70 @@
 #!/usr/bin/env python3
-"""Compare pg_dump schema-only output without applying migrations.
-
-Reject removed tables/columns; explicitly require localized tables and columns.
-This is a structural safety gate, not a substitute for a migration rehearsal.
-"""
-import re
+"""Read-only schema inventory gate; not an in-place migration rehearsal."""
 import sys
 from pathlib import Path
 
-CREATE_TABLE = re.compile(r'^CREATE TABLE (?:public\\.)?"?([a-z_][a-z_0-9]*)"? \\($', re.M)
-COLUMN = re.compile(r'^    "?([a-z_][a-z_0-9]*)"? ([^,]+?)(?:,)?$', re.M)
 EXPECTED = {
-    'services_locales': {'_locale', '_parent_id', 'localized_description'},
-    'locations_locales': {'_locale', '_parent_id', 'localized_description'},
-    'barbers_locales': {'_locale', '_parent_id', 'localized_bio'},
-    'translations': {'id'},
+    "services_locales": {"_locale", "_parent_id", "localized_description"},
+    "locations_locales": {"_locale", "_parent_id", "localized_description"},
+    "barbers_locales": {"_locale", "_parent_id", "localized_bio"},
+    "translations": {"id"},
 }
 
 
 def parse_schema(path: str) -> dict[str, set[str]]:
-    sql = Path(path).read_text(encoding='utf-8')
-    result: dict[str, set[str]] = {}
-    for match in CREATE_TABLE.finditer(sql):
-        start = match.end()
-        end = sql.find('\\n);', start)
-        if end < 0:
-            raise ValueError(f'Unterminated CREATE TABLE: {match.group(1)}')
-        body = sql[start:end]
-        columns = set(COLUMN.findall(body))
-        # Only column names are needed; ignore constraints and SQL types.
-        names = {name for name, _ in columns}
-        if not names:
-            raise ValueError(f'No columns parsed for {match.group(1)}')
-        result[match.group(1)] = names
-    if not result:
-        raise ValueError(f'No PostgreSQL CREATE TABLE statements found in {path}')
-    return result
+    tables: dict[str, set[str]] = {}
+    current: str | None = None
+    for raw in Path(path).read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if line.startswith("CREATE TABLE ") and line.endswith("("):
+            qualified = line.removeprefix("CREATE TABLE ").removesuffix("(").strip()
+            current = qualified.rsplit(".", 1)[-1].strip('"')
+            if current in tables:
+                raise ValueError(f"Duplicate CREATE TABLE: {current}")
+            tables[current] = set()
+        elif current is not None and line == ");":
+            if not tables[current]:
+                raise ValueError(f"No columns parsed for {current}")
+            current = None
+        elif current is not None and raw.startswith("    ") and line:
+            if line.startswith(("CONSTRAINT ", "PRIMARY KEY ", "UNIQUE ", "CHECK ", "FOREIGN KEY ")):
+                continue
+            name = line.split(maxsplit=1)[0].strip('"')
+            tables[current].add(name)
+    if current is not None or not tables:
+        raise ValueError(f"Malformed or empty PostgreSQL schema: {path}")
+    return tables
+
+
+def compare(before: dict[str, set[str]], after: dict[str, set[str]]) -> list[str]:
+    errors = []
+    for table, columns in before.items():
+        if table not in after:
+            errors.append(f"Dropped legacy table: {table}")
+        else:
+            errors.extend(f"Dropped legacy column: {table}.{column}" for column in sorted(columns - after[table]))
+    for table, columns in EXPECTED.items():
+        if table not in after:
+            errors.append(f"Missing localized table: {table}")
+        else:
+            errors.extend(f"Missing localized column: {table}.{column}" for column in sorted(columns - after[table]))
+    return errors
 
 
 def main() -> int:
-    before = parse_schema(sys.argv[1])
-    after = parse_schema(sys.argv[2])
-    problems: list[str] = []
-    for table, columns in before.items():
-        if table not in after:
-            problems.append(f'Dropped legacy table: {table}')
-        else:
-            for column in sorted(columns - after[table]):
-                problems.append(f'Dropped legacy column: {table}.{column}')
-    for table, columns in EXPECTED.items():
-        if table not in after:
-            problems.append(f'Missing localized table: {table}')
-        else:
-            for column in sorted(columns - after[table]):
-                problems.append(f'Missing localized column: {table}.{column}')
-    print(f'Baseline tables: {len(before)}; current tables: {len(after)}')
-    print('Added tables:', ', '.join(sorted(after.keys() - before.keys())) or '(none)')
-    if problems:
-        print('Schema regression:\\n' + '\\n'.join(problems), file=sys.stderr)
+    if len(sys.argv) != 3:
+        print("Usage: compare-localization-schemas.py baseline.sql current.sql", file=sys.stderr)
+        return 2
+    before, after = parse_schema(sys.argv[1]), parse_schema(sys.argv[2])
+    print(f"Baseline tables: {len(before)}; current tables: {len(after)}")
+    print("Added tables:", ", ".join(sorted(after.keys() - before.keys())) or "(none)")
+    errors = compare(before, after)
+    if errors:
+        print("Schema regression:\n" + "\n".join(errors), file=sys.stderr)
         return 1
-    print('PASS: no legacy tables or columns removed; required localized storage exists')
+    print("PASS: no legacy tables or columns removed; required localized storage exists")
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())
