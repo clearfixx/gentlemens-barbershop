@@ -76,3 +76,9 @@
 .cta,.header-booking,.booking-back{border-radius:var(--radius-control);transition:background-color var(--motion-fast),border-color var(--motion-fast),color var(--motion-fast)}
 @media(max-width:720px){.hero{min-height:auto;padding-bottom:96px}.cinematic-section,.final-booking-scene{min-height:75svh;padding:80px 24px}.cinematic-copy h2{font-size:clamp(32px,9vw,56px)}}
 @media(prefers-reduced-motion:reduce){.cinematic-section::before{transform:none}}
+
+/* Locale switcher: flat, compact and fully keyboard accessible. */
+.locale-switcher{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.locale-switcher a{display:inline-grid;place-items:center;min-width:44px;min-height:44px;padding:8px;color:var(--ink);text-decoration:none;border:1px solid transparent;border-radius:var(--radius-control,5px)}
+.locale-switcher a[aria-current="page"]{border-color:currentColor;font-weight:700}
+.locale-switcher a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
