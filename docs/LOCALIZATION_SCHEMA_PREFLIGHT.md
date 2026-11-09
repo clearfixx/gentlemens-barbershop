@@ -31,3 +31,5 @@ The CI gate also has two negative tests: temporarily remove `services.descriptio
 ## CI schema review artifact
 
 The CI workflow exports a **schema-only** `pg_dump` of its disposable, initialized PostgreSQL database and records the actual PostgreSQL, Payload and adapter versions. The `localization-initialized-schema` artifact is retained for seven days for migration review. It contains no rows, but is **not** a baseline of the pre-localization production schema: do not use it alone to generate or approve a production migration. Compare it with a separately captured schema-only dump of a restored pre-localization database. Do not upload production data or credentials as workflow artifacts.
+
+CI runs the schema-only dump with the `postgres:17-alpine` client image so its `pg_dump` major version matches the PostgreSQL 17 service; the runner's default PostgreSQL 16 client cannot dump a newer server.
