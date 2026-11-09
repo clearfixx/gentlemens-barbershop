@@ -36,6 +36,31 @@ async function main() {
     assert.equal(publicRead.docs.length, 1)
     assert.equal(resolvePublishedMessages('en', { locale: publicRead.docs[0].locale as string, status: publicRead.docs[0].status as string, entries: publicRead.docs[0].entries }).nav.home, 'Integration test home')
     assert.equal(published.status, 'published')
+    assert.equal(resolvePublishedMessages('uk', { locale: 'en', status: 'published', entries: publicRead.docs[0].entries }).nav.home,
+      'Головна', 'English overrides must not leak into Ukrainian')
+    await assert.rejects(
+      payload.update({ collection: 'translations', id, overrideAccess: true, data: { entries: { 'booking.steps': 'Invalid array replacement' } } }),
+      'Invalid dictionary shape must be rejected by Payload validation',
+    )
+    const stillPublished = await payload.findByID({ collection: 'translations', id, overrideAccess: true })
+    assert.equal(stillPublished.status, 'published', 'Invalid update must not change publication state')
+    assert.deepEqual(stillPublished.entries, { 'nav.home': 'Integration test home' })
+    await assert.rejects(
+      payload.create({ collection: 'translations', overrideAccess: true, data: { locale: 'en', status: 'draft', entries: {} } }),
+      'Only one translation record per locale may exist',
+    )
+    await assert.rejects(
+      payload.create({ collection: 'translations', overrideAccess: false, data: { locale: 'uk', status: 'draft', entries: {} } }),
+      'Anonymous callers must not create translations',
+    )
+    await assert.rejects(
+      payload.update({ collection: 'translations', id, overrideAccess: false, data: { status: 'draft' } }),
+      'Anonymous callers must not update translations',
+    )
+    await assert.rejects(
+      payload.delete({ collection: 'translations', id, overrideAccess: false }),
+      'Anonymous callers must not delete translations',
+    )
     await payload.update({ collection: 'translations', id, overrideAccess: true, data: { status: 'draft' } })
     const afterUnpublish = await payload.find({
       collection: 'translations',
@@ -44,6 +69,8 @@ async function main() {
       limit: 1,
     })
     assert.equal(afterUnpublish.docs.length, 0, 'Unpublishing must remove the public override')
+    const anonymousRead = await payload.find({ collection: 'translations', overrideAccess: false, limit: 10 })
+    assert.equal(anonymousRead.docs.length, 0, 'Anonymous callers must not read admin translation documents')
     console.info('Payload translation draft/publish/unpublish integration passed')
   } finally {
     if (id !== undefined) await payload.delete({ collection: 'translations', id, overrideAccess: true })
