@@ -4,7 +4,7 @@ import { ThemeToggle } from './theme-toggle'
 const links = [
   { href: '/#about', label: 'Про нас' },
   { href: '/catalog', label: 'Каталог' },
-  { href: '/availability', label: 'Вільний час' },
+  { href: '/booking', label: 'Планування запису' },
   { href: '/#team', label: 'Майстри' },
   { href: '/#locations', label: 'Локації' },
 ]
@@ -21,7 +21,7 @@ export function SiteHeader() {
       </nav>
       <div className="site-header__actions">
         <ThemeToggle />
-        <Link className="header-booking" href="/catalog">Послуги й майстри</Link>
+        <Link className="header-booking" href="/booking">Спланувати візит</Link>
       </div>
     </header>
   )
