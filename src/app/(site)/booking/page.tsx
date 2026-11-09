@@ -17,13 +17,16 @@ export default async function BookingPage() {
     locationId: typeof item.location === 'number' ? item.location : Number(item.location.id),
     serviceIds: (item.serviceOfferings ?? []).map((offering: { service: number | { id: number | string } }) => typeof offering.service === 'number' ? offering.service : Number(offering.service.id)),
   }))
+  const now = Date.now()
+  const today = new Date(now).toISOString().slice(0, 10)
+  const maxDate = new Date(now + 30 * 86400000).toISOString().slice(0, 10)
   return <main className="landing">
     <SiteHeader />
     <div className="catalog-page">
       <p className="eyebrow">Gentlemen’s Barbershop</p>
       <h1>СПЛАНУЙТЕ ВІЗИТ</h1>
       <p className="catalog-intro">Оберіть локацію, майстра та послугу, щоб переглянути вільний час. Поки що це попередній перегляд без створення запису.</p>
-      <BookingWizard locations={locations} barbers={barbers} services={services} />
+      <BookingWizard locations={locations} barbers={barbers} services={services} today={today} maxDate={maxDate} />
     </div>
     <footer className="site-footer">© 2026 GENTLEMEN’S BARBERSHOP</footer>
   </main>
