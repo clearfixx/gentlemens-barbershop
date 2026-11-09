@@ -25,7 +25,8 @@ export async function getPublicAvailability(payload: Payload, input: Availabilit
     durationMinutes: offering.durationMinutes,
   })
   // Public API must never advertise slots that have already begun.
-  const now = Date.now()\n  // Return only public slot data; never serialize booking, customer, or time-off records.
+  const now = Date.now()
+  // Return only public slot data; never serialize booking, customer, or time-off records.
   return {
     barberId: barber.id,
     serviceId: service.id,
