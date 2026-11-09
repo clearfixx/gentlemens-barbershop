@@ -45,9 +45,14 @@ The populated-schema CI job now captures a custom-format PostgreSQL 17 backup **
 
 The PostgreSQL adapter now uses the explicit `src/migrations` directory, with `pnpm db:migrate:create`, `pnpm db:migrate`, and `pnpm db:migrate:status` as the Payload CLI entry points. CI checks that these commands exist in the installed Payload version. **This wiring is not a generated migration**: before any production rollout, create and review a concrete versioned migration against the restored baseline, commit it, test it against populated legacy data, and verify a backup restore. The app's production automatic schema push remains disabled.
 
-## Payload CLI execution issue (CI)
+## Payload CLI execution mode (CI)
 
-A direct `pnpm exec payload migrate:create --help` probe on the Node 24 GitHub runner failed inside `undici@7.30.1` with `TypeError: Illegal constructor` before CLI help could be displayed. CI now checks the installed package's declared CLI executable without running it; **this does not prove the migration commands execute**. Investigate the Node/undici/tsx initialization conflict and run a real migration CLI smoke test before claiming migration tooling is ready. Do not bypass this failure in production by switching Node versions without testing.
+Payload 3.93.0's default CLI loader triggers an `undici@7.30.1`
+`TypeError: Illegal constructor` on the CI Node 24 runner. The supported
+`--disable-transpile` option bypasses that loader and has successfully run
+both CLI help and real migration generation in CI. The `db:migrate:*`
+scripts use this mode. It does **not** imply that the generated SQL is safe
+for a populated production database.
 
 ## Payload-generated first migration (2026-11-09 rehearsal)
 
@@ -62,4 +67,4 @@ populated-database rehearsal and backup/restore checks. A safe rollout must
 first establish an audited migration baseline matching the existing schema,
 then generate and review the incremental localization changes, including
 booking constraints, and rehearse the actual migration on a restored backup.
-The CI classifier is informational: it does not approve migrations.
+CI explicitly expects the classifier's blocked status (exit code 2), and fails on a classifier error (exit code 1). No generated candidate is automatically approved for deployment.
