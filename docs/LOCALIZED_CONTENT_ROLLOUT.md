@@ -68,3 +68,14 @@ first establish an audited migration baseline matching the existing schema,
 then generate and review the incremental localization changes, including
 booking constraints, and rehearse the actual migration on a restored backup.
 CI explicitly expects the classifier's blocked status (exit code 2), and fails on a classifier error (exit code 1). No generated candidate is automatically approved for deployment.
+
+## Historical bootstrap equivalence gate
+
+The incremental CI rehearsal now compares the **actual** PostgreSQL schema
+created by the historical source against the schema created by applying the
+versioned historical bootstrap. It fails on extra/missing tables, extra/missing
+columns, or differing column definitions, before seeding legacy records and
+applying the localization delta. The gate intentionally does not claim full
+schema equivalence: indexes, foreign keys, constraints, enum labels, extensions,
+and custom production alterations require separate review. It must not be used
+to automatically mark a baseline migration as applied in production.

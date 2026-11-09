@@ -986,6 +986,11 @@ jobs:
         with:
           name: prelocalization-migration-snapshot-candidate
           path: src/migrations
+      - name: Download historical PostgreSQL schema inventory
+        uses: actions/download-artifact@v4
+        with:
+          name: prelocalization-baseline-schema
+          path: baseline-review
       - name: Generate incremental migration against historical snapshot
         shell: bash
         run: |
@@ -996,6 +1001,8 @@ jobs:
           test "$(find src/migrations -maxdepth 1 -type f -name '*.json' | wc -l)" -eq 2
           echo "Generated incremental migration candidate from historical Payload snapshot"
           find src/migrations -maxdepth 1 -type f -printf '%f\n'
+      - name: Test historical schema equivalence gate
+        run: python3 -m unittest discover -s scripts -p 'test_verify_historical_baseline.py'
       - name: Test migration safety checker against destructive SQL
         shell: bash
         run: python3 -m unittest discover -s scripts -p 'test_check_localization_incremental.py'
@@ -1055,6 +1062,8 @@ jobs:
           mv src/migrations/*ci_localization_incremental.* /tmp/incremental-migration/
           # Apply only the historical bootstrap to a fresh, isolated database.
           CI=1 timeout 120s pnpm db:migrate
+          pg_dump --schema-only --no-owner --no-privileges "$DATABASE_URL" > /tmp/versioned-baseline-schema.sql
+          python3 scripts/verify-historical-baseline.py baseline-review/prelocalization-schema.sql /tmp/versioned-baseline-schema.sql
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/seed-prelocalization-rehearsal.sql
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' \
             -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/incremental-before.txt
