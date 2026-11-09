@@ -8,8 +8,8 @@ type Barber = { id: number; name: string; locationId: number; serviceIds: number
 type Slot = { startsAt: string; endsAt: string }
 type Availability = { timeZone: string; price: number; durationMinutes: number; slots: Slot[] }
 
-export function BookingWizard({ locations, barbers, services }: {
-  locations: Location[]; barbers: Barber[]; services: Service[]
+export function BookingWizard({ locations, barbers, services, today, maxDate }: {
+  locations: Location[]; barbers: Barber[]; services: Service[]; today: string; maxDate: string
 }) {
   const [step, setStep] = useState(0)
   const [locationId, setLocationId] = useState(0)
@@ -23,8 +23,6 @@ export function BookingWizard({ locations, barbers, services }: {
   const eligibleBarbers = useMemo(() => barbers.filter(item => item.locationId === locationId), [barbers, locationId])
   const selectedBarber = barbers.find(item => item.id === barberId)
   const eligibleServices = services.filter(item => selectedBarber?.serviceIds.includes(item.id))
-  const today = new Date().toISOString().slice(0, 10)
-  const maxDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 
   useEffect(() => {
     if (!barberId || !serviceId || !date) return
