@@ -48,3 +48,18 @@ The PostgreSQL adapter now uses the explicit `src/migrations` directory, with `p
 ## Payload CLI execution issue (CI)
 
 A direct `pnpm exec payload migrate:create --help` probe on the Node 24 GitHub runner failed inside `undici@7.30.1` with `TypeError: Illegal constructor` before CLI help could be displayed. CI now checks the installed package's declared CLI executable without running it; **this does not prove the migration commands execute**. Investigate the Node/undici/tsx initialization conflict and run a real migration CLI smoke test before claiming migration tooling is ready. Do not bypass this failure in production by switching Node versions without testing.
+
+## Payload-generated first migration (2026-11-09 rehearsal)
+
+The CI artifact `payload-migration-candidate` contains a **full schema bootstrap**,
+not a safe incremental migration for the populated pre-localization database.
+Payload generates it because the branch has no previously versioned migration
+snapshot. It includes `CREATE TABLE users/services/locations/barbers/bookings`
+and a destructive `down()` with `DROP TABLE ... CASCADE`.
+
+**Do not apply that artifact to an existing installation.** Keep the current
+populated-database rehearsal and backup/restore checks. A safe rollout must
+first establish an audited migration baseline matching the existing schema,
+then generate and review the incremental localization changes, including
+booking constraints, and rehearse the actual migration on a restored backup.
+The CI classifier is informational: it does not approve migrations.
