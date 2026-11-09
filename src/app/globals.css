@@ -43,3 +43,8 @@
 @media(max-width:600px){.catalog-page{padding-top:36px}.catalog-filters{padding:18px;gap:12px}.catalog-filters .cta{width:100%}}
 
 .catalog-inline-link{display:inline-block;margin-top:24px;color:var(--ink);text-decoration-color:var(--gold);text-underline-offset:6px;font-size:14px}
+
+.catalog-filters input[type=date]{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border);background:var(--paper);color:var(--ink);font:inherit;color-scheme:inherit}
+.catalog-filters input[type=date]:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.availability-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:12px;list-style:none;margin:30px 0;padding:0}
+.availability-slots li{border:1px solid var(--border);background:var(--surface);padding:18px 12px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
