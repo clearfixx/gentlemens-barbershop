@@ -852,5 +852,7 @@ jobs:
         with:
           name: localization-initialized-schema
           path: migration-review
+      - name: Verify schema comparator rejects destructive changes
+        run: python3 -m unittest discover -s scripts -p 'test_compare_localization_schemas.py'
       - name: Compare actual PostgreSQL table and column inventories
         run: python3 scripts/compare-localization-schemas.py baseline-review/prelocalization-schema.sql migration-review/initialized-schema.sql
