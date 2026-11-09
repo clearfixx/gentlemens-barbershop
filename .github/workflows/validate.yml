@@ -92,11 +92,12 @@ jobs:
           # This database is deliberately empty. Never point this test at
           # the populated CI database or a production connection string.
           PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_migration_bootstrap_ci
-          # --disable-transpile can generate migrations but cannot execute the
-          # generated TS module: its type-only imports survive native loading.
-          # Probe Payload's SWC loader on a disposable database instead.
+          # Payload 3.93.0 generates value imports for TS-only Migrate*Args.
+          # Normalize the generated *CI-only* candidate to type imports.
+          # Never silently rewrite a committed production migration.
+          python3 scripts/normalize-generated-payload-migration.py src/migrations
           DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
-            CI=1 timeout 120s pnpm exec payload migrate --use-swc
+            CI=1 timeout 120s pnpm db:migrate
           PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
             -d gentlemens_migration_bootstrap_ci -c "
               DO \$\$ BEGIN
