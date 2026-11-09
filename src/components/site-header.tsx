@@ -2,7 +2,7 @@ import { ThemeToggle } from './theme-toggle'
 
 const links = [
   { href: '#about', label: 'Про нас' },
-  { href: '#services', label: 'Послуги' },
+  { href: '/catalog', label: 'Каталог' },
   { href: '#team', label: 'Майстри' },
   { href: '#locations', label: 'Локації' },
 ]
@@ -10,7 +10,7 @@ const links = [
 export function SiteHeader() {
   return (
     <header className="site-header">
-      <a href="#top" className="site-brand" aria-label="Gentlemen’s Barbershop — на початок">
+      <a href="/" className="site-brand" aria-label="Gentlemen’s Barbershop — на початок">
         <span className="site-brand__symbol" aria-hidden="true">✦</span>
         <span>GENTLEMEN’S <small>BARBERSHOP</small></span>
       </a>
@@ -19,7 +19,7 @@ export function SiteHeader() {
       </nav>
       <div className="site-header__actions">
         <ThemeToggle />
-        <a className="header-booking" href="#booking">Записатися</a>
+        <a className="header-booking" href="/catalog">Записатися</a>
       </div>
     </header>
   )
