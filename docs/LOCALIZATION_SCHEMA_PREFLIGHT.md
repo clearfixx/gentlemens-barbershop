@@ -81,3 +81,7 @@ The `populated-localization-rehearsal` CI job initializes the exact pre-localiza
 ## Booking constraints discovered in actual schema diff
 
 The current schema also adds `btree_gist`, booking time-range and idempotency CHECK constraints, a partial unique idempotency index, and an active-booking GiST exclusion constraint. These are not merely localization tables. Before initializing the current config against a populated baseline, CI runs `db/constraints/preflight-booking-migration.sql` read-only to reject incompatible existing bookings (invalid time ranges, malformed/duplicate idempotency data, overlapping active appointments). Production migration planning must account for these constraints explicitly.
+
+## Negative booking compatibility checks
+
+The populated-database rehearsal now deliberately inserts a second overlapping active booking, confirms the read-only migration preflight rejects it, deletes the conflicting fixture, and confirms the preflight passes again. It separately changes the existing fixture to a zero-length booking interval, confirms rejection, restores the original end time, and confirms success. These negative checks run on the legacy schema before current Payload initialization. They do not exercise the eventual versioned migration file.

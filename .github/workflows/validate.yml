@@ -912,6 +912,38 @@ jobs:
           grep -q '^locations|1|' /tmp/legacy-before.txt
       - name: Preflight existing bookings against new integrity constraints
         run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
+      - name: Prove migration preflight rejects overlapping active bookings
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            INSERT INTO bookings (id, location_id, barber_id, customer_name, customer_phone, starts_at, ends_at, total_price, status)
+            VALUES (900002, 900001, 900001, 'CI Overlap', '+380000000001',
+                    '2027-01-01 10:15:00+00', '2027-01-01 10:30:00+00', 600, 'pending')
+          "
+          if psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql > /tmp/overlap-preflight.log 2>&1; then
+            echo "ERROR: overlapping active bookings passed the preflight"
+            exit 1
+          fi
+          grep -q 'Existing booking records violate target database constraints' /tmp/overlap-preflight.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "DELETE FROM bookings WHERE id = 900002"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
+      - name: Prove migration preflight rejects invalid booking intervals
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET ends_at = starts_at WHERE id = 900001
+          "
+          if psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql > /tmp/invalid-time-preflight.log 2>&1; then
+            echo "ERROR: invalid booking time interval passed the preflight"
+            exit 1
+          fi
+          grep -q 'Existing booking records violate target database constraints' /tmp/invalid-time-preflight.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET ends_at = '2027-01-01 10:45:00+00' WHERE id = 900001
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
       - name: Install current dependencies
         run: pnpm install --frozen-lockfile
       - name: Initialize current localized Payload against populated old database
