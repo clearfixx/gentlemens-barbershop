@@ -20,7 +20,7 @@ async function main() {
       data: { locale: 'en', status: 'draft', entries: { 'nav.home': 'Integration test home' } },
     })
     id = draft.id
-    assert.equal(resolvePublishedMessages('en', draft).nav.home, 'Home', 'Draft must not be visible')
+    assert.equal(resolvePublishedMessages('en', { locale: draft.locale as string, status: draft.status as string, entries: draft.entries }).nav.home, 'Home', 'Draft must not be visible')
     const published = await payload.update({
       collection: 'translations',
       id,
@@ -34,7 +34,7 @@ async function main() {
       limit: 1,
     })
     assert.equal(publicRead.docs.length, 1)
-    assert.equal(resolvePublishedMessages('en', publicRead.docs[0]).nav.home, 'Integration test home')
+    assert.equal(resolvePublishedMessages('en', { locale: publicRead.docs[0].locale as string, status: publicRead.docs[0].status as string, entries: publicRead.docs[0].entries }).nav.home, 'Integration test home')
     assert.equal(published.status, 'published')
     await payload.update({ collection: 'translations', id, overrideAccess: true, data: { status: 'draft' } })
     const afterUnpublish = await payload.find({
