@@ -937,7 +937,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prelocalization-migration-snapshot-candidate
-          path: baseline-review/*ci_prelocalization_baseline*
+          path: |
+            baseline-review/*.ts
+            baseline-review/*.json
           if-no-files-found: error
           retention-days: 7
       - name: Upload pre-localization schema baseline
