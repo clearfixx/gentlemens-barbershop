@@ -10,7 +10,7 @@ import Link from 'next/link'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { SiteHeader } from '@/components/site-header'
-import { getFallbackMessages } from '@/i18n/messages'
+import { loadPublicMessages } from '@/i18n/load-public-messages'
 import { isLocale } from '@/i18n/config'
 import { notFound } from 'next/navigation'
 
@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic'
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   if (!isLocale(locale)) notFound()
-  const t = getFallbackMessages(locale)
+  const t = await loadPublicMessages(locale)
   const payload = await getPayload({ config })
   const [services, barbers, locations] = await Promise.all([
     payload.find({ collection: 'services', locale, depth: 0, limit: 30, sort: 'name', overrideAccess: false }),
@@ -27,7 +27,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     payload.find({ collection: 'locations', locale, depth: 0, limit: 30, sort: 'name', overrideAccess: false }),
   ])
   return <main id="top" className="landing">
-    <SiteHeader locale={locale} />
+    <SiteHeader locale={locale} messages={t} />
     <section className="hero" aria-labelledby="hero-title">
       <div className="hero-copy">
         <p className="eyebrow">{t.home.eyebrow}</p>

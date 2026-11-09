@@ -4,8 +4,8 @@ import { LocaleSwitcher } from './locale-switcher'
 import { getFallbackMessages } from '@/i18n/messages'
 import { type Locale } from '@/i18n/config'
 
-export function SiteHeader({ locale = 'uk' }: { locale?: Locale }) {
-  const t = getFallbackMessages(locale)
+export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messages?: ReturnType<typeof getFallbackMessages> }) {
+  const t = messages ?? getFallbackMessages(locale)
   const prefix = `/${locale}`
   const links = [
     { href: `${prefix}/#about`, label: t.nav.about },

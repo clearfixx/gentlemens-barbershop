@@ -10,7 +10,7 @@ import Link from 'next/link'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { SiteHeader } from '@/components/site-header'
-import { getFallbackMessages } from '@/i18n/messages'
+import { loadPublicMessages } from '@/i18n/load-public-messages'
 import { isLocale } from '@/i18n/config'
 import { notFound } from 'next/navigation'
 import { loadPublicCatalog, parseCatalogId } from '@/lib/catalog/public-catalog'
@@ -22,7 +22,7 @@ type Params = Promise<{ location?: string; barber?: string }>
 export default async function CatalogPage({ searchParams, params: routeParams }: { searchParams: Params; params: Promise<{ locale: string }> }) {
   const { locale } = await routeParams
   if (!isLocale(locale)) notFound()
-  const t = getFallbackMessages(locale)
+  const t = await loadPublicMessages(locale)
   const params = await searchParams
   const locationId = parseCatalogId(params.location)
   const barberId = parseCatalogId(params.barber)
@@ -33,7 +33,7 @@ export default async function CatalogPage({ searchParams, params: routeParams }:
   const selectedBarber = catalog.barbers.find(barber => barber.id === barberId)
 
   return <main id="top" className="landing">
-    <SiteHeader locale={locale} />
+    <SiteHeader locale={locale} messages={t} />
     <div className="catalog-page">
       <Link className="catalog-back" href={`/${locale}`}>← {t.nav.home}</Link>
       <p className="eyebrow">Gentlemen’s Barbershop</p>

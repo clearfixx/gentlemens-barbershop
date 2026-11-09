@@ -10,10 +10,10 @@ type Barber = { id: number; name: string; locationId: number; serviceIds: number
 type Slot = { startsAt: string; endsAt: string }
 type Availability = { timeZone: string; price: number; durationMinutes: number; slots: Slot[] }
 
-export function BookingWizard({ locations, barbers, services, today, maxDate, locale }: {
-  locations: Location[]; barbers: Barber[]; services: Service[]; today: string; maxDate: string; locale: Locale
+export function BookingWizard({ locations, barbers, services, today, maxDate, locale, messages }: {
+  locations: Location[]; barbers: Barber[]; services: Service[]; today: string; maxDate: string; locale: Locale; messages?: ReturnType<typeof getFallbackMessages>
 }) {
-  const t = getFallbackMessages(locale)
+  const t = messages ?? getFallbackMessages(locale)
   const [step, setStep] = useState(0)
   const [locationId, setLocationId] = useState(0)
   const [barberId, setBarberId] = useState(0)

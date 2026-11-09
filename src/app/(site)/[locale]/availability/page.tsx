@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { SiteHeader } from '@/components/site-header'
-import { getFallbackMessages } from '@/i18n/messages'
+import { loadPublicMessages } from '@/i18n/load-public-messages'
 import { isLocale } from '@/i18n/config'
 import { notFound } from 'next/navigation'
 import { loadPublicCatalog, parseCatalogId } from '@/lib/catalog/public-catalog'
@@ -26,7 +26,7 @@ export default async function AvailabilityPage({
 }) {
   const { locale } = await routeParams
   if (!isLocale(locale)) notFound()
-  const t = getFallbackMessages(locale)
+  const t = await loadPublicMessages(locale)
   const params = await searchParams
   const payload = await getPayload({ config })
   const catalog = await loadPublicCatalog(payload, {}, locale)
@@ -45,7 +45,7 @@ export default async function AvailabilityPage({
     }
   }
   return <main className="landing" id="top">
-    <SiteHeader locale={locale} />
+    <SiteHeader locale={locale} messages={t} />
     <div className="catalog-page">
       <Link href={`/${locale}/catalog`} className="catalog-back">← {t.availability.toCatalog}</Link>
       <p className="eyebrow">{t.availability.eyebrow}</p>
