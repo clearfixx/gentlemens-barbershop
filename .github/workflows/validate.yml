@@ -54,6 +54,21 @@ jobs:
             if (!pkg.bin?.payload) throw new Error('Payload CLI executable is missing');
             console.log('Payload CLI declared:', pkg.bin.payload);
           "
+      - name: Diagnose Payload migration CLI startup
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "Node: $(node --version)"
+          echo "Payload manifest: $(node -p \"require('./node_modules/payload/package.json').version\")"
+          echo "Undici direct import:"
+          node -e "const u = require('undici'); console.log('undici loaded', typeof u.fetch)" || true
+          echo "Payload CLI migration help:"
+          if pnpm exec payload migrate:create --help > /tmp/payload-migrate-cli.log 2>&1; then
+            echo "Payload migration CLI starts successfully"
+          else
+            echo "::warning::Payload migration CLI failed to start; versioned migration remains blocked"
+            tail -n 35 /tmp/payload-migrate-cli.log
+          fi
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint
