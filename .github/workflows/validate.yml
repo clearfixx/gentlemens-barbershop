@@ -105,6 +105,8 @@ jobs:
           CONFIRM_BOOKING_MIGRATION=apply bash scripts/apply-booking-integrity.sh
       - name: Verify read-only localization schema preflight
         run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-localization-schema.sql
+      - name: Verify legacy catalog schema survives localization
+        run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/verify-localization-legacy-schema.sql
       - name: Verify read-only booking migration preflight
         run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-integrity.sql
       - name: Verify booking migrations are repeatable

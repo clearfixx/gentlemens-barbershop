@@ -21,3 +21,7 @@ Payload's localized field storage and migration output depend on its installed v
 In Payload Admin create a draft UK dictionary and confirm the public page still shows fallback copy. Publish it and verify the public page, navbar, locale switcher and SEO description use the override. Revert to draft and verify fallback returns. Repeat for EN. Confirm non-admin access is denied and malformed dictionary keys are rejected.
 
 The current one-record-per-locale model does not support editing a new draft while keeping an older published snapshot live; switching a published record back to draft immediately disables its overrides. This is an explicit v1 limitation, not a staged publication workflow.
+
+## Automated legacy-schema regression gate
+
+CI runs `db/constraints/verify-localization-legacy-schema.sql` against the initialized disposable PostgreSQL database. It asserts that core legacy catalog columns and the booking table still exist alongside the new translations table. This is deliberately read-only and catches accidental column removals, but **does not** prove a migration from a populated production snapshot is safe. Production rollout still requires a generated/reviewed Payload migration, restored-data rehearsal, and rollback plan.
