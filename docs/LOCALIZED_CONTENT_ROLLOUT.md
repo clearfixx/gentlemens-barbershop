@@ -32,3 +32,7 @@
 - Locale affects display copy, not authorization, service prices, slot availability, or booking identifiers.
 - Admin-only collection read and write access must remain enforced. Payload rejects unauthorized collection reads with HTTP 403 rather than returning an empty result.
 - Switching language on the booking preview warns before discarding the in-memory draft.
+
+## Production schema mutation safety
+
+Payload PostgreSQL automatic schema push is disabled whenever `NODE_ENV=production`. This is a fail-closed deployment rule: production schema must be provisioned with reviewed migrations before starting the app. It does **not** create or apply the missing migration, and a fresh production database cannot be initialized through application startup. CI development-mode bootstrap and disposable migration rehearsal still use automatic push, strictly on isolated PostgreSQL instances. Do not override `NODE_ENV` to bypass this protection.

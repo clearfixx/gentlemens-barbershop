@@ -34,6 +34,11 @@ export default buildConfig({
     fallback: true,
   },
   secret: process.env.PAYLOAD_SECRET || '',
-  db: postgresAdapter({ pool: { connectionString: process.env.DATABASE_URL || '' } }),
+  db: postgresAdapter({
+    pool: { connectionString: process.env.DATABASE_URL || '' },
+    // Never let a production process auto-alter the database schema.
+    // Apply reviewed, versioned Payload migrations before deploying the app.
+    push: process.env.NODE_ENV !== 'production',
+  }),
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
 })
