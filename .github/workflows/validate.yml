@@ -95,6 +95,7 @@ jobs:
           # Payload 3.93.0 generates value imports for TS-only Migrate*Args.
           # Normalize the generated *CI-only* candidate to type imports.
           # Never silently rewrite a committed production migration.
+          python3 scripts/test-normalize-generated-payload-migration.py
           python3 scripts/normalize-generated-payload-migration.py src/migrations
           DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
             CI=1 timeout 120s pnpm db:migrate
