@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getFallbackMessages } from './messages'
+import { loadPublicMessages } from './load-public-messages'
 import { isLocale, locales, type Locale } from './config'
 
 type PublicPage = 'home' | 'catalog' | 'booking' | 'availability'
@@ -21,8 +22,7 @@ function configuredOrigin(): string | null {
   }
 }
 
-export function publicPageMetadata(locale: Locale, page: PublicPage): Metadata {
-  const t = getFallbackMessages(locale)
+export function publicPageMetadata(locale: Locale, page: PublicPage, t: ReturnType<typeof getFallbackMessages> = getFallbackMessages(locale)): Metadata {
   const title = page === 'home' ? 'Gentlemen’s Barbershop' : `Gentlemen’s Barbershop | ${page === 'catalog' ? t.catalog.title : page === 'booking' ? t.booking.title : t.availability.title}`
   const description = page === 'home' ? t.home.heroIntro : page === 'catalog' ? t.catalog.intro : page === 'booking' ? t.booking.intro : t.availability.intro
   const indexable = page === 'home' || page === 'catalog'
@@ -38,5 +38,6 @@ export function publicPageMetadata(locale: Locale, page: PublicPage): Metadata {
 export async function generatePublicPageMetadata(params: Promise<{ locale: string }>, page: PublicPage): Promise<Metadata> {
   const { locale } = await params
   if (!isLocale(locale)) return { robots: { index: false, follow: false } }
-  return publicPageMetadata(locale, page)
+  const messages = await loadPublicMessages(locale)
+  return publicPageMetadata(locale, page, messages)
 }
