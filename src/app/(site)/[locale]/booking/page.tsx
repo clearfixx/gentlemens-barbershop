@@ -1,3 +1,10 @@
+import type { Metadata } from 'next'
+import { generatePublicPageMetadata } from '@/i18n/seo'
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  return generatePublicPageMetadata(params, 'booking')
+}
+
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { SiteHeader } from '@/components/site-header'
