@@ -808,3 +808,22 @@ jobs:
           name: prelocalization-baseline-schema
           path: baseline-review/
           retention-days: 7
+
+  compare-localization-schemas:
+    needs: [checks, prelocalization-baseline]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pre-localization schema
+        uses: actions/download-artifact@v4
+        with:
+          name: prelocalization-baseline-schema
+          path: baseline-review
+      - name: Download current initialized schema
+        uses: actions/download-artifact@v4
+        with:
+          name: localization-initialized-schema
+          path: migration-review
+      - name: Compare actual PostgreSQL table and column inventories
+        run: python3 scripts/compare-localization-schemas.py baseline-review/prelocalization-schema.sql migration-review/initialized-schema.sql

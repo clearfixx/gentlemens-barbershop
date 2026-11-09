@@ -65,3 +65,7 @@ The separate `prelocalization-baseline` job checks out the exact source commit `
 ## Verified baseline/current artifact comparison (CI run 42624883836)
 
 Downloaded and compared both schema-only artifacts from the same workflow run. Both environments resolved **Payload 3.93.0** and **@payloadcms/db-postgres 3.93.0**. The baseline contains **18** PostgreSQL tables; the current initialized schema contains **22**. The four additional tables are `barbers_locales`, `locations_locales`, `services_locales` and `translations`. No existing table disappeared from the table-name inventory. This is a table-name comparison, **not** a complete diff of indexes, columns, constraints or foreign keys. The two databases were initialized separately, so this does not validate a populated-data migration or rollback.
+
+## Automated baseline-to-current structural gate
+
+The `compare-localization-schemas` CI job downloads both independently generated schema artifacts and runs `scripts/compare-localization-schemas.py`. It fails if a legacy table/column disappears or the expected localized storage is missing. It reports added tables. This does not prove the safety of changes to types, defaults, indexes or constraints, and does not execute a migration on populated data.
