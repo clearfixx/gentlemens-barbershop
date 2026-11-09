@@ -15,7 +15,7 @@ export async function getPublicAvailability(payload: Payload, input: Availabilit
   if (!location?.isActive) return null
   let offering
   try {
-    offering = resolvePublicDuration(barber, service)
+    offering = resolvePublicDuration(barber as unknown as Parameters<typeof resolvePublicDuration>[0], service as unknown as Parameters<typeof resolvePublicDuration>[1])
   } catch (error) {
     if (error instanceof RangeError) return null
     throw error
