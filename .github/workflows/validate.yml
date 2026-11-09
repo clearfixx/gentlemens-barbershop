@@ -58,8 +58,8 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          echo "Node: $(node --version)"
-          echo "Payload manifest: $(node -p \"require('./node_modules/payload/package.json').version\")"
+          node --version
+          node -p "require('./node_modules/payload/package.json').version"
           echo "Undici direct import:"
           node -e "const u = require('undici'); console.log('undici loaded', typeof u.fetch)" || true
           echo "Payload CLI migration help:"
