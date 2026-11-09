@@ -1027,7 +1027,7 @@ jobs:
           grep -q 'UNVERSIONED_PAYLOAD_SCHEMA' /tmp/unversioned-preflight.log
           # The negative test must leave all four tables intact.
           for table in services locations barbers bookings; do
-            psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT to_regclass('public.$table')" | grep -qx "$table"
+            psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT to_regclass('public.$table') IS NOT NULL" | grep -qx 't'
           done
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'DROP TABLE public.bookings, public.barbers, public.locations, public.services'
           # A genuinely empty database must be allowed for bootstrap.
