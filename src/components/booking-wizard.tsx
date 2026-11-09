@@ -20,6 +20,9 @@ export function BookingWizard({ locations, barbers, services, today, maxDate }: 
   const [availability, setAvailability] = useState<Availability | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
   const eligibleBarbers = useMemo(() => barbers.filter(item => item.locationId === locationId), [barbers, locationId])
   const selectedBarber = barbers.find(item => item.id === barberId)
   const eligibleServices = services.filter(item => selectedBarber?.serviceIds.includes(item.id))
@@ -49,7 +52,7 @@ export function BookingWizard({ locations, barbers, services, today, maxDate }: 
 
   const resetAvailability = () => { setAvailability(null); setSelectedSlot(''); setError(''); setLoading(false) }
   const stepNames = ['Локація', 'Майстер', 'Послуга', 'Дата й час', 'Підсумок']
-  const canContinue = [locationId > 0, barberId > 0, serviceId > 0, Boolean(selectedSlot), false][step]
+  const canContinue = [locationId > 0, barberId > 0, serviceId > 0, Boolean(selectedSlot && availability?.slots.some(slot => slot.startsAt === selectedSlot)), false][step]
   const formatTime = (value: string, timeZone: string) => new Intl.DateTimeFormat('uk-UA', { timeZone, hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 
   return <section className="booking-wizard" aria-label="Планування запису">
@@ -75,7 +78,14 @@ export function BookingWizard({ locations, barbers, services, today, maxDate }: 
         <p><strong>Дата:</strong> {date}</p>
         <p><strong>Час:</strong> {availability && formatTime(selectedSlot, availability.timeZone)}</p>
         <p><strong>Вартість:</strong> {availability?.price} грн</p>
-        <p className="catalog-notice">Це попередній перегляд, не бронювання. Контактні дані поки не збираються; підтвердження запису буде доступне після запуску захищеного оформлення.</p>
+        <div className="booking-contact">
+          <h3>Контактні дані</h3>
+          <p className="catalog-intro">Можна попередньо заповнити форму. Дані залишаються лише в цьому вікні браузера та не надсилаються на сервер.</p>
+          <label>Ваше ім’я <input type="text" autoComplete="name" maxLength={120} value={customerName} onChange={event => setCustomerName(event.target.value)} placeholder="Ім’я та прізвище" /></label>
+          <label>Телефон <input type="tel" autoComplete="tel" maxLength={24} value={customerPhone} onChange={event => setCustomerPhone(event.target.value)} placeholder="+380…" /></label>
+          <label>Email (необов’язково) <input type="email" autoComplete="email" maxLength={254} value={customerEmail} onChange={event => setCustomerEmail(event.target.value)} placeholder="you@example.com" /></label>
+        </div>
+        <p className="catalog-notice" role="status">Запис ще не створено. Відправлення контактних даних та підтвердження бронювання поки вимкнені.</p>
       </div>}
       <div className="booking-actions">
         {step > 0 && <button type="button" className="booking-back" onClick={() => setStep(value => value - 1)}>Назад</button>}
