@@ -145,6 +145,33 @@ jobs:
           for table in services locations barbers bookings; do
             grep -q "^$table|" /tmp/legacy-before.txt
           done
+      - name: Reject legacy data mutation in fingerprint regression test
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/fingerprint-before.txt
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            INSERT INTO services (name, slug, description, duration_minutes, price, is_active, updated_at, created_at)
+            VALUES ('Fingerprint test', 'fingerprint-ci-test', 'Original copy', 30, 500, true, now(), now())
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/fingerprint-insert.txt
+          if diff -q /tmp/fingerprint-before.txt /tmp/fingerprint-insert.txt; then
+            echo "Fingerprint did not detect an inserted service"
+            exit 1
+          fi
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE services SET description = 'Modified copy' WHERE slug = 'fingerprint-ci-test'
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/fingerprint-update.txt
+          if diff -q /tmp/fingerprint-insert.txt /tmp/fingerprint-update.txt; then
+            echo "Fingerprint did not detect a changed legacy description"
+            exit 1
+          fi
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            DELETE FROM services WHERE slug = 'fingerprint-ci-test'
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/fingerprint-restored.txt
+          diff -u /tmp/fingerprint-before.txt /tmp/fingerprint-restored.txt
       - name: Verify read-only localization schema preflight
         run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-localization-schema.sql
       - name: Verify legacy catalog schema survives localization

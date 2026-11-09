@@ -69,3 +69,7 @@ Downloaded and compared both schema-only artifacts from the same workflow run. B
 ## Automated baseline-to-current structural gate
 
 The `compare-localization-schemas` CI job downloads both independently generated schema artifacts and runs `scripts/compare-localization-schemas.py`. It fails if a legacy table/column disappears or the expected localized storage is missing. It reports added tables. This does not prove the safety of changes to types, defaults, indexes or constraints, and does not execute a migration on populated data.
+
+## Fingerprint negative regression test
+
+CI now inserts a disposable service, verifies the legacy fingerprint changes, edits its description, verifies the fingerprint changes again, deletes the test service, and verifies the original fingerprint is restored. This tests detection of inserted and mutated catalog data on the isolated CI database. It does not yet exercise an actual Payload migration or existing production records.
