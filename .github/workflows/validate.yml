@@ -1,0 +1,655 @@
+name: Validate scaffold
+
+on:
+  pull_request:
+  push:
+    branches:
+      - feat/app-scaffold
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_barbershop
+      PAYLOAD_SECRET: ci-only-not-a-production-secret-please-replace
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gentlemens_barbershop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gentlemens_barbershop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Booking availability unit tests
+        run: node --experimental-strip-types --test src/lib/booking/availability.test.ts src/lib/booking/local-time.test.ts src/lib/booking/zoned-availability.test.ts src/lib/booking/barber-day.test.ts src/lib/booking/interval-conflicts.test.ts src/lib/booking/booking-errors.test.ts src/lib/booking/resolve-offering.test.ts src/lib/booking/booking-request.test.ts src/lib/booking/booking-slot.test.ts src/lib/booking/create-booking.test.ts src/lib/booking/persist-payload-booking.test.ts src/lib/booking/idempotency.test.ts src/lib/booking/idempotent-replay.test.ts src/lib/booking/payload-idempotency.test.ts src/lib/booking/load-booking-catalog.test.ts src/lib/booking/payload-booking-service.test.ts src/lib/catalog/public-catalog.test.ts src/lib/catalog/public-availability.test.ts src/lib/catalog/availability-limiter.test.ts
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Production build
+        run: pnpm build
+      - name: Verify first-admin bootstrap is one-time only
+        shell: bash
+        env:
+          BOOTSTRAP_ADMIN_EMAIL: bootstrap-ci@example.invalid
+          BOOTSTRAP_ADMIN_PASSWORD: ci-only-test-password-not-for-production
+        run: |
+          set -euo pipefail
+          timeout 90s pnpm bootstrap:admin
+          set +e
+          timeout 90s pnpm bootstrap:admin > /tmp/barbershop-second-bootstrap.log 2>&1
+          second_status=$?
+          set -e
+          if [ "$second_status" -eq 0 ]; then
+            echo "Bootstrap unexpectedly succeeded twice"
+            exit 1
+          fi
+          if [ "$second_status" -eq 124 ] || [ "$second_status" -eq 137 ]; then
+            echo "Second bootstrap timed out instead of refusing existing users"
+            cat /tmp/barbershop-second-bootstrap.log
+            exit 1
+          fi
+          if ! grep -q "Bootstrap refused: users already exist" /tmp/barbershop-second-bootstrap.log; then
+            echo "Second bootstrap failed for an unexpected reason"
+            cat /tmp/barbershop-second-bootstrap.log
+            exit 1
+          fi
+      - name: Install database booking integrity constraints
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
+            -f db/constraints/booking-no-overlap.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
+            -f db/constraints/booking-idempotency.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
+            -Atc "SELECT conname FROM pg_constraint WHERE conname IN ('bookings_valid_time_range', 'bookings_no_active_overlap')" \
+            | grep -Fx 'bookings_no_active_overlap'
+      - name: Verify deployment migration command refuses missing approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          if bash scripts/apply-booking-integrity.sh; then
+            echo "Migration command ran without explicit approval"
+            exit 1
+          fi
+      - name: Verify transactional deployment migration command
+        shell: bash
+        run: |
+          CONFIRM_BOOKING_MIGRATION=apply bash scripts/apply-booking-integrity.sh
+      - name: Verify read-only booking migration preflight
+        run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-integrity.sql
+      - name: Verify booking migrations are repeatable
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
+            -f db/constraints/booking-no-overlap.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
+            -f db/constraints/booking-idempotency.sql
+      - name: Verify booking database integrity is installed
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d gentlemens_barbershop \
+            -f db/constraints/verify-booking-integrity.sql
+      - name: Reject an integrity schema with a renamed unique index
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Rename inside one transaction, expect verification to fail, then
+          # automatically roll back the rename on the SQL error.
+          if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
+            -c "ALTER INDEX bookings_idempotency_unique RENAME TO bookings_idempotency_broken" \
+            -f db/constraints/verify-booking-integrity.sql > /tmp/booking-negative-verify.log 2>&1; then
+            echo "Integrity verification accepted an invalid schema"
+            exit 1
+          fi
+          grep -q "Missing valid partial idempotency unique index" /tmp/booking-negative-verify.log || {
+            cat /tmp/booking-negative-verify.log
+            exit 1
+          }
+          # A failed verification must not leave the database modified.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT to_regclass('bookings_idempotency_unique') IS NOT NULL" | grep -Fx t
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -f db/constraints/verify-booking-integrity.sql
+      - name: Reject a missing booking overlap constraint
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Deliberately remove the exclusion rule inside a transaction.
+          # Verification must fail, forcing PostgreSQL to roll back the drop.
+          if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
+            -c "ALTER TABLE bookings DROP CONSTRAINT bookings_no_active_overlap" \
+            -f db/constraints/verify-booking-integrity.sql > /tmp/booking-overlap-negative.log 2>&1; then
+            echo "Integrity verification accepted a missing overlap constraint"
+            exit 1
+          fi
+          grep -q "Missing bookings_no_active_overlap exclusion constraint" /tmp/booking-overlap-negative.log || {
+            cat /tmp/booking-overlap-negative.log
+            exit 1
+          }
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM pg_constraint WHERE conrelid = 'bookings'::regclass AND conname = 'bookings_no_active_overlap'" | grep -Fx 1
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -f db/constraints/verify-booking-integrity.sql
+      - name: Reject legacy overlapping bookings before migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
+            -f db/constraints/test-preflight-overlap-fixture.sql \
+            -f db/constraints/preflight-booking-integrity.sql > /tmp/preflight-overlap.log 2>&1; then
+            echo "Preflight incorrectly accepted overlapping legacy bookings"
+            exit 1
+          fi
+          grep -q "Booking integrity preflight: overlapping active appointments" /tmp/preflight-overlap.log || {
+            cat /tmp/preflight-overlap.log
+            exit 1
+          }
+          # Failed migration must restore the constraint and remove both fixtures.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM pg_constraint WHERE conrelid = 'bookings'::regclass AND conname = 'bookings_no_active_overlap'" | grep -Fx 1
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM bookings WHERE customer_name LIKE 'Preflight fixture %'" | grep -Fx 0
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM barbers WHERE slug = 'ci-preflight-barber'" | grep -Fx 0
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM locations WHERE slug = 'ci-preflight-location'" | grep -Fx 0
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -f db/constraints/verify-booking-integrity.sql
+      - name: Smoke test production HTTP routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm start > /tmp/barbershop-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in {1..40}; do
+            if curl --fail --silent --output /dev/null http://localhost:3000/; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/barbershop-server.log
+            exit 1
+          fi
+          curl --fail --silent --show-error --output /dev/null http://localhost:3000/
+          curl --fail --silent --show-error --output /tmp/barbershop-catalog.html 'http://localhost:3000/catalog?location=1&barber=1'
+          grep -q 'ОБЕРІТЬ СВІЙ СТИЛЬ' /tmp/barbershop-catalog.html
+          curl --fail --silent --show-error --output /tmp/barbershop-booking.html http://localhost:3000/booking
+          grep -q 'СПЛАНУЙТЕ ВІЗИТ' /tmp/barbershop-booking.html
+          curl --fail --silent --show-error --output /tmp/barbershop-availability.html http://localhost:3000/availability
+          grep -q 'ВІЛЬНИЙ ЧАС' /tmp/barbershop-availability.html
+          invalid_availability_status=$(curl --silent --output /tmp/barbershop-availability-invalid.json --write-out '%{http_code}' 'http://localhost:3000/api/availability?barber=1&service=2&date=not-a-date')
+          test "$invalid_availability_status" = 400
+          # Valid-but-unavailable catalog IDs must not disclose private records.
+          unavailable_status=$(curl --silent --output /tmp/barbershop-availability-missing.json --write-out '%{http_code}' "http://localhost:3000/api/availability?barber=999999999&service=999999999&date=$(date -u +%F)")
+          test "$unavailable_status" = 404
+          # Unauthenticated clients must never receive user records.
+          users_status=$(curl --silent --output /tmp/barbershop-users-response.json --write-out '%{http_code}' http://localhost:3000/api/users)
+          echo "Unauthenticated users API HTTP status: $users_status"
+          if [[ "$users_status" != "401" && "$users_status" != "403" ]]; then
+            echo "Unexpected public access to users collection"
+            cat /tmp/barbershop-server.log
+            exit 1
+          fi
+          admin_status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:3000/admin)
+          echo "Admin route HTTP status: $admin_status"
+          if [[ "$admin_status" != "200" && "$admin_status" != "302" && "$admin_status" != "307" && "$admin_status" != "308" ]]; then
+            cat /tmp/barbershop-server.log
+            exit 1
+          fi
+          # Public catalog is readable, but anonymous writes are forbidden.
+          for collection in locations services barbers; do
+            catalog_status=$(curl --silent --show-error --output "/tmp/barbershop-${collection}.json" --write-out '%{http_code}' \
+              "http://localhost:3000/api/${collection}?depth=0")
+            if [ "$catalog_status" != "200" ]; then
+              echo "Public catalog read failed for $collection: HTTP $catalog_status"
+              cat "/tmp/barbershop-${collection}.json"
+              exit 1
+            fi
+            create_status=$(curl --silent --show-error --output "/tmp/barbershop-${collection}-create.json" --write-out '%{http_code}' \
+              --header 'Content-Type: application/json' \
+              --data '{"name":"Unauthorized test"}' \
+              "http://localhost:3000/api/${collection}")
+            if [[ "$create_status" != "401" && "$create_status" != "403" ]]; then
+              echo "Anonymous catalog write not denied for $collection: HTTP $create_status"
+              cat "/tmp/barbershop-${collection}-create.json"
+              exit 1
+            fi
+          done
+          # Inactive catalog records must remain hidden from anonymous readers.
+          admin_login_status=$(curl --silent --show-error --output /tmp/barbershop-admin-login.json --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"email":"bootstrap-ci@example.invalid","password":"ci-only-test-password-not-for-production"}' \
+            http://localhost:3000/api/users/login)
+          if [ "$admin_login_status" != "200" ]; then
+            echo "Bootstrap admin login failed: HTTP $admin_login_status"
+            cat /tmp/barbershop-admin-login.json
+            exit 1
+          fi
+          admin_token=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-admin-login.json", "utf8")).token')
+          for state in false true; do
+            location_status=$(curl --silent --show-error --output "/tmp/barbershop-location-${state}.json" --write-out '%{http_code}' \
+              --header "Authorization: JWT $admin_token" \
+              --header 'Content-Type: application/json' \
+              --data "{\"name\":\"CI Location ${state}\",\"slug\":\"ci-location-${state}\",\"city\":\"Test City\",\"address\":\"Test Address\",\"isActive\":${state}}" \
+              http://localhost:3000/api/locations)
+            if [ "$location_status" != "201" ]; then
+              echo "Admin location creation failed: HTTP $location_status"
+              cat "/tmp/barbershop-location-${state}.json"
+              exit 1
+            fi
+          done
+          curl --fail --silent --show-error 'http://localhost:3000/api/locations?depth=0' > /tmp/barbershop-public-locations.json
+          node -e '
+            const fs = require("node:fs");
+            const result = JSON.parse(fs.readFileSync("/tmp/barbershop-public-locations.json", "utf8"));
+            const slugs = (result.docs ?? []).map((doc) => doc.slug);
+            if (!slugs.includes("ci-location-true") || slugs.includes("ci-location-false")) {
+              console.error("Public locations do not respect publication status:", slugs);
+              process.exit(1);
+            }
+          '
+          # Verify that a barber can be associated with an existing location and service.
+          location_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-location-true.json", "utf8")).doc.id')
+          service_status=$(curl --silent --show-error --output /tmp/barbershop-service-created.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" \
+            --header 'Content-Type: application/json' \
+            --data '{"name":"CI Haircut","slug":"ci-haircut","durationMinutes":45,"price":500,"isActive":true}' \
+            http://localhost:3000/api/services)
+          if [ "$service_status" != "201" ]; then
+            echo "Admin service creation failed: HTTP $service_status"
+            cat /tmp/barbershop-service-created.json
+            exit 1
+          fi
+          service_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-service-created.json", "utf8")).doc.id')
+          LOCATION_ID="$location_id" SERVICE_ID="$service_id" node -e '
+            const fs = require("node:fs");
+            fs.writeFileSync("/tmp/barbershop-barber-payload.json", JSON.stringify({
+              name: "CI Barber", slug: "ci-barber", location: Number(process.env.LOCATION_ID),
+              isActive: true,
+              serviceOfferings: [{ service: Number(process.env.SERVICE_ID), priceOverride: 650, durationOverrideMinutes: 60 }],
+            }));
+          '
+          barber_status=$(curl --silent --show-error --output /tmp/barbershop-barber-created.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" \
+            --header 'Content-Type: application/json' \
+            --data-binary @/tmp/barbershop-barber-payload.json \
+            http://localhost:3000/api/barbers)
+          if [ "$barber_status" != "201" ]; then
+            echo "Admin barber creation failed: HTTP $barber_status"
+            cat /tmp/barbershop-barber-created.json
+            exit 1
+          fi
+          curl --fail --silent --show-error 'http://localhost:3000/api/barbers?depth=0' > /tmp/barbershop-public-barbers.json
+          node -e '
+            const fs = require("node:fs");
+            const result = JSON.parse(fs.readFileSync("/tmp/barbershop-public-barbers.json", "utf8"));
+            const doc = (result.docs ?? []).find((entry) => entry.slug === "ci-barber");
+            const offering = doc?.serviceOfferings?.[0];
+            if (!doc || !doc.location || !offering?.service || offering.priceOverride !== 650 || offering.durationOverrideMinutes !== 60) {
+              console.error("Barber relations or overrides were not persisted correctly");
+              process.exit(1);
+            }
+          '
+          # Exercise the PostgreSQL constraint against real catalog fixtures.
+          PGPASSWORD=postgres psql -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_barbershop -f db/constraints/test-booking-no-overlap.sql
+          # Verify actual Payload REST writes honor PostgreSQL's overlap constraint.
+          barber_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-barber-created.json", "utf8")).doc.id')
+          LOCATION_ID="$location_id" BARBER_ID="$barber_id" SERVICE_ID="$service_id" node -e '
+            const fs = require("node:fs");
+            const base = {
+              location: Number(process.env.LOCATION_ID),
+              barber: Number(process.env.BARBER_ID),
+              services: [Number(process.env.SERVICE_ID)],
+              customerName: "CI Payload booking",
+              customerPhone: "+380671234567",
+              totalPrice: 650,
+              status: "pending",
+            };
+            for (const [name, startsAt, endsAt] of [
+              ["first", "2031-01-02T09:00:00.000Z", "2031-01-02T10:00:00.000Z"],
+              ["overlap", "2031-01-02T09:30:00.000Z", "2031-01-02T10:30:00.000Z"],
+              ["adjacent", "2031-01-02T10:00:00.000Z", "2031-01-02T11:00:00.000Z"],
+            ]) {
+              fs.writeFileSync("/tmp/barbershop-booking-" + name + ".json", JSON.stringify({ ...base, startsAt, endsAt }));
+            }
+          '
+          first_booking_status=$(curl --silent --show-error --output /tmp/barbershop-booking-first-response.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data-binary @/tmp/barbershop-booking-first.json http://localhost:3000/api/bookings)
+          if [ "$first_booking_status" != "201" ]; then
+            echo "Payload booking insertion failed: HTTP $first_booking_status"
+            cat /tmp/barbershop-booking-first-response.json
+            exit 1
+          fi
+          overlap_booking_status=$(curl --silent --show-error --output /tmp/barbershop-booking-overlap-response.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data-binary @/tmp/barbershop-booking-overlap.json http://localhost:3000/api/bookings)
+          if [[ "$overlap_booking_status" == "200" || "$overlap_booking_status" == "201" ]]; then
+            echo "Payload incorrectly accepted overlapping booking"
+            cat /tmp/barbershop-booking-overlap-response.json
+            exit 1
+          fi
+          adjacent_booking_status=$(curl --silent --show-error --output /tmp/barbershop-booking-adjacent-response.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data-binary @/tmp/barbershop-booking-adjacent.json http://localhost:3000/api/bookings)
+          if [ "$adjacent_booking_status" != "201" ]; then
+            echo "Payload rejected a valid adjacent booking: HTTP $adjacent_booking_status"
+            cat /tmp/barbershop-booking-adjacent-response.json
+            exit 1
+          fi
+          # Internal idempotency fields must not be writable through REST, even
+          # by an administrator. They are only set by trusted server-side code.
+          LOCATION_ID="$location_id" BARBER_ID="$barber_id" SERVICE_ID="$service_id" \
+            node -e '
+              const fs = require("node:fs");
+              fs.writeFileSync("/tmp/barbershop-booking-injected.json", JSON.stringify({
+                location: Number(process.env.LOCATION_ID),
+                barber: Number(process.env.BARBER_ID),
+                services: [Number(process.env.SERVICE_ID)],
+                customerName: "CI protected metadata",
+                customerPhone: "+380671234567",
+                startsAt: "2035-01-02T09:00:00.000Z",
+                endsAt: "2035-01-02T10:00:00.000Z",
+                totalPrice: 650,
+                idempotencyScope: "attacker:scope",
+                idempotencyKey: "attacker-key",
+                idempotencyRequestHash: "f".repeat(64),
+              }));
+            '
+          injected_status=$(curl --silent --show-error --output /tmp/barbershop-booking-injected-response.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data-binary @/tmp/barbershop-booking-injected.json http://localhost:3000/api/bookings)
+          if [ "$injected_status" = "201" ]; then
+            injected_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-booking-injected-response.json","utf8")).doc.id')
+            leaked=$(PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
+              -d gentlemens_barbershop -c "SELECT count(*) FROM bookings WHERE id = $injected_id AND (idempotency_scope IS NOT NULL OR idempotency_key IS NOT NULL OR idempotency_request_hash IS NOT NULL)")
+            if [ "$leaked" != "0" ]; then
+              echo "REST client was able to write protected booking metadata"
+              exit 1
+            fi
+          elif [[ "$injected_status" != "400" && "$injected_status" != "403" ]]; then
+            echo "Unexpected HTTP status for protected booking fields: $injected_status"
+            cat /tmp/barbershop-booking-injected-response.json
+            exit 1
+          fi
+          # Verify two independent transactions cannot reserve an overlapping slot.
+          LOCATION_ID="$location_id" BARBER_ID="$barber_id" \
+            DATABASE_URL="$DATABASE_URL" bash scripts/test-concurrent-bookings.sh
+          PGPASSWORD=postgres psql -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_barbershop -f db/constraints/test-booking-idempotency.sql
+          # Distinct non-overlapping slots with the same idempotency key must
+          # still be serialized by the unique index across concurrent writes.
+          LOCATION_ID="$location_id" BARBER_ID="$barber_id" \
+            DATABASE_URL="$DATABASE_URL" bash scripts/test-concurrent-idempotency.sh
+          # Exercise the actual Payload Local API against PostgreSQL, not mocks.
+          CI_LOCATION_ID="$location_id" CI_BARBER_ID="$barber_id" CI_SERVICE_ID="$service_id" \
+            timeout 90s node --experimental-strip-types scripts/test-payload-idempotency.ts
+          # Verify the full trusted booking flow with real catalog, schedules and DB writes.
+          CI_LOCATION_ID="$location_id" CI_BARBER_ID="$barber_id" CI_SERVICE_ID="$service_id" \
+            timeout 90s node --experimental-strip-types scripts/test-payload-booking-service.ts
+          # The landing page must render the published CMS records, not static placeholders.
+          curl --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-cms-home.html
+          for expected in 'CI Location true' 'CI Haircut' 'CI Barber'; do
+            if ! grep -Fq "$expected" /tmp/barbershop-cms-home.html; then
+              echo "Published CMS content missing from landing page: $expected"
+              cat /tmp/barbershop-server.log
+              exit 1
+            fi
+          done
+          if grep -Fq 'CI Location false' /tmp/barbershop-cms-home.html; then
+            echo "Inactive location leaked onto landing page"
+            exit 1
+          fi
+          # Draft services and barbers must not be exposed via the public API or HTML.
+          inactive_service_status=$(curl --silent --show-error --output /tmp/barbershop-inactive-service.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data '{"name":"CI Hidden Service","slug":"ci-hidden-service","durationMinutes":30,"price":300,"isActive":false}' \
+            http://localhost:3000/api/services)
+          if [ "$inactive_service_status" != "201" ]; then
+            echo "Admin draft service creation failed: HTTP $inactive_service_status"
+            cat /tmp/barbershop-inactive-service.json
+            exit 1
+          fi
+          inactive_barber_status=$(curl --silent --show-error --output /tmp/barbershop-inactive-barber.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data "{\"name\":\"CI Hidden Barber\",\"slug\":\"ci-hidden-barber\",\"location\":$location_id,\"isActive\":false}" \
+            http://localhost:3000/api/barbers)
+          if [ "$inactive_barber_status" != "201" ]; then
+            echo "Admin draft barber creation failed: HTTP $inactive_barber_status"
+            cat /tmp/barbershop-inactive-barber.json
+            exit 1
+          fi
+          for collection in services barbers; do
+            curl --fail --silent --show-error "http://localhost:3000/api/$collection?depth=0" > "/tmp/barbershop-public-$collection-after-drafts.json"
+          done
+          node -e '
+            const fs = require("node:fs");
+            for (const [collection, hiddenSlug] of [["services", "ci-hidden-service"], ["barbers", "ci-hidden-barber"]]) {
+              const data = JSON.parse(fs.readFileSync(`/tmp/barbershop-public-${collection}-after-drafts.json`, "utf8"));
+              if (data.docs?.some((doc) => doc.slug === hiddenSlug)) {
+                console.error("Draft leaked through public API:", hiddenSlug);
+                process.exit(1);
+              }
+            }
+          '
+          curl --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-home-after-drafts.html
+          for hidden in 'CI Hidden Service' 'CI Hidden Barber'; do
+            if grep -Fq "$hidden" /tmp/barbershop-home-after-drafts.html; then
+              echo "Draft leaked onto landing page: $hidden"
+              exit 1
+            fi
+          done
+          # Bookings contain personal information: anonymous access must be denied.
+          for method in GET POST; do
+            if [ "$method" = "POST" ]; then
+              booking_status=$(curl --silent --show-error --output /tmp/barbershop-bookings-denied.json --write-out '%{http_code}' \
+                --header 'Content-Type: application/json' --data '{"customerName":"Anonymous"}' \
+                http://localhost:3000/api/bookings)
+            else
+              booking_status=$(curl --silent --show-error --output /tmp/barbershop-bookings-denied.json --write-out '%{http_code}' \
+                http://localhost:3000/api/bookings)
+            fi
+            if [[ "$booking_status" != "401" && "$booking_status" != "403" ]]; then
+              echo "Anonymous $method bookings request was not denied: HTTP $booking_status"
+              cat /tmp/barbershop-bookings-denied.json
+              exit 1
+            fi
+          done
+          # Weekly shifts are operational data: only admins may manage or inspect them.
+          schedule_status=$(curl --silent --show-error --output /tmp/barbershop-schedule-created.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data "{\"label\":\"CI Weekly Schedule\",\"barber\":$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-barber-created.json","utf8")).doc.id'),\"isActive\":true,\"weeklyShifts\":[{\"weekday\":\"1\",\"startMinute\":540,\"endMinute\":1080}]}" \
+            http://localhost:3000/api/barber-schedules)
+          if [ "$schedule_status" != "201" ]; then
+            echo "Admin schedule creation failed: HTTP $schedule_status"
+            cat /tmp/barbershop-schedule-created.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const doc = JSON.parse(fs.readFileSync("/tmp/barbershop-schedule-created.json", "utf8")).doc;
+            if (doc.weeklyShifts?.[0]?.startMinute !== 540 || doc.weeklyShifts?.[0]?.endMinute !== 1080) {
+              console.error("Weekly shift was not saved correctly");
+              process.exit(1);
+            }
+          '
+          for method in GET POST; do
+            if [ "$method" = "POST" ]; then
+              schedule_public_status=$(curl --silent --show-error --output /tmp/barbershop-schedule-denied.json --write-out '%{http_code}' \
+                --header 'Content-Type: application/json' --data '{"label":"Anonymous"}' \
+                http://localhost:3000/api/barber-schedules)
+            else
+              schedule_public_status=$(curl --silent --show-error --output /tmp/barbershop-schedule-denied.json --write-out '%{http_code}' \
+                http://localhost:3000/api/barber-schedules)
+            fi
+            if [[ "$schedule_public_status" != "401" && "$schedule_public_status" != "403" ]]; then
+              echo "Anonymous $method schedule request was not denied: HTTP $schedule_public_status"
+              exit 1
+            fi
+          done
+          # Reject impossible and overlapping working hours, including through the REST API.
+          for shifts in '[{"weekday":"1","startMinute":1080,"endMinute":540}]' '[{"weekday":"1","startMinute":540,"endMinute":720},{"weekday":"1","startMinute":700,"endMinute":900}]'; do
+            invalid_schedule_payload=$(SHIFTS="$shifts" BARBER_ID="$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-barber-created.json","utf8")).doc.id')" node -e 'process.stdout.write(JSON.stringify({label:"Invalid shift",barber:Number(process.env.BARBER_ID),weeklyShifts:JSON.parse(process.env.SHIFTS)}))')
+            invalid_status=$(curl --silent --show-error --output /tmp/barbershop-invalid-shift.json --write-out '%{http_code}' \
+              --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+              --data "$invalid_schedule_payload" http://localhost:3000/api/barber-schedules)
+            if [[ "$invalid_status" == "200" || "$invalid_status" == "201" ]]; then
+              echo "Invalid barber schedule was accepted"
+              cat /tmp/barbershop-invalid-shift.json
+              exit 1
+            fi
+          done
+          # Admin can register time off; malformed ranges and anonymous access are denied.
+          time_off_payload=$(BARBER_ID="$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-barber-created.json","utf8")).doc.id')" node -e 'process.stdout.write(JSON.stringify({barber:Number(process.env.BARBER_ID),reason:"CI vacation",startsAt:"2026-12-01T09:00:00.000Z",endsAt:"2026-12-02T09:00:00.000Z"}))')
+          time_off_status=$(curl --silent --show-error --output /tmp/barbershop-time-off-created.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data "$time_off_payload" http://localhost:3000/api/barber-time-off)
+          if [ "$time_off_status" != "201" ]; then
+            echo "Admin time-off creation failed: HTTP $time_off_status"
+            cat /tmp/barbershop-time-off-created.json
+            exit 1
+          fi
+          invalid_time_off=$(BARBER_ID="$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-barber-created.json","utf8")).doc.id')" node -e 'process.stdout.write(JSON.stringify({barber:Number(process.env.BARBER_ID),reason:"Invalid",startsAt:"2026-12-02T09:00:00.000Z",endsAt:"2026-12-01T09:00:00.000Z"}))')
+          invalid_time_off_status=$(curl --silent --show-error --output /tmp/barbershop-time-off-invalid.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data "$invalid_time_off" http://localhost:3000/api/barber-time-off)
+          if [[ "$invalid_time_off_status" == "200" || "$invalid_time_off_status" == "201" ]]; then
+            echo "Invalid time-off interval was accepted"
+            exit 1
+          fi
+          for method in GET POST; do
+            if [ "$method" = "POST" ]; then
+              time_off_public_status=$(curl --silent --show-error --output /tmp/barbershop-time-off-denied.json --write-out '%{http_code}' \
+                --header 'Content-Type: application/json' --data "$time_off_payload" http://localhost:3000/api/barber-time-off)
+            else
+              time_off_public_status=$(curl --silent --show-error --output /tmp/barbershop-time-off-denied.json --write-out '%{http_code}' \
+                http://localhost:3000/api/barber-time-off)
+            fi
+            if [[ "$time_off_public_status" != "401" && "$time_off_public_status" != "403" ]]; then
+              echo "Anonymous $method time-off request was not denied: HTTP $time_off_public_status"
+              exit 1
+            fi
+          done
+          # A public signup must never be able to assign the administrator role.
+          signup_status=$(curl --silent --show-error --output /tmp/barbershop-signup.json --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"email":"customer-ci@example.invalid","password":"ci-customer-test-password","role":"admin"}' \
+            http://localhost:3000/api/users)
+          echo "Public signup HTTP status: $signup_status"
+          if [[ "$signup_status" != "201" && "$signup_status" != "200" ]]; then
+            echo "Public signup failed"
+            cat /tmp/barbershop-signup.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const response = JSON.parse(fs.readFileSync("/tmp/barbershop-signup.json", "utf8"));
+            const user = response.doc ?? response;
+            if (user.role !== "customer") {
+              console.error("Privilege escalation through public signup:", user.role);
+              process.exit(1);
+            }
+          '
+          # An authenticated customer must not be able to promote their own account.
+          login_status=$(curl --silent --show-error --output /tmp/barbershop-login.json --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"email":"customer-ci@example.invalid","password":"ci-customer-test-password"}' \
+            http://localhost:3000/api/users/login)
+          if [ "$login_status" != "200" ]; then
+            echo "Customer login failed: HTTP $login_status"
+            cat /tmp/barbershop-login.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const login = JSON.parse(fs.readFileSync("/tmp/barbershop-login.json", "utf8"));
+            const signup = JSON.parse(fs.readFileSync("/tmp/barbershop-signup.json", "utf8"));
+            const id = (signup.doc ?? signup).id;
+            if (!login.token || !id) process.exit(1);
+            fs.writeFileSync("/tmp/barbershop-auth-token", login.token);
+            fs.writeFileSync("/tmp/barbershop-customer-id", String(id));
+          '
+          token=$(cat /tmp/barbershop-auth-token)
+          customer_id=$(cat /tmp/barbershop-customer-id)
+          update_status=$(curl --silent --show-error --output /tmp/barbershop-role-update.json --write-out '%{http_code}' \
+            --request PATCH \
+            --header "Authorization: JWT $token" \
+            --header 'Content-Type: application/json' \
+            --data '{"role":"admin"}' \
+            "http://localhost:3000/api/users/$customer_id")
+          echo "Customer role update HTTP status: $update_status"
+          if [[ "$update_status" != "200" && "$update_status" != "403" && "$update_status" != "400" ]]; then
+            echo "Unexpected role update response"
+            cat /tmp/barbershop-role-update.json
+            exit 1
+          fi
+          me_status=$(curl --silent --show-error --output /tmp/barbershop-me.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $token" \
+            http://localhost:3000/api/users/me)
+          if [ "$me_status" != "200" ]; then
+            echo "Could not verify customer role after attempted escalation: HTTP $me_status"
+            cat /tmp/barbershop-me.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const response = JSON.parse(fs.readFileSync("/tmp/barbershop-me.json", "utf8"));
+            const user = response.user ?? response;
+            if (user.role !== "customer") {
+              console.error("Customer role changed unexpectedly:", user.role);
+              process.exit(1);
+            }
+          '
+          # A customer must not be able to enumerate the administrator or other users.
+          customer_list_status=$(curl --silent --show-error --output /tmp/barbershop-customer-list.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $token" \
+            http://localhost:3000/api/users)
+          if [ "$customer_list_status" != "200" ]; then
+            echo "Customer-scoped user listing failed: HTTP $customer_list_status"
+            cat /tmp/barbershop-customer-list.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const result = JSON.parse(fs.readFileSync("/tmp/barbershop-customer-list.json", "utf8"));
+            const customerId = fs.readFileSync("/tmp/barbershop-customer-id", "utf8");
+            const docs = result.docs ?? [];
+            if (docs.length !== 1 || String(docs[0].id) !== customerId || docs[0].role !== "customer") {
+              console.error("Customer can enumerate other users or sees unexpected records");
+              process.exit(1);
+            }
+          '
