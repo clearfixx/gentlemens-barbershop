@@ -4,6 +4,7 @@ import { ThemeToggle } from './theme-toggle'
 const links = [
   { href: '/#about', label: 'Про нас' },
   { href: '/catalog', label: 'Каталог' },
+  { href: '/availability', label: 'Вільний час' },
   { href: '/#team', label: 'Майстри' },
   { href: '/#locations', label: 'Локації' },
 ]
