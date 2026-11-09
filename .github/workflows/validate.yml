@@ -71,6 +71,13 @@ jobs:
           else
             echo "::warning::Undici package not found in pnpm store"
           fi
+          echo "Payload CLI without tsx transpilation:"
+          if pnpm exec payload migrate:create --disable-transpile --help > /tmp/payload-migrate-native.log 2>&1; then
+            echo "Payload native CLI migration help starts successfully"
+          else
+            echo "::warning::Payload native CLI startup failed"
+            tail -n 35 /tmp/payload-migrate-native.log
+          fi
           echo "Payload CLI migration help:"
           if pnpm exec payload migrate:create --help > /tmp/payload-migrate-cli.log 2>&1; then
             echo "Payload migration CLI starts successfully"
