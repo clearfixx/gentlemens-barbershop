@@ -22,7 +22,9 @@
 
 - A reviewed, repeatable migration and production rollback plan have **not** been added.
 - Existing names/cities/addresses need a separate localization and data-backfill design.
-- Admin-managed interface dictionaries with draft/publish, validation and cache invalidation are **not implemented**.
+- Admin-managed UI dictionaries are implemented with admin-only draft/published records, key validation, and request-time published-only reads (no shared dictionary cache). Verify publish/unpublish in a running Payload instance before release.
+- Array-valued UI messages (for example booking wizard steps) are intentionally not editable through flat string overrides.
+- No reviewed migration for the new `translations` collection exists yet; deployment must not depend on automatic production schema push.
 - Do not mark localization complete or merge to production until these blockers are addressed.
 
 ## Security and UX

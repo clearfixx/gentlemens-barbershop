@@ -10,7 +10,9 @@ function flatten(value: Dictionary, prefix = ''): string[] {
   return Object.entries(value).flatMap(([key, child]) => {
     const path = prefix ? `${prefix}.${key}` : key
     if (typeof child === 'string') return [path]
-    if (Array.isArray(child)) return child.every(item => typeof item === 'string') ? [path] : []
+    // Array-valued dictionary entries (e.g. booking.steps) must remain arrays.
+    // Flat string overrides cannot safely replace them.
+    if (Array.isArray(child)) return []
     if (child && typeof child === 'object') return flatten(child as Dictionary, path)
     return []
   })

@@ -20,3 +20,8 @@ test('draft, wrong locale and invalid payload never reach the public dictionary'
   }
   assert.equal(resolvePublishedMessages('en', null).nav.home, 'Home')
 })
+
+test('invalid array replacement is ignored without corrupting the booking wizard', () => {
+  const result = resolvePublishedMessages('en', { locale: 'en', status: 'published', entries: { 'booking.steps': 'Broken' } })
+  assert.deepEqual(result.booking.steps, getFallbackMessages('en').booking.steps)
+})

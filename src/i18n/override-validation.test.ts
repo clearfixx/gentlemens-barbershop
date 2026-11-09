@@ -16,3 +16,7 @@ test('rejects unknown keys, markup, invalid values and oversized content', () =>
   assert.notEqual(validateTranslationOverrides([]), true)
   assert.notEqual(validateTranslationOverrides(null), true)
 })
+
+test('rejects attempts to replace array-valued booking steps with a string', () => {
+  assert.notEqual(validateTranslationOverrides({ 'booking.steps': 'One step' }), true)
+})
