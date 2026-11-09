@@ -1038,6 +1038,15 @@ jobs:
               END IF;
             END \$\$;"
           CI=1 timeout 120s pnpm db:migrate
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            DO \$\$ BEGIN
+              IF (SELECT count(*) FROM payload_migrations) <> 2 THEN
+                RAISE EXCEPTION 'Repeat migration unexpectedly changed migration history';
+              END IF;
+            END \$\$;"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/incremental-repeat.txt
+          diff -u /tmp/incremental-before.txt /tmp/incremental-repeat.txt
           echo "Versioned incremental migration preserved legacy data and is repeatable"
       - name: Upload incremental migration candidate for manual review
         uses: actions/upload-artifact@v4
