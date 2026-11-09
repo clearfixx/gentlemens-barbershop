@@ -204,12 +204,22 @@ jobs:
             exit 1
           fi
           curl --fail --silent --show-error --output /dev/null http://localhost:3000/
-          curl --fail --silent --show-error --output /tmp/barbershop-catalog.html 'http://localhost:3000/catalog?location=1&barber=1'
+          curl --location --fail --silent --show-error --output /tmp/barbershop-catalog.html 'http://localhost:3000/catalog?location=1&barber=1'
           grep -q 'ОБЕРІТЬ СВІЙ СТИЛЬ' /tmp/barbershop-catalog.html
-          curl --fail --silent --show-error --output /tmp/barbershop-booking.html http://localhost:3000/booking
+          curl --location --fail --silent --show-error --output /tmp/barbershop-booking.html http://localhost:3000/booking
           grep -q 'СПЛАНУЙТЕ ВІЗИТ' /tmp/barbershop-booking.html
-          curl --fail --silent --show-error --output /tmp/barbershop-availability.html http://localhost:3000/availability
+          curl --location --fail --silent --show-error --output /tmp/barbershop-availability.html http://localhost:3000/availability
           grep -q 'ВІЛЬНИЙ ЧАС' /tmp/barbershop-availability.html
+          # Public locale routes must render their own language, not just switch URLs.
+          curl --fail --silent --show-error --output /tmp/barbershop-english.html http://localhost:3000/en
+          grep -q 'lang="en"' /tmp/barbershop-english.html
+          grep -q 'WHERE' /tmp/barbershop-english.html
+          curl --fail --silent --show-error --output /tmp/barbershop-english-booking.html http://localhost:3000/en/booking
+          grep -q 'PLAN YOUR VISIT' /tmp/barbershop-english-booking.html
+          curl --fail --silent --show-error --output /tmp/barbershop-ukrainian.html http://localhost:3000/uk
+          grep -q 'lang="uk"' /tmp/barbershop-ukrainian.html
+          # Payload administration must remain outside locale-prefixed URLs.
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:3000/admin)" != "404"
           invalid_availability_status=$(curl --silent --output /tmp/barbershop-availability-invalid.json --write-out '%{http_code}' 'http://localhost:3000/api/availability?barber=1&service=2&date=not-a-date')
           test "$invalid_availability_status" = 400
           # Valid-but-unavailable catalog IDs must not disclose private records.
