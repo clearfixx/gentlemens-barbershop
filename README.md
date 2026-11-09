@@ -29,7 +29,7 @@ See `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` for the initial specification. 
 
 ## Local development (Windows PowerShell)
 
-Use Node.js 24 (recent patch release), pnpm 10.28.2, and Docker Desktop with Linux containers enabled.
+Use Node.js 24.22.1 or newer, pnpm 10.28.2, and Docker Desktop with Linux containers enabled.
 
 ```powershell
 corepack enable
