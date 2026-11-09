@@ -996,6 +996,11 @@ jobs:
           test "$(find src/migrations -maxdepth 1 -type f -name '*.json' | wc -l)" -eq 2
           echo "Generated incremental migration candidate from historical Payload snapshot"
           find src/migrations -maxdepth 1 -type f -printf '%f\n'
+      - name: Assert incremental migration is additive and scoped to localization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/check-localization-incremental.py src/migrations
       - name: Upload incremental migration candidate for manual review
         uses: actions/upload-artifact@v4
         with:
