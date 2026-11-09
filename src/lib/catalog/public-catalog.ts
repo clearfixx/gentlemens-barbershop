@@ -46,7 +46,7 @@ export async function loadPublicCatalog(payload: Payload, filters: PublicCatalog
     : visibleBarbers
   const offeredServices = filters.barberId
     ? new Set(filteredBarbers.flatMap(barber =>
-        (barber.serviceOfferings ?? []).map(offering =>
+        (barber.serviceOfferings ?? []).map((offering: { service: number | { id: number } }) =>
           typeof offering.service === 'number' ? offering.service : offering.service.id),
       ))
     : null
