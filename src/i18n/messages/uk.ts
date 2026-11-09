@@ -1,4 +1,5 @@
 export const uk = {
+  language: { navigation: 'Мова сайту', ukrainian: 'Українська', english: 'Англійська', discardBooking: 'Зміна мови скине поточний вибір у формі запису. Продовжити?' },
   common: { currency: 'грн', minutes: 'хвилин', minuteShort: 'хв', from: 'від', duration: 'Тривалість', price: 'Вартість' },
   home: {
     eyebrow: 'Традиції. Майстерність. Стиль.',

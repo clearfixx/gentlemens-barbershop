@@ -4,12 +4,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { locales, type Locale } from '@/i18n/config'
 import { localePath } from '@/i18n/paths'
+import { getFallbackMessages } from '@/i18n/messages'
 
 /**
  * Booking selections and customer details are kept in component memory only.
  * Warn before changing locale on that route; never silently discard the draft.
  */
 export function LocaleSwitcher({ locale }: { locale: Locale }) {
+  const t = getFallbackMessages(locale)
   const pathname = usePathname()
   const currentPath = pathname.replace(/^\/(uk|en)(?=\/|$)/, '')
   const bookingInProgress = currentPath === '/booking'
@@ -20,13 +22,11 @@ export function LocaleSwitcher({ locale }: { locale: Locale }) {
       return
     }
     if (!bookingInProgress) return
-    const warning = locale === 'uk'
-      ? 'Зміна мови скине поточний вибір у формі запису. Продовжити?'
-      : 'Changing the language will reset your current booking selections. Continue?'
+    const warning = t.language.discardBooking
     if (!window.confirm(warning)) event.preventDefault()
   }
 
-  return <nav className="locale-switcher" aria-label={locale === 'uk' ? 'Мова сайту' : 'Website language'}>
+  return <nav className="locale-switcher" aria-label={t.language.navigation}>
     {locales.map(option =>
       <Link
         key={option}
@@ -34,7 +34,7 @@ export function LocaleSwitcher({ locale }: { locale: Locale }) {
         hrefLang={option}
         lang={option}
         aria-current={option === locale ? 'page' : undefined}
-        aria-label={option === 'uk' ? 'Українська' : 'English'}
+        aria-label={option === 'uk' ? t.language.ukrainian : t.language.english}
         onClick={event => confirmSwitch(event, option)}
       >{option.toUpperCase()}</Link>
     )}

@@ -3,6 +3,7 @@ import type { uk } from './uk'
 type MessageShape<T> = { -readonly [K in keyof T]: T[K] extends readonly string[] ? readonly string[] : T[K] extends string ? string : T[K] extends object ? MessageShape<T[K]> : T[K] }
 
 export const en = {
+  language: { navigation: 'Website language', ukrainian: 'Ukrainian', english: 'English', discardBooking: 'Changing the language will reset your current booking selections. Continue?' },
   common: { currency: 'UAH', minutes: 'minutes', minuteShort: 'min', from: 'from', duration: 'Duration', price: 'Price' },
   home: {
     eyebrow: 'Tradition. Craft. Style.',
