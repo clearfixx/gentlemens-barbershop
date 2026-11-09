@@ -23,7 +23,9 @@ src/
     booking/
     barbers/
     shops/
-    catalog/
+    shop/
+    loyalty/
+    customer-account/
     reviews/
     notifications/
   lib/
@@ -59,6 +61,16 @@ This is a conceptual target; actual Payload route directories must follow the of
 - Cancellation/decline and reschedule are server-validated state transitions with clear ownership and notifications.
 - Explicitly decide whether new requests *hold* slots while awaiting barber acceptance; recommended default is yes, otherwise double bookings are possible.
 - Do not rely exclusively on Payload collection hooks for conflict protection.
+
+## Customer account, shop and loyalty — v1.0 boundaries
+
+- **Customer account** is a read/write facade over the authenticated user's permitted profile, bookings, orders, favorites and loyalty summaries. It does not own booking, inventory, order or bonus business rules. Customer IDs link domains; authorization is checked independently in each domain.
+- **Shop** owns `Products`, optional `ProductVariants`, `Inventory` / `StockMovements`, `Carts` / `CartItems`, `Orders`, `OrderItems`, and fulfillment details. An order stores a price/name snapshot and a fulfillment discriminator `pickup | delivery`. Pickup requires a valid `Location` reference; delivery requires a Ukrainian delivery address and recipient contact. The shipping provider integration is an adapter, not a dependency of core order creation.
+- **Loyalty** owns `LoyaltyAccounts`, `LoyaltyLevels`, `LoyaltyRules` and immutable `LoyaltyTransactions` with separate XP and bonus units. Unique source-event IDs prevent duplicate awards; reversals are new ledger entries. Rule changes are versioned and audited. The user profile never directly writes balances.
+- A server-side **checkout service** validates cart, stock, discounts, delivery method, totals and authorization in one authoritative flow. Order creation, stock reservation and any bonus reservation/debit must be transactionally consistent in PostgreSQL; retries use idempotency. Order cancellation/refund reverses stock/bonus effects exactly once.
+- Award XP/bonus after an eligible completed booking or fulfilled order, not on request creation. Event processing must be idempotent; if asynchronous delivery is introduced, use a durable outbox or equivalent rather than relying on a best-effort hook.
+- No online payment gateway or multi-vendor marketplace in v1.0. Delivery across Ukraine and pickup at a selected barbershop are approved. Carrier, fees, payment-on-receipt and loyalty numeric policies are **not yet approved**.
+- Domain writes should use explicit service functions and database transactions; Payload collections are content/admin storage and access controls, not a substitute for stock/ledger transactional integrity.
 
 ## Security
 
