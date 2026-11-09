@@ -1,3 +1,5 @@
+import { localizedCopy } from '@/i18n/localized-copy'
+import type { Locale } from '@/i18n/config'
 import type { Payload } from 'payload'
 
 export type PublicCatalogFilters = {
@@ -12,18 +14,18 @@ export function parseCatalogId(value: string | undefined): number | undefined {
 }
 
 /** Public catalog queries always include an active predicate, even in Local API. */
-export async function loadPublicCatalog(payload: Payload, filters: PublicCatalogFilters = {}) {
+export async function loadPublicCatalog(payload: Payload, filters: PublicCatalogFilters = {}, locale: Locale = 'uk') {
   const [locations, services, barbers] = await Promise.all([
     payload.find({
-      collection: 'locations', depth: 0, sort: 'name', limit: 100,
+      collection: 'locations', locale, depth: 0, sort: 'name', limit: 100,
       where: { isActive: { equals: true } }, overrideAccess: true,
     }),
     payload.find({
-      collection: 'services', depth: 0, sort: 'name', limit: 100,
+      collection: 'services', locale, depth: 0, sort: 'name', limit: 100,
       where: { isActive: { equals: true } }, overrideAccess: true,
     }),
     payload.find({
-      collection: 'barbers', depth: 1, sort: 'name', limit: 100,
+      collection: 'barbers', locale, depth: 1, sort: 'name', limit: 100,
       where: {
         and: [
           { isActive: { equals: true } },

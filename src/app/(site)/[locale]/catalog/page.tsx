@@ -1,3 +1,4 @@
+import { localizedCopy } from '@/i18n/localized-copy'
 import type { Metadata } from 'next'
 import { generatePublicPageMetadata } from '@/i18n/seo'
 
@@ -26,7 +27,7 @@ export default async function CatalogPage({ searchParams, params: routeParams }:
   const locationId = parseCatalogId(params.location)
   const barberId = parseCatalogId(params.barber)
   const payload = await getPayload({ config })
-  const catalog = await loadPublicCatalog(payload, { locationId, barberId })
+  const catalog = await loadPublicCatalog(payload, { locationId, barberId }, locale)
   const visibleLocationIds = new Set(catalog.locations.map(location => location.id))
   const selectedLocation = catalog.locations.find(location => location.id === locationId)
   const selectedBarber = catalog.barbers.find(barber => barber.id === barberId)
@@ -58,7 +59,7 @@ export default async function CatalogPage({ searchParams, params: routeParams }:
         <h2 id="catalog-services">{t.catalog.services}</h2>
         {catalog.services.length ? <ul className="catalog-grid">{catalog.services.map(service => <li className="catalog-card" key={service.id}>
           <div className="catalog-card__top"><h3>{service.name}</h3><strong className="catalog-card__price">{t.common.from} {service.price} {t.common.currency}</strong></div>
-          {service.description && <p>{service.description}</p>}
+          {localizedCopy(service, 'localizedDescription', 'description') && <p>{localizedCopy(service, 'localizedDescription', 'description')}</p>}
           <div className="catalog-card__meta"><span>{service.durationMinutes} {t.common.minuteShort}</span><span aria-hidden="true">✦</span></div>
         </li>)}</ul> : <p className="catalog-empty">{t.catalog.noServices}</p>}
       </section>
@@ -68,7 +69,7 @@ export default async function CatalogPage({ searchParams, params: routeParams }:
           {barber.portrait && typeof barber.portrait === 'object' && barber.portrait.url
             ? <img className="team-card__portrait" src={barber.portrait.url} alt={barber.portrait.alt || `${t.home.barberPortrait} ${barber.name}`} loading="lazy" />
             : <span className="team-card__monogram" aria-hidden="true">{barber.name.charAt(0)}</span>}
-          <h3>{barber.name}</h3>{barber.bio && <p>{barber.bio}</p>}
+          <h3>{barber.name}</h3>{localizedCopy(barber, 'localizedBio', 'bio') && <p>{localizedCopy(barber, 'localizedBio', 'bio')}</p>}
           <span className="catalog-card__kicker">{catalog.locations.find(location => location.id === (typeof barber.location === 'number' ? barber.location : barber.location.id))?.name}</span>
         </li>)}</ul> : <p className="catalog-empty">{t.catalog.noBarbers}</p>}
       </section>
