@@ -24,6 +24,14 @@ export default buildConfig({
   },
   collections: [Users, Media, Locations, Services, Barbers, Bookings, BarberSchedules, BarberTimeOff],
   editor: lexicalEditor(),
+  localization: {
+    locales: [
+      { label: 'Українська', code: 'uk' },
+      { label: 'English', code: 'en' },
+    ],
+    defaultLocale: 'uk',
+    fallback: true,
+  },
   secret: process.env.PAYLOAD_SECRET || '',
   db: postgresAdapter({ pool: { connectionString: process.env.DATABASE_URL || '' } }),
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
