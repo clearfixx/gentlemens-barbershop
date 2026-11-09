@@ -135,6 +135,16 @@ jobs:
           name: localization-initialized-schema
           path: migration-review/
           retention-days: 7
+      - name: Verify read-only legacy data fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/legacy-before.txt
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/legacy-after.txt
+          diff -u /tmp/legacy-before.txt /tmp/legacy-after.txt
+          for table in services locations barbers bookings; do
+            grep -q "^$table|" /tmp/legacy-before.txt
+          done
       - name: Verify read-only localization schema preflight
         run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-localization-schema.sql
       - name: Verify legacy catalog schema survives localization

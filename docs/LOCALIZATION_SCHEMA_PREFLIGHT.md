@@ -35,3 +35,7 @@ The CI workflow exports a **schema-only** `pg_dump` of its disposable, initializ
 CI runs the schema-only dump with the `postgres:17-alpine` client image so its `pg_dump` major version matches the PostgreSQL 17 service; the runner's default PostgreSQL 16 client cannot dump a newer server.
 
 The review artifact also includes `localization-columns.csv` (actual column types and nullability) and `localization-constraints.csv` (constraint names and types) for the catalog and `%_locales` tables. These inventories are read-only and are intended for human review alongside the SQL dump; they are not a substitute for a populated-database migration rehearsal.
+
+## Legacy data preservation fingerprints
+
+Run `psql -X -v ON_ERROR_STOP=1 -At -F '|' "$DATABASE_URL" -f db/constraints/fingerprint-localization-legacy-data.sql > before.txt` on a **restored isolated database**, apply the reviewed localization migration, then run the same command into `after.txt` and compare with `diff -u before.txt after.txt`. The query hashes legacy catalog fields and all booking rows, excluding new localized columns. This detects changed or missing legacy values without exporting raw booking data. It does **not** cover all dependent tables, so also verify relationship IDs and booking constraints. CI smoke-tests repeatability on its disposable database, but the actual before/after migration comparison remains pending until a pre-localization database snapshot is available.
