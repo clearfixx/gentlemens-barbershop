@@ -22,7 +22,7 @@
 
 - A reviewed, repeatable migration and production rollback plan have **not** been added.
 - Existing names/cities/addresses need a separate localization and data-backfill design.
-- Admin-managed UI dictionaries are implemented with admin-only draft/published records, key validation, and request-time published-only reads (no shared dictionary cache). Verify publish/unpublish in a running Payload instance before release.
+- Admin-managed UI dictionaries are implemented with admin-only draft/published records, key validation, and request-time published-only reads (no shared dictionary cache). CI exercises draft/publish/unpublish on a disposable PostgreSQL instance and rejects anonymous CRUD, invalid override shapes, and duplicate locale records. Before release, also verify the admin UI and browser-rendered copy against a deployed instance.
 - Array-valued UI messages (for example booking wizard steps) are intentionally not editable through flat string overrides.
 - No reviewed migration for the new `translations` collection exists yet; deployment must not depend on automatic production schema push.
 - Do not mark localization complete or merge to production until these blockers are addressed.
@@ -30,5 +30,5 @@
 ## Security and UX
 
 - Locale affects display copy, not authorization, service prices, slot availability, or booking identifiers.
-- Admin-only collection write access must remain enforced.
+- Admin-only collection read and write access must remain enforced. Payload rejects unauthorized collection reads with HTTP 403 rather than returning an empty result.
 - Switching language on the booking preview warns before discarding the in-memory draft.

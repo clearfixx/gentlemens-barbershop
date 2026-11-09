@@ -70,8 +70,10 @@ async function main() {
       limit: 1,
     })
     assert.equal(afterUnpublish.docs.length, 0, 'Unpublishing must remove the public override')
-    const anonymousRead = await payload.find({ collection: 'translations', overrideAccess: false, limit: 10 })
-    assert.equal(anonymousRead.docs.length, 0, 'Anonymous callers must not read admin translation documents')
+    await assert.rejects(
+      payload.find({ collection: 'translations', overrideAccess: false, limit: 10 }),
+      'Anonymous callers must not read admin translation documents',
+    )
     console.info('Payload translation draft/publish/unpublish integration passed')
   } finally {
     if (id !== undefined) await payload.delete({ collection: 'translations', id, overrideAccess: true })
