@@ -54,14 +54,23 @@ jobs:
             if (!pkg.bin?.payload) throw new Error('Payload CLI executable is missing');
             console.log('Payload CLI declared:', pkg.bin.payload);
           "
-      - name: Diagnose Payload migration CLI startup
+      - name: Diagnose Payload CLI and transitive undici loader
         shell: bash
         run: |
           set -uo pipefail
           node --version
           node -p "require('./node_modules/payload/package.json').version"
-          echo "Undici direct import:"
-          node -e "const u = require('undici'); console.log('undici loaded', typeof u.fetch)" || true
+          echo "Resolve the undici package used by Payload CLI:"
+          undici_entry="$(find node_modules/.pnpm -path '*/undici@*/node_modules/undici/index.js' -print -quit)"
+          if [ -n "$undici_entry" ]; then
+            echo "Undici entry: $undici_entry"
+            echo "Plain Node:"
+            node -e "require('./$undici_entry'); console.log('undici loaded')" || true
+            echo "Node with tsx import hook:"
+            node --import tsx -e "require('./$undici_entry'); console.log('undici loaded')" || true
+          else
+            echo "::warning::Undici package not found in pnpm store"
+          fi
           echo "Payload CLI migration help:"
           if pnpm exec payload migrate:create --help > /tmp/payload-migrate-cli.log 2>&1; then
             echo "Payload migration CLI starts successfully"
