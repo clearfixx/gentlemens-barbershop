@@ -949,6 +949,61 @@ jobs:
           path: baseline-review/
           retention-days: 7
 
+  incremental-migration-candidate:
+    needs: [prelocalization-baseline]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_barbershop
+      PAYLOAD_SECRET: ci-only-not-a-production-secret-please-replace
+      NEXT_TELEMETRY_DISABLED: "1"
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gentlemens_barbershop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gentlemens_barbershop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install current dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Download historical migration and snapshot
+        uses: actions/download-artifact@v4
+        with:
+          name: prelocalization-migration-snapshot-candidate
+          path: src/migrations
+      - name: Generate incremental migration against historical snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find src/migrations -maxdepth 1 -type f -name '*.json' | wc -l)" -eq 1
+          test "$(find src/migrations -maxdepth 1 -type f -name '*.ts' ! -name index.ts | wc -l)" -eq 1
+          CI=1 timeout 90s pnpm db:migrate:create -- ci-localization-incremental --force-accept-warning
+          test "$(find src/migrations -maxdepth 1 -type f -name '*.json' | wc -l)" -eq 2
+          echo "Generated incremental migration candidate from historical Payload snapshot"
+          find src/migrations -maxdepth 1 -type f -printf '%f\n'
+      - name: Upload incremental migration candidate for manual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: payload-incremental-migration-candidate
+          path: src/migrations/
+          if-no-files-found: error
+          retention-days: 7
+
   compare-localization-schemas:
     needs: [checks, prelocalization-baseline]
     runs-on: ubuntu-latest
