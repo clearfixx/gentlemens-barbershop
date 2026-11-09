@@ -747,3 +747,64 @@ jobs:
               process.exit(1);
             }
           '
+
+  prelocalization-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_barbershop
+      PAYLOAD_SECRET: ci-only-not-a-production-secret-please-replace
+      BOOTSTRAP_ADMIN_EMAIL: baseline-ci@example.invalid
+      BOOTSTRAP_ADMIN_PASSWORD: ci-only-test-password-not-for-production
+      NEXT_TELEMETRY_DISABLED: "1"
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gentlemens_barbershop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gentlemens_barbershop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout exact pre-localization baseline
+        uses: actions/checkout@v4
+        with:
+          ref: 78bcb938bd5265cf19425ad701de6fa608863829
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install frozen baseline dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Initialize baseline Payload schema on isolated PostgreSQL
+        run: timeout 90s pnpm bootstrap:admin
+      - name: Export pre-localization schema only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p baseline-review
+          docker run --rm --network host -e DATABASE_URL="$DATABASE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges' > baseline-review/prelocalization-schema.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT version()" > baseline-review/postgres-version.txt
+          node -e "const p=require('./node_modules/payload/package.json');const d=require('./node_modules/@payloadcms/db-postgres/package.json');require('node:fs').writeFileSync('baseline-review/payload-versions.txt', 'payload='+p.version+'\\n@payloadcms/db-postgres='+d.version+'\\n')"
+          printf '%s\\n' '78bcb938bd5265cf19425ad701de6fa608863829' > baseline-review/source-commit.txt
+          test -s baseline-review/prelocalization-schema.sql
+          if grep -Eq '^CREATE TABLE public\\.(translations|services_locales|locations_locales|barbers_locales)' baseline-review/prelocalization-schema.sql; then
+            echo "Unexpected localization tables in pre-localization baseline"
+            exit 1
+          fi
+      - name: Upload pre-localization schema baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: prelocalization-baseline-schema
+          path: baseline-review/
+          retention-days: 7
