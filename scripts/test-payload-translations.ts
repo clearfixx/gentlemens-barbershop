@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { getPayload } from 'payload'
 import config from '../src/payload.config.ts'
 import { resolvePublishedMessages } from '../src/i18n/resolve-overrides.ts'
+import { getFallbackMessages } from '../src/i18n/messages/index.ts'
 
 async function main() {
   const payload = await getPayload({ config })
@@ -37,7 +38,7 @@ async function main() {
     assert.equal(resolvePublishedMessages('en', { locale: publicRead.docs[0].locale as string, status: publicRead.docs[0].status as string, entries: publicRead.docs[0].entries }).nav.home, 'Integration test home')
     assert.equal(published.status, 'published')
     assert.equal(resolvePublishedMessages('uk', { locale: 'en', status: 'published', entries: publicRead.docs[0].entries }).nav.home,
-      'Головна', 'English overrides must not leak into Ukrainian')
+      getFallbackMessages('uk').nav.home, 'English overrides must not leak into Ukrainian')
     await assert.rejects(
       payload.update({ collection: 'translations', id, overrideAccess: true, data: { entries: { 'booking.steps': 'Invalid array replacement' } } }),
       'Invalid dictionary shape must be rejected by Payload validation',
