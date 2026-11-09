@@ -1029,6 +1029,18 @@ jobs:
           for table in services locations barbers bookings; do
             psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT to_regclass('public.$table') IS NOT NULL" | grep -qx 't'
           done
+          # A ledger table that exists but contains no records is also unsafe.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'CREATE TABLE public.payload_migrations (id serial PRIMARY KEY)'
+          set +e
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-unversioned-payload.sql > /tmp/empty-ledger-preflight.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "::error::Preflight unexpectedly accepted an empty migration ledger"
+            exit 1
+          fi
+          grep -q 'UNVERSIONED_PAYLOAD_SCHEMA' /tmp/empty-ledger-preflight.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'DROP TABLE public.payload_migrations'
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'DROP TABLE public.bookings, public.barbers, public.locations, public.services'
           # A genuinely empty database must be allowed for bootstrap.
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-unversioned-payload.sql
