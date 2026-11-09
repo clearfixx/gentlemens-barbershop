@@ -109,7 +109,17 @@ jobs:
                 THEN RAISE EXCEPTION 'Bootstrap migration omitted required tables';
                 END IF;
               END \$\$;"
-          echo "Bootstrap applied successfully to an isolated empty database only"
+          # A second invocation must not replay the initial CREATE TABLE statements.
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
+            CI=1 timeout 120s pnpm db:migrate
+          PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_migration_bootstrap_ci -c "
+              DO \$\$ BEGIN
+                IF (SELECT count(*) FROM payload_migrations) <> 1 THEN
+                  RAISE EXCEPTION 'Expected exactly one recorded migration';
+                END IF;
+              END \$\$;"
+          echo "Bootstrap and repeat migration succeeded on isolated empty database only"
       - name: Upload generated migration candidate for manual review
         if: always()
         uses: actions/upload-artifact@v4
