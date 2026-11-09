@@ -78,6 +78,8 @@ jobs:
             cat /tmp/barbershop-second-bootstrap.log
             exit 1
           fi
+      - name: Payload translation publication integration test
+        run: node --experimental-strip-types scripts/test-payload-translations.ts
       - name: Install database booking integrity constraints
         env:
           PGPASSWORD: postgres
