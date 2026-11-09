@@ -1,12 +1,18 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { SiteHeader } from '@/components/site-header'
+import { getFallbackMessages } from '@/i18n/messages'
+import { isLocale } from '@/i18n/config'
+import { notFound } from 'next/navigation'
 import { BookingWizard } from '@/components/booking-wizard'
 import { loadPublicCatalog } from '@/lib/catalog/public-catalog'
 
 export const dynamic = 'force-dynamic'
 
-export default async function BookingPage() {
+export default async function BookingPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  if (!isLocale(locale)) notFound()
+  const t = getFallbackMessages(locale)
   const payload = await getPayload({ config })
   const catalog = await loadPublicCatalog(payload)
   const locations = catalog.locations.map(item => ({ id: Number(item.id), name: String(item.name), city: String(item.city) }))
@@ -23,12 +29,12 @@ export default async function BookingPage() {
   const today = new Date(now).toISOString().slice(0, 10)
   const maxDate = new Date(now + 30 * 86400000).toISOString().slice(0, 10)
   return <main className="landing">
-    <SiteHeader />
+    <SiteHeader locale={locale} />
     <div className="catalog-page">
       <p className="eyebrow">Gentlemen’s Barbershop</p>
-      <h1>СПЛАНУЙТЕ ВІЗИТ</h1>
-      <p className="catalog-intro">Оберіть локацію, майстра та послугу, щоб переглянути вільний час. Поки що це попередній перегляд без створення запису.</p>
-      <BookingWizard locations={locations} barbers={barbers} services={services} today={today} maxDate={maxDate} />
+      <h1>{t.booking.title}</h1>
+      <p className="catalog-intro">{t.booking.intro}</p>
+      <BookingWizard locations={locations} barbers={barbers} services={services} today={today} maxDate={maxDate} locale={locale} />
     </div>
     <footer className="site-footer">© 2026 GENTLEMEN’S BARBERSHOP</footer>
   </main>

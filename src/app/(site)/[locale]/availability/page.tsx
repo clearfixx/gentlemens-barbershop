@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { SiteHeader } from '@/components/site-header'
+import { getFallbackMessages } from '@/i18n/messages'
+import { isLocale } from '@/i18n/config'
+import { notFound } from 'next/navigation'
 import { loadPublicCatalog, parseCatalogId } from '@/lib/catalog/public-catalog'
 import { parseAvailabilityInput } from '@/lib/catalog/public-availability'
 import { getPublicAvailability } from '@/lib/catalog/get-public-availability'
@@ -9,10 +12,14 @@ import { getPublicAvailability } from '@/lib/catalog/get-public-availability'
 export const dynamic = 'force-dynamic'
 
 export default async function AvailabilityPage({
-  searchParams,
+  searchParams, params: routeParams,
 }: {
   searchParams: Promise<{ barber?: string; service?: string; date?: string }>
+  params: Promise<{ locale: string }>
 }) {
+  const { locale } = await routeParams
+  if (!isLocale(locale)) notFound()
+  const t = getFallbackMessages(locale)
   const params = await searchParams
   const payload = await getPayload({ config })
   const catalog = await loadPublicCatalog(payload)
@@ -31,41 +38,41 @@ export default async function AvailabilityPage({
     }
   }
   return <main className="landing" id="top">
-    <SiteHeader />
+    <SiteHeader locale={locale} />
     <div className="catalog-page">
-      <Link href="/catalog" className="catalog-back">← До каталогу</Link>
-      <p className="eyebrow">Планування візиту</p>
-      <h1>ВІЛЬНИЙ ЧАС</h1>
-      <p className="catalog-intro">Перегляньте доступні години для майстра й послуги. Це попередня інформація, а не підтвердження запису.</p>
-      <form method="get" action="/availability" className="catalog-filters">
-        <label>Майстер
+      <Link href={`/${locale}/catalog`} className="catalog-back">← {t.availability.toCatalog}</Link>
+      <p className="eyebrow">{t.availability.eyebrow}</p>
+      <h1>{t.availability.title}</h1>
+      <p className="catalog-intro">{t.availability.intro}</p>
+      <form method="get" action={`/${locale}/availability`} className="catalog-filters">
+        <label>{t.availability.barber}
           <select name="barber" required defaultValue={parseCatalogId(params.barber) ?? ''}>
-            <option value="">Оберіть майстра</option>
+            <option value="">{t.availability.selectBarber}</option>
             {catalog.barbers.map(barber => <option key={barber.id} value={barber.id}>{barber.name}</option>)}
           </select>
         </label>
-        <label>Послуга
+        <label>{t.availability.service}
           <select name="service" required defaultValue={parseCatalogId(params.service) ?? ''}>
-            <option value="">Оберіть послугу</option>
+            <option value="">{t.availability.selectService}</option>
             {catalog.services.map(service => <option key={service.id} value={service.id}>{service.name}</option>)}
           </select>
         </label>
-        <label>Дата
+        <label>{t.availability.date}
           <input type="date" name="date" required defaultValue={params.date ?? ''} />
         </label>
-        <button className="cta" type="submit">Перевірити час</button>
+        <button className="cta" type="submit">{t.availability.check}</button>
       </form>
-      {invalid && <p role="alert" className="catalog-empty">Оберіть коректну дату в межах найближчого місяця.</p>}
-      {!invalid && (params.barber || params.service || params.date) && !result && <p className="catalog-empty">Майстер або послуга недоступні для вибору.</p>}
+      {invalid && <p role="alert" className="catalog-empty">{t.availability.invalidDate}</p>}
+      {!invalid && (params.barber || params.service || params.date) && !result && <p className="catalog-empty">{t.availability.unavailable}</p>}
       {result && <section aria-labelledby="slots-title">
-        <h2 id="slots-title">Доступні години · {result.date}</h2>
-        <p className="catalog-intro">Тривалість: {result.durationMinutes} хв · Вартість: {result.price} грн</p>
+        <h2 id="slots-title">{t.availability.slots} · {result.date}</h2>
+        <p className="catalog-intro">{t.common.duration}: {result.durationMinutes} {t.common.minuteShort} · {t.common.price}: {result.price} {t.common.currency}</p>
         {result.slots.length ? <ul className="availability-slots">
           {result.slots.map(slot => <li key={slot.startsAt}><time dateTime={slot.startsAt}>
-            {new Intl.DateTimeFormat('uk-UA', { timeZone: result.timeZone, hour: '2-digit', minute: '2-digit' }).format(new Date(slot.startsAt))}
+            {new Intl.DateTimeFormat(locale === 'uk' ? 'uk-UA' : 'en-GB', { timeZone: result.timeZone, hour: '2-digit', minute: '2-digit' }).format(new Date(slot.startsAt))}
           </time></li>)}
-        </ul> : <p className="catalog-empty">На обрану дату вільних годин немає.</p>}
-        <p className="catalog-notice">Бронювання ще не відкрите. Вільний час може змінитися.</p>
+        </ul> : <p className="catalog-empty">{t.booking.empty}</p>}
+        <p className="catalog-notice">{t.availability.notice}</p>
       </section>}
     </div>
     <footer className="site-footer">© 2026 GENTLEMEN’S BARBERSHOP</footer>

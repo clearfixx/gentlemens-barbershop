@@ -3,6 +3,33 @@ import type { uk } from './uk'
 type MessageShape<T> = { -readonly [K in keyof T]: T[K] extends readonly string[] ? readonly string[] : T[K] extends string ? string : T[K] extends object ? MessageShape<T[K]> : T[K] }
 
 export const en = {
+  common: { currency: 'UAH', minutes: 'minutes', minuteShort: 'min', from: 'from', duration: 'Duration', price: 'Price' },
+  home: {
+    eyebrow: 'Tradition. Craft. Style.',
+    heroLine1: 'WHERE', heroLine2: 'STYLE IS', heroAccent: 'BORN.',
+    heroIntro: 'Grooming with character. Traditional craftsmanship, attention to detail and an atmosphere worth returning to.',
+    learnMore: 'Discover more', heroArtLabel: 'Decorative barbershop photo placeholder', scrollLabel: 'Scroll to the next section',
+    whyEyebrow: 'Why choose us', whyTitle: 'MORE THAN A HAIRCUT', whyIntro: 'Craft, atmosphere and attention to detail.',
+    philosophyEyebrow: 'Our philosophy', philosophyTitle: 'CRAFT IN EVERY DETAIL',
+    philosophyIntro: 'Grooming heritage, precision and time dedicated entirely to you.', chooseTime: 'Find your time',
+    servicesEyebrow: 'Grooming traditions', servicesTitle: 'OUR SERVICES', servicesEmpty: 'Services are coming soon.', fullCatalog: 'Explore the catalog',
+    teamEyebrow: 'Barbers', teamTitle: 'OUR TEAM', barberPortrait: 'Portrait of barber', teamEmpty: 'Meet our team soon.', allBarbers: 'All barbers',
+    locationsEyebrow: 'Locations', locationsTitle: 'FIND US', locationsEmpty: 'Our shop addresses will appear soon.',
+    finalEyebrow: 'Your visit', finalTitle: 'TIME FOR YOUR STYLE',
+    finalIntro: 'Choose a barber and explore available times. Booking confirmation is not yet available.',
+  },
+  catalog: {
+    title: 'FIND YOUR STYLE', intro: 'Explore our barbers, services and locations. Prices and information come directly from our barbershop catalog.',
+    location: 'Location', allLocations: 'All locations', barber: 'Barber', allBarbers: 'All barbers', show: 'Show', reset: 'Reset',
+    services: 'Services', noServices: 'No services match the selected filters.', team: 'Our barbers', noBarbers: 'No barbers are available for this selection.',
+    locations: 'Locations', notice: 'Online booking is coming soon. The catalog is available to browse.',
+  },
+  availability: {
+    toCatalog: 'Back to catalog', eyebrow: 'Plan a visit', title: 'AVAILABLE TIMES', intro: 'Browse available times for a barber and service. This is a preview, not a confirmed booking.',
+    barber: 'Barber', selectBarber: 'Choose a barber', service: 'Service', selectService: 'Choose a service', date: 'Date', check: 'Check times',
+    invalidDate: 'Choose a valid date within the next month.', unavailable: 'This barber or service is unavailable.', slots: 'Available times',
+    notice: 'Booking is not open yet. Availability may change.',
+  },
   nav: {
     about: 'About us',
     catalog: 'Catalog',
@@ -20,6 +47,7 @@ export const en = {
     services: 'Explore services',
   },
   booking: {
+    step: 'Step', of: 'of', time: 'Time', namePlaceholder: 'Full name',
     title: 'PLAN YOUR VISIT',
     intro: 'Choose a location, barber and service to view available times. This is a preview; no appointment will be created.',
     steps: ['Location', 'Barber', 'Service', 'Date & time', 'Summary'],
