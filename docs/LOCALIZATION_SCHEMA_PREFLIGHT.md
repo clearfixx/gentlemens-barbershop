@@ -51,3 +51,9 @@ The downloaded `localization-initialized-schema` artifact was inspected. It was 
 | barbers | `barbers_locales` | `localized_bio` | `_locale`, `_parent_id` |
 
 These are **observations**, not instructions to handwrite migration DDL. Confirm indexes, foreign keys, column defaults and migration output against the actual schema artifact before approving a migration. This initialized schema does not represent the pre-localization baseline.
+
+## Reproducible source baseline
+
+Git commit `78bcb938bd5265cf19425ad701de6fa608863829` is the parent of the first localization-config commit `95d277fd215e4461b103aeb74e5145fcd1e3e449`. Inspection confirms the baseline `src/payload.config.ts` has no `localization` configuration or `Translations` collection, and baseline `Services` has only the legacy `description` field. This is the **pre-localization source baseline**, not a backup of any deployed database.
+
+For the migration rehearsal, initialize a separate disposable PostgreSQL 17 database using that exact baseline commit and a reproducible dependency lockfile. Populate representative services, locations, barbers, bookings and relationships. Capture the legacy-data fingerprints and a schema-only dump. Then check out the migration branch, run the version-matched Payload migration against the *same* database (without schema auto-push), verify fingerprints and booking integrity, and compare the two schema dumps. Never run this against production or treat a fresh empty schema as proof of preservation of populated records.
