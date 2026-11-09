@@ -9,8 +9,6 @@ from pathlib import Path
 import re
 import sys
 
-from compare_localization_schemas import parse_schema
-
 
 def columns_with_definitions(path: str) -> dict[str, dict[str, str]]:
     text = Path(path).read_text(encoding="utf-8")
