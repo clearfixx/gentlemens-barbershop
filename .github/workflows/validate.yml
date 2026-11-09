@@ -1062,7 +1062,8 @@ jobs:
           mv src/migrations/*ci_localization_incremental.* /tmp/incremental-migration/
           # Apply only the historical bootstrap to a fresh, isolated database.
           CI=1 timeout 120s pnpm db:migrate
-          pg_dump --schema-only --no-owner --no-privileges "$DATABASE_URL" > /tmp/versioned-baseline-schema.sql
+          docker run --rm --network host -e DATABASE_URL="$DATABASE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges' > /tmp/versioned-baseline-schema.sql
           python3 scripts/verify-historical-baseline.py baseline-review/prelocalization-schema.sql /tmp/versioned-baseline-schema.sql
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/seed-prelocalization-rehearsal.sql
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' \
