@@ -176,6 +176,10 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
             -Atc "SELECT count(*) FROM bookings WHERE customer_name LIKE 'Preflight fixture %'" | grep -Fx 0
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM barbers WHERE slug = 'ci-preflight-barber'" | grep -Fx 0
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM locations WHERE slug = 'ci-preflight-location'" | grep -Fx 0
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
             -f db/constraints/verify-booking-integrity.sql
       - name: Smoke test production HTTP routes
         shell: bash
