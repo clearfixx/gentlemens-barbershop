@@ -1004,6 +1004,34 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/check-localization-incremental.py src/migrations
+      - name: Reject legacy schema with missing migration ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Build a real pre-localization schema without the migration ledger,
+          # matching an installation previously managed by Payload push.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f /dev/stdin <<'SQL'
+          CREATE TABLE IF NOT EXISTS public.services (id integer PRIMARY KEY);
+          CREATE TABLE IF NOT EXISTS public.locations (id integer PRIMARY KEY);
+          CREATE TABLE IF NOT EXISTS public.barbers (id integer PRIMARY KEY);
+          CREATE TABLE IF NOT EXISTS public.bookings (id integer PRIMARY KEY);
+          SQL
+          set +e
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-unversioned-payload.sql > /tmp/unversioned-preflight.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "::error::Preflight unexpectedly accepted a legacy schema without migration history"
+            exit 1
+          fi
+          grep -q 'UNVERSIONED_PAYLOAD_SCHEMA' /tmp/unversioned-preflight.log
+          # The negative test must leave all four tables intact.
+          for table in services locations barbers bookings; do
+            psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT to_regclass('public.$table')" | grep -qx "$table"
+          done
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'DROP TABLE public.bookings, public.barbers, public.locations, public.services'
+          # A genuinely empty database must be allowed for bootstrap.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-unversioned-payload.sql
       - name: Rehearse versioned baseline and incremental upgrade with legacy data
         shell: bash
         run: |
