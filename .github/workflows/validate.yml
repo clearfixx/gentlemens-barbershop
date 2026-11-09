@@ -910,6 +910,8 @@ jobs:
           grep -q '^barbers|1|' /tmp/legacy-before.txt
           grep -q '^services|1|' /tmp/legacy-before.txt
           grep -q '^locations|1|' /tmp/legacy-before.txt
+      - name: Preflight existing bookings against new integrity constraints
+        run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
       - name: Install current dependencies
         run: pnpm install --frozen-lockfile
       - name: Initialize current localized Payload against populated old database

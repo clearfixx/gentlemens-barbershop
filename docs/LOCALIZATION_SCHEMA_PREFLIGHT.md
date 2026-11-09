@@ -77,3 +77,7 @@ CI now inserts a disposable service, verifies the legacy fingerprint changes, ed
 ## Populated database upgrade rehearsal
 
 The `populated-localization-rehearsal` CI job initializes the exact pre-localization source on PostgreSQL 17, inserts representative legacy catalog and booking records, fingerprints all four collections, then starts the current Payload config **against that same database** and asserts the fingerprints match byte-for-byte. It also checks that localized tables exist. This tests Payload's schema initialization behavior on populated legacy storage; it is **not** an explicit, reviewed Payload migration file and does not constitute production migration approval.
+
+## Booking constraints discovered in actual schema diff
+
+The current schema also adds `btree_gist`, booking time-range and idempotency CHECK constraints, a partial unique idempotency index, and an active-booking GiST exclusion constraint. These are not merely localization tables. Before initializing the current config against a populated baseline, CI runs `db/constraints/preflight-booking-migration.sql` read-only to reject incompatible existing bookings (invalid time ranges, malformed/duplicate idempotency data, overlapping active appointments). Production migration planning must account for these constraints explicitly.
