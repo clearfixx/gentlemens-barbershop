@@ -1,31 +1,51 @@
 #!/usr/bin/env python3
-"""Classify Payload-generated migrations without executing them.
+"""Read-only safety gate for generated Payload migrations.
 
-Payload's first migration is a full schema bootstrap even when an existing
-database has already been initialized by schema push. Never apply such a
-migration directly to a populated installation.
+This is intentionally conservative: a full bootstrap is useful as a CI
+artifact but must never be mistaken for an incremental production migration.
 """
 from pathlib import Path
 import re
 import sys
 
-migration_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "src/migrations")
-files = sorted(migration_dir.glob("*.ts"))
-files = [path for path in files if path.name != "index.ts"]
-if not files:
-    raise SystemExit("No generated Payload migration candidate found")
+CORE = {"users", "services", "locations", "barbers", "bookings"}
+CREATE = re.compile(r'\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:"public"\.)?"([^"]+)"', re.I)
+DROP = re.compile(r'\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:"public"\.)?"([^"]+)"', re.I)
+ALTER_DROP = re.compile(r'\bALTER\s+TABLE\s+(?:"public"\.)?"([^"]+)"[\s\S]*?\bDROP\s+COLUMN\b', re.I)
 
-for path in files:
-    source = path.read_text(encoding="utf-8")
+
+def classify(source: str) -> tuple[str, set[str]]:
+    # Classify the forward migration only; down() is an intentional rollback.
     up = source.split("export async function down", 1)[0]
-    created = set(re.findall(r'CREATE TABLE\s+"([^"]+)"', up, re.I))
-    dropped = set(re.findall(r'DROP TABLE\s+"([^"]+)"', up, re.I))
-    legacy = {"users", "services", "locations", "barbers", "bookings"}
-    if created & legacy:
-        print(f"WARNING: {path.name}: FULL SCHEMA BOOTSTRAP, NOT AN INCREMENTAL UPGRADE")
-        print("Existing tables recreated: " + ", ".join(sorted(created & legacy)))
-        print("Do not run this migration against an existing installation.")
-    elif dropped & legacy:
-        raise SystemExit(f"UNSAFE: {path.name} drops existing core tables")
-    else:
-        print(f"{path.name}: no core table creation/drop detected; manual SQL review still required")
+    created = set(CREATE.findall(up))
+    dropped = set(DROP.findall(up))
+    if dropped & CORE:
+        return "unsafe-drop", dropped & CORE
+    if created & CORE:
+        return "bootstrap", created & CORE
+    if ALTER_DROP.search(up):
+        return "manual-review", set()
+    return "incremental-candidate", set()
+
+
+def main() -> int:
+    migration_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "src/migrations")
+    files = sorted(p for p in migration_dir.glob("*.ts") if p.name != "index.ts")
+    if not files:
+        print("ERROR: No generated Payload migration candidate found", file=sys.stderr)
+        return 1
+    blocked = False
+    for path in files:
+        kind, tables = classify(path.read_text(encoding="utf-8"))
+        print(f"{path.name}: {kind}" + (f" ({', '.join(sorted(tables))})" if tables else ""))
+        if kind in {"bootstrap", "unsafe-drop", "manual-review"}:
+            blocked = True
+    if blocked:
+        print("BLOCKED for populated database deployment; generated files remain review-only.")
+        return 2
+    print("Candidate requires manual SQL review and rehearsal before deployment.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

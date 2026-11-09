@@ -73,7 +73,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/classify-payload-migration.py src/migrations
+          python3 scripts/test-classify-payload-migration.py
+          # The generated bootstrap is expected to be blocked for populated DBs.
+          if python3 scripts/classify-payload-migration.py src/migrations; then
+            echo "::error::Unexpectedly approved the generated migration"
+            exit 1
+          else
+            echo "Generated migration correctly blocked pending baseline review"
+          fi
       - name: Upload generated migration candidate for manual review
         if: always()
         uses: actions/upload-artifact@v4
