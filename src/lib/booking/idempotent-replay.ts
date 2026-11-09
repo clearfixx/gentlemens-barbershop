@@ -28,10 +28,11 @@ export async function replayOrCreateBooking<T>(input: {
   try {
     return { booking: await input.insert(input.token), replayed: false }
   } catch (error) {
-    if (!isIdempotencyUniqueViolation(error) && !isBookingOverlapViolation(error)) throw error
+    if (!isIdempotencyUniqueViolation(error) && !isBookingOverlapViolation(error) && !isDatabaseDeadlock(error)) throw error
 
-    // PostgreSQL may report either the unique-key conflict or the slot
-    // exclusion conflict for two identical concurrent booking attempts.
+    // PostgreSQL may report a unique-key conflict, slot exclusion conflict,
+    // or a deadlock (40P01) when concurrent inserts check both constraints.
+    // The deadlock victim has been rolled back; never retry the insert here.
     // Re-read only the exact idempotency key; an unrelated overlap must
     // retain its original error when no matching winner exists.
     const winner = await input.findExisting(input.token)
@@ -54,6 +55,20 @@ export function isIdempotencyUniqueViolation(error: unknown): boolean {
     }
     if (candidate.code === '23505' &&
         candidate.constraint === 'bookings_idempotency_unique') return true
+    current = candidate.cause
+  }
+  return false
+}
+
+/** A PostgreSQL deadlock is replayable only when the exact key has a committed winner. */
+export function isDatabaseDeadlock(error: unknown): boolean {
+  const seen = new Set<object>()
+  let current: unknown = error
+  for (let depth = 0; depth < 8; depth++) {
+    if (!current || typeof current !== 'object' || seen.has(current)) return false
+    seen.add(current)
+    const candidate = current as { code?: unknown; cause?: unknown }
+    if (candidate.code === '40P01') return true
     current = candidate.cause
   }
   return false
