@@ -29,6 +29,13 @@ class MigrationImportNormalizerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("import type { MigrateUpArgs, MigrateDownArgs }", content)
 
+    def test_real_generated_mixed_import_preserves_sql(self):
+        source = "import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'\\n"
+        result, content = self.run_normalizer(source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("import type { MigrateUpArgs, MigrateDownArgs }", content)
+        self.assertIn("import { sql }", content)
+
     def test_unknown_import_fails_without_writing(self):
         source = "import { sql } from '@payloadcms/db-postgres'\n"
         result, content = self.run_normalizer(source)
