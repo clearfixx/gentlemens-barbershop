@@ -50,9 +50,7 @@ jobs:
         run: |
           node --input-type=module -e "
             import { readFileSync } from 'node:fs';
-            import { createRequire } from 'node:module';
-            const require = createRequire(import.meta.url);
-            const pkg = JSON.parse(readFileSync(require.resolve('payload/package.json'), 'utf8'));
+            const pkg = JSON.parse(readFileSync('node_modules/payload/package.json', 'utf8'));
             if (!pkg.bin?.payload) throw new Error('Payload CLI executable is missing');
             console.log('Payload CLI declared:', pkg.bin.payload);
           "
