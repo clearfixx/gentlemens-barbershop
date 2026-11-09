@@ -911,6 +911,35 @@ jobs:
             echo "Unexpected localization tables in pre-localization baseline"
             exit 1
           fi
+      - name: Generate legacy Payload migration snapshot for incremental planning
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This job checks out the exact historical source. Modify its config
+          # only inside this disposable runner to enable migration generation.
+          python3 - <<'PY'
+          from pathlib import Path
+          config = Path("src/payload.config.ts")
+          original = config.read_text()
+          old = "db: postgresAdapter({ pool: { connectionString: process.env.DATABASE_URL || '' } }),"
+          new = "db: postgresAdapter({ pool: { connectionString: process.env.DATABASE_URL || '' }, migrationDir: path.resolve(dirname, 'migrations') }),"
+          if original.count(old) != 1:
+              raise SystemExit("Unexpected historical Payload config; refusing to patch")
+          config.write_text(original.replace(old, new))
+          PY
+          mkdir -p src/migrations
+          CI=1 timeout 90s pnpm exec payload migrate:create --disable-transpile --force-accept-warning ci-prelocalization-baseline
+          test -n "$(find src/migrations -maxdepth 1 -type f -name '*.json' -print -quit)"
+          cp src/migrations/*.json baseline-review/
+          cp src/migrations/*.ts baseline-review/
+          echo "Historical migration snapshot generated for manual review; NOT applied to populated databases"
+      - name: Upload legacy migration snapshot candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: prelocalization-migration-snapshot-candidate
+          path: baseline-review/*ci_prelocalization_baseline*
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload pre-localization schema baseline
         uses: actions/upload-artifact@v4
         with:
