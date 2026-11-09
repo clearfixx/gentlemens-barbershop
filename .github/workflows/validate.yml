@@ -944,6 +944,51 @@ jobs:
             UPDATE bookings SET ends_at = '2027-01-01 10:45:00+00' WHERE id = 900001
           "
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
+      - name: Prove migration preflight rejects malformed idempotency data
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET idempotency_scope = 'ci-scope', idempotency_key = NULL,
+              idempotency_request_hash = NULL WHERE id = 900001
+          "
+          if psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql > /tmp/invalid-idempotency-preflight.log 2>&1; then
+            echo "ERROR: malformed idempotency fields passed the preflight"
+            exit 1
+          fi
+          grep -q 'Existing booking records violate target database constraints' /tmp/invalid-idempotency-preflight.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET idempotency_scope = NULL, idempotency_key = NULL,
+              idempotency_request_hash = NULL WHERE id = 900001
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
+      - name: Prove migration preflight rejects duplicate idempotency keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET idempotency_scope = 'ci-scope', idempotency_key = 'ci-key',
+              idempotency_request_hash = repeat('a', 64) WHERE id = 900001
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            INSERT INTO bookings (id, location_id, barber_id, customer_name, customer_phone,
+              starts_at, ends_at, total_price, status, idempotency_scope, idempotency_key,
+              idempotency_request_hash)
+            VALUES (900002, 900001, 900001, 'CI Duplicate', '+380000000002',
+              '2027-01-02 10:00:00+00', '2027-01-02 10:45:00+00', 600, 'cancelled',
+              'ci-scope', 'ci-key', repeat('b', 64))
+          "
+          if psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql > /tmp/duplicate-idempotency-preflight.log 2>&1; then
+            echo "ERROR: duplicate idempotency keys passed the preflight"
+            exit 1
+          fi
+          grep -q 'Existing booking records violate target database constraints' /tmp/duplicate-idempotency-preflight.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "DELETE FROM bookings WHERE id = 900002"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET idempotency_scope = NULL, idempotency_key = NULL,
+              idempotency_request_hash = NULL WHERE id = 900001
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
       - name: Install current dependencies
         run: pnpm install --frozen-lockfile
       - name: Initialize current localized Payload against populated old database

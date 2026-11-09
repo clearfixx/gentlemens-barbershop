@@ -85,3 +85,7 @@ The current schema also adds `btree_gist`, booking time-range and idempotency CH
 ## Negative booking compatibility checks
 
 The populated-database rehearsal now deliberately inserts a second overlapping active booking, confirms the read-only migration preflight rejects it, deletes the conflicting fixture, and confirms the preflight passes again. It separately changes the existing fixture to a zero-length booking interval, confirms rejection, restores the original end time, and confirms success. These negative checks run on the legacy schema before current Payload initialization. They do not exercise the eventual versioned migration file.
+
+## Idempotency compatibility negative tests
+
+The populated legacy-schema rehearsal now verifies that incomplete idempotency triplets and duplicate (scope, key) pairs are rejected by the read-only preflight. Each negative fixture is removed or restored, then the preflight must pass again before Payload schema initialization. This specifically guards the newly introduced booking idempotency CHECK and partial unique index.
