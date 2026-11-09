@@ -21,7 +21,7 @@ export default async function BookingPage({ params }: { params: Promise<{ locale
   if (!isLocale(locale)) notFound()
   const t = getFallbackMessages(locale)
   const payload = await getPayload({ config })
-  const catalog = await loadPublicCatalog(payload)
+  const catalog = await loadPublicCatalog(payload, {}, locale)
   const locations = catalog.locations.map(item => ({ id: Number(item.id), name: String(item.name), city: String(item.city) }))
   const services = catalog.services.map(item => ({ id: Number(item.id), name: String(item.name) }))
   const barbers = catalog.barbers.map(item => ({
