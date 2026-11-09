@@ -41,3 +41,5 @@
 .catalog-empty,.catalog-notice{color:var(--muted);line-height:1.8}
 .catalog-notice{margin-top:72px;padding-top:26px;border-top:1px solid var(--border)}
 @media(max-width:600px){.catalog-page{padding-top:36px}.catalog-filters{padding:18px;gap:12px}.catalog-filters .cta{width:100%}}
+
+.catalog-inline-link{display:inline-block;margin-top:24px;color:var(--ink);text-decoration-color:var(--gold);text-underline-offset:6px;font-size:14px}
