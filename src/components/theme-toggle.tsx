@@ -1,33 +1,30 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 type Theme = 'light' | 'dark'
 const STORAGE_KEY = 'gentlemens-theme'
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>('light')
-
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY)
     const preferred = window.matchMedia('(prefers-color-scheme: dark)').matches
     const initial: Theme = saved === 'light' || saved === 'dark' ? saved : preferred ? 'dark' : 'light'
     document.documentElement.dataset.theme = initial
-    setTheme(initial)
   }, [])
 
   const toggle = () => {
-    const next = theme === 'light' ? 'dark' : 'light'
+    const next: Theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
     document.documentElement.dataset.theme = next
     window.localStorage.setItem(STORAGE_KEY, next)
-    setTheme(next)
   }
 
   return (
     <button type="button" className="theme-toggle" onClick={toggle}
-      aria-label={theme === 'light' ? 'Увімкнути темну тему' : 'Увімкнути світлу тему'}
-      title={theme === 'light' ? 'Темна тема' : 'Світла тема'}>
-      <span aria-hidden="true">{theme === 'light' ? '☾' : '☀'}</span>
+      aria-label="Перемкнути світлу або темну тему"
+      title="Перемкнути тему">
+      <span className="theme-toggle__moon" aria-hidden="true">☾</span>
+      <span className="theme-toggle__sun" aria-hidden="true">☀</span>
     </button>
   )
 }
