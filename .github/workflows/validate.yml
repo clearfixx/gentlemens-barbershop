@@ -156,6 +156,27 @@ jobs:
             -Atc "SELECT count(*) FROM pg_constraint WHERE conrelid = 'bookings'::regclass AND conname = 'bookings_no_active_overlap'" | grep -Fx 1
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
             -f db/constraints/verify-booking-integrity.sql
+      - name: Reject legacy overlapping bookings before migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
+            -f db/constraints/test-preflight-overlap-fixture.sql \
+            -f db/constraints/preflight-booking-integrity.sql > /tmp/preflight-overlap.log 2>&1; then
+            echo "Preflight incorrectly accepted overlapping legacy bookings"
+            exit 1
+          fi
+          grep -q "Booking integrity preflight: overlapping active appointments" /tmp/preflight-overlap.log || {
+            cat /tmp/preflight-overlap.log
+            exit 1
+          }
+          # Failed migration must restore the constraint and remove both fixtures.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM pg_constraint WHERE conrelid = 'bookings'::regclass AND conname = 'bookings_no_active_overlap'" | grep -Fx 1
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM bookings WHERE customer_name LIKE 'Preflight fixture %'" | grep -Fx 0
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -f db/constraints/verify-booking-integrity.sql
       - name: Smoke test production HTTP routes
         shell: bash
         run: |
