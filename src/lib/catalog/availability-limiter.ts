@@ -34,14 +34,9 @@ export class FixedWindowLimiter {
   }
 }
 
-export const availabilityLimiter = new FixedWindowLimiter()
+export const availabilityLimiter = new FixedWindowLimiter(120, 60_000, 1)
 
-/** Only trust the direct socket peer when no trusted proxy has been configured. */
-export function requestRateLimitKey(request: Request): string {
-  // The caller cannot select an arbitrary identity via X-Forwarded-For.
-  // With a trusted reverse proxy, configure the proxy to enforce IP limits.
-  const userAgent = request.headers.get('user-agent')?.slice(0, 100) ?? ''
-  // This coarse key deliberately limits all callers sharing the same worker
-  // and user agent. It is a defensive fallback, not a substitute for edge limits.
-  return userAgent || 'unknown-client'
+/** Worker-wide budget: cannot be bypassed with spoofed client headers. */
+export function requestRateLimitKey(_request: Request): string {
+  return 'availability-worker'
 }
