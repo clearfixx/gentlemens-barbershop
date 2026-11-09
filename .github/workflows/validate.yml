@@ -107,6 +107,40 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-localization-schema.sql
       - name: Verify legacy catalog schema survives localization
         run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/verify-localization-legacy-schema.sql
+      - name: Reject missing legacy catalog columns without changing the database
+        shell: bash
+        run: |
+          set -euo pipefail
+          if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
+            -c "ALTER TABLE services DROP COLUMN description" \
+            -f db/constraints/verify-localization-legacy-schema.sql > /tmp/localization-negative.log 2>&1; then
+            echo "Localization schema verifier accepted a missing legacy column"
+            exit 1
+          fi
+          grep -q "Localization schema regression: missing services.description" /tmp/localization-negative.log || {
+            cat /tmp/localization-negative.log
+            exit 1
+          }
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'services' AND column_name = 'description'" | grep -Fx 1
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/verify-localization-legacy-schema.sql
+      - name: Reject missing translation storage without changing the database
+        shell: bash
+        run: |
+          set -euo pipefail
+          if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
+            -c "DROP TABLE translations" \
+            -f db/constraints/verify-localization-legacy-schema.sql > /tmp/translations-negative.log 2>&1; then
+            echo "Localization schema verifier accepted missing translations storage"
+            exit 1
+          fi
+          grep -q "Localization schema regression: translations table missing" /tmp/translations-negative.log || {
+            cat /tmp/translations-negative.log
+            exit 1
+          }
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT to_regclass('translations') IS NOT NULL" | grep -Fx t
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/verify-localization-legacy-schema.sql
       - name: Verify read-only booking migration preflight
         run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-integrity.sql
       - name: Verify booking migrations are repeatable

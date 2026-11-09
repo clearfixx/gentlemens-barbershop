@@ -25,3 +25,5 @@ The current one-record-per-locale model does not support editing a new draft whi
 ## Automated legacy-schema regression gate
 
 CI runs `db/constraints/verify-localization-legacy-schema.sql` against the initialized disposable PostgreSQL database. It asserts that core legacy catalog columns and the booking table still exist alongside the new translations table. This is deliberately read-only and catches accidental column removals, but **does not** prove a migration from a populated production snapshot is safe. Production rollout still requires a generated/reviewed Payload migration, restored-data rehearsal, and rollback plan.
+
+The CI gate also has two negative tests: temporarily remove `services.description` or the `translations` table inside a single PostgreSQL transaction, demand a verifier failure, then confirm the transaction rolled back and the original schema still passes. These tests do not modify production data.
