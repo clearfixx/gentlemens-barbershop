@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { ThemeToggle } from './theme-toggle'
 
 const links = [
@@ -10,16 +11,16 @@ const links = [
 export function SiteHeader() {
   return (
     <header className="site-header">
-      <a href="/" className="site-brand" aria-label="Gentlemen’s Barbershop — на початок">
+      <Link href="/" className="site-brand" aria-label="Gentlemen’s Barbershop — на початок">
         <span className="site-brand__symbol" aria-hidden="true">✦</span>
         <span>GENTLEMEN’S <small>BARBERSHOP</small></span>
-      </a>
+      </Link>
       <nav aria-label="Головна навігація" className="site-nav">
-        {links.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}
+        {links.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}
       </nav>
       <div className="site-header__actions">
         <ThemeToggle />
-        <a className="header-booking" href="/catalog">Послуги й майстри</a>
+        <Link className="header-booking" href="/catalog">Послуги й майстри</Link>
       </div>
     </header>
   )
