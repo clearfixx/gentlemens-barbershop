@@ -19,7 +19,7 @@ export function SiteHeader() {
       </nav>
       <div className="site-header__actions">
         <ThemeToggle />
-        <a className="header-booking" href="/catalog">Записатися</a>
+        <a className="header-booking" href="/catalog">Послуги й майстри</a>
       </div>
     </header>
   )
