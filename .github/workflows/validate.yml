@@ -1048,6 +1048,22 @@ jobs:
             -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/incremental-repeat.txt
           diff -u /tmp/incremental-before.txt /tmp/incremental-repeat.txt
           echo "Versioned incremental migration preserved legacy data and is repeatable"
+      - name: Reject unregistered baseline on an existing database
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The old schema already exists, but its migration record is absent.
+          # A naive migrate would replay the baseline and fail on CREATE TABLE.
+          # Fail closed instead of silently marking it applied.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            DO \$\$ BEGIN
+              IF (SELECT count(*) FROM payload_migrations) <> 2 THEN
+                RAISE EXCEPTION 'Unexpected migration history after rehearsal';
+              END IF;
+            END \$\$;"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/incremental-final.txt
+          diff -u /tmp/incremental-before.txt /tmp/incremental-final.txt
       - name: Upload incremental migration candidate for manual review
         uses: actions/upload-artifact@v4
         with:
