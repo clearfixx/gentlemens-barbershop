@@ -1,10 +1,10 @@
 import { ThemeToggle } from './theme-toggle'
 
 const links = [
-  { href: '#about', label: 'Про нас' },
+  { href: '/#about', label: 'Про нас' },
   { href: '/catalog', label: 'Каталог' },
-  { href: '#team', label: 'Майстри' },
-  { href: '#locations', label: 'Локації' },
+  { href: '/#team', label: 'Майстри' },
+  { href: '/#locations', label: 'Локації' },
 ]
 
 export function SiteHeader() {
