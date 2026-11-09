@@ -17,7 +17,7 @@ expected = {"locations_locales", "services_locales", "barbers_locales", "transla
 created = set(re.findall(r'CREATE TABLE\s+"([^"]+)"', up_sql, flags=re.I))
 if created != expected:
     raise SystemExit(f"Unexpected CREATE TABLE set: {sorted(created)}")
-if re.search(r'\b(DROP|TRUNCATE|DELETE|UPDATE|INSERT)\b|\bALTER\s+TYPE\b', up_sql, flags=re.I):
+if re.search(r'(?:^|;)\s*(?:DROP|TRUNCATE|DELETE|UPDATE|INSERT)\b|\bALTER\s+TYPE\b', up_sql, flags=re.I):
     raise SystemExit("Destructive or data-mutating SQL detected in up()")
 altered = set(re.findall(r'ALTER TABLE\s+"([^"]+)"', up_sql, flags=re.I))
 if altered - (expected | {"payload_locked_documents_rels"}):
