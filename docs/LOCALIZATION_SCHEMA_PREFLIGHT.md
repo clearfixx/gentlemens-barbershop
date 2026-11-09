@@ -27,3 +27,7 @@ The current one-record-per-locale model does not support editing a new draft whi
 CI runs `db/constraints/verify-localization-legacy-schema.sql` against the initialized disposable PostgreSQL database. It asserts that core legacy catalog columns and the booking table still exist alongside the new translations table. This is deliberately read-only and catches accidental column removals, but **does not** prove a migration from a populated production snapshot is safe. Production rollout still requires a generated/reviewed Payload migration, restored-data rehearsal, and rollback plan.
 
 The CI gate also has two negative tests: temporarily remove `services.description` or the `translations` table (with dependent foreign keys via `CASCADE`) inside a single PostgreSQL transaction, demand a verifier failure, then confirm the transaction rolled back and the original schema still passes. These tests do not modify production data.
+
+## CI schema review artifact
+
+The CI workflow exports a **schema-only** `pg_dump` of its disposable, initialized PostgreSQL database and records the actual PostgreSQL, Payload and adapter versions. The `localization-initialized-schema` artifact is retained for seven days for migration review. It contains no rows, but is **not** a baseline of the pre-localization production schema: do not use it alone to generate or approve a production migration. Compare it with a separately captured schema-only dump of a restored pre-localization database. Do not upload production data or credentials as workflow artifacts.

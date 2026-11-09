@@ -103,6 +103,21 @@ jobs:
         shell: bash
         run: |
           CONFIRM_BOOKING_MIGRATION=apply bash scripts/apply-booking-integrity.sh
+      - name: Capture initialized localization schema for migration review
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p migration-review
+          pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges --file migration-review/initialized-schema.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT version()" > migration-review/postgres-version.txt
+          node -e "const p=require('./node_modules/payload/package.json');const d=require('./node_modules/@payloadcms/db-postgres/package.json');require('node:fs').writeFileSync('migration-review/payload-versions.txt', 'payload='+p.version+'\\n@payloadcms/db-postgres='+d.version+'\\n')"
+          test -s migration-review/initialized-schema.sql
+      - name: Upload initialized schema for migration comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: localization-initialized-schema
+          path: migration-review/
+          retention-days: 7
       - name: Verify read-only localization schema preflight
         run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-localization-schema.sql
       - name: Verify legacy catalog schema survives localization
