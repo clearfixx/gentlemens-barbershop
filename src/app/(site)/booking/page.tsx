@@ -17,6 +17,8 @@ export default async function BookingPage() {
     locationId: typeof item.location === 'number' ? item.location : Number(item.location.id),
     serviceIds: (item.serviceOfferings ?? []).map((offering: { service: number | { id: number | string } }) => typeof offering.service === 'number' ? offering.service : Number(offering.service.id)),
   }))
+  // Server request time is intentionally dynamic; never computed during client render.
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
   const today = new Date(now).toISOString().slice(0, 10)
   const maxDate = new Date(now + 30 * 86400000).toISOString().slice(0, 10)
