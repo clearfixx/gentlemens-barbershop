@@ -9,13 +9,13 @@ export const dynamic = 'force-dynamic'
 export default async function BookingPage() {
   const payload = await getPayload({ config })
   const catalog = await loadPublicCatalog(payload)
-  const locations = catalog.locations.map(item => ({ id: item.id, name: item.name, city: item.city }))
-  const services = catalog.services.map(item => ({ id: item.id, name: item.name }))
+  const locations = catalog.locations.map(item => ({ id: Number(item.id), name: String(item.name), city: String(item.city) }))
+  const services = catalog.services.map(item => ({ id: Number(item.id), name: String(item.name) }))
   const barbers = catalog.barbers.map(item => ({
-    id: item.id,
-    name: item.name,
-    locationId: typeof item.location === 'number' ? item.location : item.location.id,
-    serviceIds: (item.serviceOfferings ?? []).map(offering => typeof offering.service === 'number' ? offering.service : offering.service.id),
+    id: Number(item.id),
+    name: String(item.name),
+    locationId: typeof item.location === 'number' ? item.location : Number(item.location.id),
+    serviceIds: (item.serviceOfferings ?? []).map((offering: { service: number | { id: number | string } }) => typeof offering.service === 'number' ? offering.service : Number(offering.service.id)),
   }))
   return <main className="landing">
     <SiteHeader />
