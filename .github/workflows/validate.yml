@@ -206,6 +206,8 @@ jobs:
           curl --fail --silent --show-error --output /dev/null http://localhost:3000/
           curl --fail --silent --show-error --output /tmp/barbershop-catalog.html 'http://localhost:3000/catalog?location=1&barber=1'
           grep -q 'ОБЕРІТЬ СВІЙ СТИЛЬ' /tmp/barbershop-catalog.html
+          curl --fail --silent --show-error --output /tmp/barbershop-booking.html http://localhost:3000/booking
+          grep -q 'СПЛАНУЙТЕ ВІЗИТ' /tmp/barbershop-booking.html
           curl --fail --silent --show-error --output /tmp/barbershop-availability.html http://localhost:3000/availability
           grep -q 'ВІЛЬНИЙ ЧАС' /tmp/barbershop-availability.html
           invalid_availability_status=$(curl --silent --output /tmp/barbershop-availability-invalid.json --write-out '%{http_code}' 'http://localhost:3000/api/availability?barber=1&service=2&date=not-a-date')
