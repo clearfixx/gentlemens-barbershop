@@ -28,5 +28,11 @@ INSERT INTO bookings (
 SELECT location_id, id, 'Preflight fixture B', '+380000000000',
   '2038-03-01 09:30:00+00', '2038-03-01 10:30:00+00', 500,
   'pending', now(), now()
-FROM barbers
-LIMIT 1;
+FROM barbers WHERE slug = 'ci-preflight-barber';
+
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM bookings WHERE customer_name LIKE 'Preflight fixture %') <> 2 THEN
+    RAISE EXCEPTION 'CI fixture setup failed: expected exactly two conflicting bookings';
+  END IF;
+END $$;
