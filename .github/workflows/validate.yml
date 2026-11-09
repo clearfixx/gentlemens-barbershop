@@ -989,10 +989,30 @@ jobs:
               idempotency_request_hash = NULL WHERE id = 900001
           "
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
+      - name: Export populated pre-upgrade database snapshot for restore test
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network host -e DATABASE_URL="$DATABASE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges' > /tmp/pre-upgrade.dump
+          test -s /tmp/pre-upgrade.dump
       - name: Install current dependencies
         run: pnpm install --frozen-lockfile
       - name: Initialize current localized Payload against populated old database
         run: timeout 90s node --experimental-strip-types scripts/rehearse-localization-upgrade.ts
+      - name: Prove pre-upgrade snapshot can restore into a fresh database
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "CREATE DATABASE gentlemens_restore_ci"
+          docker run --rm --network host -e PGPASSWORD=postgres -v /tmp:/backup:ro postgres:17-alpine \
+            pg_restore --exit-on-error --no-owner --no-privileges \
+              --host localhost --username postgres --dbname gentlemens_restore_ci \
+              /backup/pre-upgrade.dump
+          RESTORED_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_restore_ci"
+          psql -X -v ON_ERROR_STOP=1 "$RESTORED_URL" -At -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/legacy-restored.txt
+          diff -u /tmp/legacy-before.txt /tmp/legacy-restored.txt
       - name: Assert legacy business data preserved exactly
         shell: bash
         run: |

@@ -36,3 +36,7 @@
 ## Production schema mutation safety
 
 Payload PostgreSQL automatic schema push is disabled whenever `NODE_ENV=production`. This is a fail-closed deployment rule: production schema must be provisioned with reviewed migrations before starting the app. It does **not** create or apply the missing migration, and a fresh production database cannot be initialized through application startup. CI development-mode bootstrap and disposable migration rehearsal still use automatic push, strictly on isolated PostgreSQL instances. Do not override `NODE_ENV` to bypass this protection.
+
+## CI restore rehearsal
+
+The populated-schema CI job now captures a custom-format PostgreSQL 17 backup **before** the schema upgrade, restores it into a second disposable database after the upgrade, and compares legacy catalog/booking fingerprints with the pre-upgrade state. This verifies a database-level restore path in CI. It is not an in-place downgrade, a production recovery-time test, or approval to migrate production.
