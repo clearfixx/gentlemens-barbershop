@@ -10,8 +10,8 @@ import { getFallbackMessages } from '@/i18n/messages'
  * Booking selections and customer details are kept in component memory only.
  * Warn before changing locale on that route; never silently discard the draft.
  */
-export function LocaleSwitcher({ locale }: { locale: Locale }) {
-  const t = getFallbackMessages(locale)
+export function LocaleSwitcher({ locale, messages }: { locale: Locale; messages?: ReturnType<typeof getFallbackMessages> }) {
+  const t = messages ?? getFallbackMessages(locale)
   const pathname = usePathname()
   const currentPath = pathname.replace(/^\/(uk|en)(?=\/|$)/, '')
   const bookingInProgress = currentPath === '/booking'

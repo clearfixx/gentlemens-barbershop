@@ -2,8 +2,8 @@ import type { CollectionConfig } from 'payload'
 import { validateTranslationOverrides } from '../../i18n/override-validation.ts'
 
 /**
- * Admin-only draft/publish storage. Public pages continue to use versioned
- * dictionaries until the published-only resolver and cache invalidation ship.
+ * Admin-only draft/publish storage. Public pages apply published overrides
+ * at request time, without a shared translation cache.
  */
 export const Translations: CollectionConfig = {
   slug: 'translations',

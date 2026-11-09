@@ -25,7 +25,7 @@ export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messa
         {links.map(link => <Link key={link.href} href={link.href}>{link.label}</Link>)}
       </nav>
       <div className="site-header__actions">
-        <LocaleSwitcher locale={locale} />
+        <LocaleSwitcher locale={locale} messages={t} />
         <ThemeToggle locale={locale} />
         <Link className="header-booking" href={`${prefix}/booking`}>{t.actions.planVisit}</Link>
       </div>
