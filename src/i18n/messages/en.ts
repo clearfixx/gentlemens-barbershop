@@ -1,6 +1,6 @@
 import type { uk } from './uk'
 
-type MessageShape<T> = { -readonly [K in keyof T]: T[K] extends readonly string[] ? readonly string[] : T[K] extends string ? string : MessageShape<T[K]> }
+type MessageShape<T> = { -readonly [K in keyof T]: T[K] extends readonly string[] ? readonly string[] : T[K] extends string ? string : T[K] extends object ? MessageShape<T[K]> : T[K] }
 
 export const en = {
   nav: {
