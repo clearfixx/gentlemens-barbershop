@@ -129,7 +129,7 @@ jobs:
         run: |
           set -euo pipefail
           if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
-            -c "DROP TABLE translations" \
+            -c "DROP TABLE translations CASCADE" \
             -f db/constraints/verify-localization-legacy-schema.sql > /tmp/translations-negative.log 2>&1; then
             echo "Localization schema verifier accepted missing translations storage"
             exit 1
