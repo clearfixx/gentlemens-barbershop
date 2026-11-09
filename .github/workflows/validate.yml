@@ -856,3 +856,72 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_compare_localization_schemas.py'
       - name: Compare actual PostgreSQL table and column inventories
         run: python3 scripts/compare-localization-schemas.py baseline-review/prelocalization-schema.sql migration-review/initialized-schema.sql
+
+  populated-localization-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_barbershop
+      PAYLOAD_SECRET: ci-only-not-a-production-secret-please-replace
+      BOOTSTRAP_ADMIN_EMAIL: migration-ci@example.invalid
+      BOOTSTRAP_ADMIN_PASSWORD: ci-only-test-password-not-for-production
+      NEXT_TELEMETRY_DISABLED: "1"
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gentlemens_barbershop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gentlemens_barbershop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout exact pre-localization source separately
+        uses: actions/checkout@v4
+        with:
+          ref: 78bcb938bd5265cf19425ad701de6fa608863829
+          path: baseline-source
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install baseline dependencies
+        working-directory: baseline-source
+        run: pnpm install --frozen-lockfile
+      - name: Initialize old Payload schema
+        working-directory: baseline-source
+        run: timeout 90s pnpm bootstrap:admin
+      - name: Insert representative legacy records and fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/seed-prelocalization-rehearsal.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/legacy-before.txt
+          grep -q '^bookings|1|' /tmp/legacy-before.txt
+          grep -q '^barbers|1|' /tmp/legacy-before.txt
+          grep -q '^services|1|' /tmp/legacy-before.txt
+          grep -q '^locations|1|' /tmp/legacy-before.txt
+      - name: Install current dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Initialize current localized Payload against populated old database
+        run: timeout 90s node --experimental-strip-types scripts/rehearse-localization-upgrade.ts
+      - name: Assert legacy business data preserved exactly
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/legacy-after.txt
+          diff -u /tmp/legacy-before.txt /tmp/legacy-after.txt
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "
+            SELECT count(*) FROM information_schema.tables
+            WHERE table_schema = 'public'
+            AND table_name IN ('services_locales', 'locations_locales', 'barbers_locales', 'translations')
+          " | grep -qx '4'

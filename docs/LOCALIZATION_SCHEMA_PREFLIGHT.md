@@ -73,3 +73,7 @@ The `compare-localization-schemas` CI job downloads both independently generated
 ## Fingerprint negative regression test
 
 CI now inserts a disposable service, verifies the legacy fingerprint changes, edits its description, verifies the fingerprint changes again, deletes the test service, and verifies the original fingerprint is restored. This tests detection of inserted and mutated catalog data on the isolated CI database. It does not yet exercise an actual Payload migration or existing production records.
+
+## Populated database upgrade rehearsal
+
+The `populated-localization-rehearsal` CI job initializes the exact pre-localization source on PostgreSQL 17, inserts representative legacy catalog and booking records, fingerprints all four collections, then starts the current Payload config **against that same database** and asserts the fingerprints match byte-for-byte. It also checks that localized tables exist. This tests Payload's schema initialization behavior on populated legacy storage; it is **not** an explicit, reviewed Payload migration file and does not constitute production migration approval.
