@@ -41,6 +41,7 @@ export const uk = {
     back: 'Назад',
     continue: 'Продовжити',
     services: 'Переглянути послуги',
+    switchTheme: 'Перемкнути світлу або темну тему',
   },
   booking: {
     step: 'Крок', of: 'із', time: 'Час', namePlaceholder: 'Ім’я та прізвище',

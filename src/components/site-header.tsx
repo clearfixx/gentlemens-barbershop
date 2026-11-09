@@ -26,7 +26,7 @@ export function SiteHeader({ locale = 'uk' }: { locale?: Locale }) {
       </nav>
       <div className="site-header__actions">
         <LocaleSwitcher locale={locale} />
-        <ThemeToggle />
+        <ThemeToggle locale={locale} />
         <Link className="header-booking" href={`${prefix}/booking`}>{t.actions.planVisit}</Link>
       </div>
     </header>

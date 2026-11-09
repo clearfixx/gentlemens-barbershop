@@ -45,6 +45,7 @@ export const en = {
     back: 'Back',
     continue: 'Continue',
     services: 'Explore services',
+    switchTheme: 'Switch between light and dark theme',
   },
   booking: {
     step: 'Step', of: 'of', time: 'Time', namePlaceholder: 'Full name',
