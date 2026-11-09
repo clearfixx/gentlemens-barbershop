@@ -21,5 +21,9 @@ export async function loadPublicMessages(locale: Locale) {
   })
   const record = result.docs[0]
   if (!record) return getFallbackMessages(locale)
-  return resolvePublishedMessages(locale, record)
+  return resolvePublishedMessages(locale, {
+    locale: typeof record.locale === 'string' ? record.locale : undefined,
+    status: typeof record.status === 'string' ? record.status : undefined,
+    entries: record.entries,
+  })
 }
