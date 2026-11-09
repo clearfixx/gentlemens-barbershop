@@ -46,6 +46,11 @@ jobs:
         run: node --experimental-strip-types --test src/lib/booking/availability.test.ts src/lib/booking/local-time.test.ts src/lib/booking/zoned-availability.test.ts src/lib/booking/barber-day.test.ts src/lib/booking/interval-conflicts.test.ts src/lib/booking/booking-errors.test.ts src/lib/booking/resolve-offering.test.ts src/lib/booking/booking-request.test.ts src/lib/booking/booking-slot.test.ts src/lib/booking/create-booking.test.ts src/lib/booking/persist-payload-booking.test.ts src/lib/booking/idempotency.test.ts src/lib/booking/idempotent-replay.test.ts src/lib/booking/payload-idempotency.test.ts src/lib/booking/load-booking-catalog.test.ts src/lib/booking/payload-booking-service.test.ts src/lib/catalog/public-catalog.test.ts src/lib/catalog/public-availability.test.ts src/lib/catalog/availability-limiter.test.ts
       - name: Translation override validation tests
         run: node --experimental-strip-types --test src/i18n/override-validation.test.ts src/i18n/resolve-overrides.test.ts src/i18n/messages/fallback.test.ts
+      - name: Verify Payload migration CLI is available
+        run: |
+          pnpm exec payload migrate:create --help
+          pnpm exec payload migrate --help
+          pnpm exec payload migrate:status --help
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint

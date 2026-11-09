@@ -39,6 +39,7 @@ export default buildConfig({
     // Never let a production process auto-alter the database schema.
     // Apply reviewed, versioned Payload migrations before deploying the app.
     push: process.env.NODE_ENV !== 'production',
+    migrationDir: path.resolve(dirname, 'migrations'),
   }),
   typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
 })

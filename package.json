@@ -1,7 +1,9 @@
 {
   "name": "gentlemens-barbershop",
   "version": "0.1.0",
-  "engines": { "node": ">=24.22.1" },
+  "engines": {
+    "node": ">=24.22.1"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,7 +12,10 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "generate:importmap": "payload generate:importmap",
-    "bootstrap:admin": "node --experimental-strip-types scripts/bootstrap-admin.ts"
+    "bootstrap:admin": "node --experimental-strip-types scripts/bootstrap-admin.ts",
+    "db:migrate:create": "payload migrate:create",
+    "db:migrate": "payload migrate",
+    "db:migrate:status": "payload migrate:status"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.0.0",

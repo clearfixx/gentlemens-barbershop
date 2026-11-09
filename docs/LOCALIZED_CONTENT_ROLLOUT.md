@@ -40,3 +40,7 @@ Payload PostgreSQL automatic schema push is disabled whenever `NODE_ENV=producti
 ## CI restore rehearsal
 
 The populated-schema CI job now captures a custom-format PostgreSQL 17 backup **before** the schema upgrade, restores it into a second disposable database after the upgrade, and compares legacy catalog/booking fingerprints with the pre-upgrade state. This verifies a database-level restore path in CI. It is not an in-place downgrade, a production recovery-time test, or approval to migrate production.
+
+## Versioned migration entry points
+
+The PostgreSQL adapter now uses the explicit `src/migrations` directory, with `pnpm db:migrate:create`, `pnpm db:migrate`, and `pnpm db:migrate:status` as the Payload CLI entry points. CI checks that these commands exist in the installed Payload version. **This wiring is not a generated migration**: before any production rollout, create and review a concrete versioned migration against the restored baseline, commit it, test it against populated legacy data, and verify a backup restore. The app's production automatic schema push remains disabled.
