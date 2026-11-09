@@ -54,37 +54,11 @@ jobs:
             if (!pkg.bin?.payload) throw new Error('Payload CLI executable is missing');
             console.log('Payload CLI declared:', pkg.bin.payload);
           "
-      - name: Diagnose Payload CLI and transitive undici loader
-        shell: bash
+      - name: Verify Payload native migration CLI
         run: |
-          set -uo pipefail
-          node --version
-          node -p "require('./node_modules/payload/package.json').version"
-          echo "Resolve the undici package used by Payload CLI:"
-          undici_entry="$(find node_modules/.pnpm -path '*/undici@*/node_modules/undici/index.js' -print -quit)"
-          if [ -n "$undici_entry" ]; then
-            echo "Undici entry: $undici_entry"
-            echo "Plain Node:"
-            node -e "require('./$undici_entry'); console.log('undici loaded')" || true
-            echo "Node with tsx import hook:"
-            node --import tsx -e "require('./$undici_entry'); console.log('undici loaded')" || true
-          else
-            echo "::warning::Undici package not found in pnpm store"
-          fi
-          echo "Payload CLI without tsx transpilation:"
-          if pnpm exec payload migrate:create --disable-transpile --help > /tmp/payload-migrate-native.log 2>&1; then
-            echo "Payload native CLI migration help starts successfully"
-          else
-            echo "::warning::Payload native CLI startup failed"
-            tail -n 35 /tmp/payload-migrate-native.log
-          fi
-          echo "Payload CLI migration help:"
-          if pnpm exec payload migrate:create --help > /tmp/payload-migrate-cli.log 2>&1; then
-            echo "Payload migration CLI starts successfully"
-          else
-            echo "::warning::Payload migration CLI failed to start; versioned migration remains blocked"
-            tail -n 35 /tmp/payload-migrate-cli.log
-          fi
+          set -euo pipefail
+          pnpm exec payload migrate:create --disable-transpile --help
+          pnpm exec payload migrate:status --disable-transpile --help
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint

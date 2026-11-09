@@ -13,9 +13,9 @@
     "typecheck": "tsc --noEmit",
     "generate:importmap": "payload generate:importmap",
     "bootstrap:admin": "node --experimental-strip-types scripts/bootstrap-admin.ts",
-    "db:migrate:create": "payload migrate:create",
-    "db:migrate": "payload migrate",
-    "db:migrate:status": "payload migrate:status"
+    "db:migrate:create": "payload migrate:create --disable-transpile",
+    "db:migrate": "payload migrate --disable-transpile",
+    "db:migrate:status": "payload migrate:status --disable-transpile"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.0.0",
