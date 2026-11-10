@@ -76,3 +76,26 @@ test('unrelated persistence errors are not swallowed or retried', async () => {
   }), error => error === failure)
   assert.equal(reads, 1)
 })
+
+test('insert adapter must return the same retry identity', async () => {
+  for (const mismatch of [
+    { ...row, idempotency_scope: 'customer:456' },
+    { ...row, idempotency_key: 'another_retry' },
+    { ...row, idempotency_request_hash: '0'.repeat(64) },
+  ]) {
+    await assert.rejects(persistBookingIdempotently({
+      token, readExisting: async () => null,
+      insert: async () => mismatch,
+    }), BookingIdempotencyConflictError)
+  }
+})
+
+test('collision replay rejects a row with mismatched retry identity', async () => {
+  let reads = 0
+  await assert.rejects(persistBookingIdempotently({
+    token,
+    readExisting: async () => (++reads === 1 ? null : { ...row, idempotency_key: 'wrong' }),
+    insert: async () => { throw uniqueError },
+  }), BookingIdempotencyConflictError)
+  assert.equal(reads, 2)
+})
