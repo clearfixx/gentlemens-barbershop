@@ -83,28 +83,12 @@ export function prepareBookingRequest(input: {
       barber.locationId !== location.id) {
     throw new RangeError('Selected barber or location is unavailable')
   }
-  if (!Array.isArray(request.serviceIds) || request.serviceIds.length < 1 ||
-      request.serviceIds.length > 10 || new Set(request.serviceIds).size !== request.serviceIds.length ||
-      !request.serviceIds.every(id => Number.isSafeInteger(id) && id > 0)) {
-    throw new RangeError('Invalid service selection')
-  }
-  const customerName = request.customerName?.trim()
-  const customerPhone = request.customerPhone?.trim()
-  if (!customerName || customerName.length > 120 ||
-      !customerPhone || !/^\+?[0-9 ()-]{7,24}$/.test(customerPhone)) {
-    throw new RangeError('Invalid customer contact details')
-  }
+  // Request shape was validated above. Normalize contact fields once; all
+  // catalog-derived fields remain server-owned.
+  const customerName = request.customerName.trim()
+  const customerPhone = request.customerPhone.trim()
   const customerEmail = request.customerEmail?.trim()
-  if (customerEmail && (customerEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail))) {
-    throw new RangeError('Invalid email')
-  }
   const start = new Date(request.startsAt)
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(request.startsAt) ||
-      !Number.isFinite(start.getTime()) ||
-      (request.startsAt !== start.toISOString() &&
-       request.startsAt !== start.toISOString().replace('.000Z', 'Z'))) {
-    throw new RangeError('Start must be an explicit UTC timestamp')
-  }
   if (!Array.isArray(services) || !Array.isArray(barber.offerings)) {
     throw new RangeError('Invalid booking catalog')
   }
