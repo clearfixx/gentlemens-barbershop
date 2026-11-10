@@ -64,6 +64,20 @@ export function validateBookingRequestShape(value: unknown): asserts value is Bo
   }
 }
 
+/** Copy only validated client-owned fields before crossing an async boundary. */
+export function snapshotBookingRequest(value: BookingRequest): BookingRequest {
+  validateBookingRequestShape(value)
+  return {
+    barberId: value.barberId,
+    locationId: value.locationId,
+    serviceIds: [...value.serviceIds],
+    startsAt: value.startsAt,
+    customerName: value.customerName,
+    customerPhone: value.customerPhone,
+    ...(value.customerEmail !== undefined ? { customerEmail: value.customerEmail } : {}),
+  }
+}
+
 /**
  * Validates request shape and derives the complete appointment from trusted
  * catalog data. This does not reserve a slot; the database must still enforce

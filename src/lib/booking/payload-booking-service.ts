@@ -2,7 +2,7 @@ import type { Payload } from 'payload'
 import { assertBookingIdempotencyIdentity, prepareBookingIdempotency } from './idempotency.ts'
 import { findExistingPayloadBooking, persistIdempotentPayloadBooking } from './payload-idempotency.ts'
 import { createBooking } from './create-booking.ts'
-import { validateBookingRequestShape, type BookingQuote, type BookingRequest } from './booking-request.ts'
+import { snapshotBookingRequest, type BookingQuote, type BookingRequest } from './booking-request.ts'
 import { getBarberAvailability } from './get-barber-availability.ts'
 import { localDayMinute } from './local-time.ts'
 import { loadBookingCatalog } from './load-booking-catalog.ts'
@@ -43,13 +43,7 @@ export async function createIdempotentPayloadBooking(
   identityScope: string,
   key: string,
 ) {
-  validateBookingRequestShape(request)
-  const snapshot: BookingRequest = {
-    barberId: request.barberId, locationId: request.locationId,
-    serviceIds: [...request.serviceIds], startsAt: request.startsAt,
-    customerName: request.customerName, customerPhone: request.customerPhone,
-    ...(request.customerEmail !== undefined ? { customerEmail: request.customerEmail } : {}),
-  }
+  const snapshot = snapshotBookingRequest(request)
   const token = prepareBookingIdempotency({ scope: identityScope, key, request: snapshot })
   const existing = await findExistingPayloadBooking(payload, token)
   if (existing) {

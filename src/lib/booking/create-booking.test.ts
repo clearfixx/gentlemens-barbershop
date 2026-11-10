@@ -167,3 +167,29 @@ test('invalid request still fails before any asynchronous catalog call', async (
   }), RangeError)
   assert.equal(calls, 0)
 })
+
+test('availability adapter cannot mutate the authoritative quote before persistence', async () => {
+  let saved: unknown
+  const result = await createBooking({
+    request,
+    loadCatalog: async () => catalog,
+    loadAvailableSlots: async quote => {
+      quote.serviceIds[0] = 999
+      quote.customerName = 'Changed by availability adapter'
+      quote.startsAt = '2030-01-02T11:00:00.000Z'
+      quote.totalPrice = 0
+      return [slot]
+    },
+    persist: async quote => {
+      saved = quote
+      return { id: 42 }
+    },
+  })
+  assert.equal(result.id, 42)
+  assert.deepEqual(saved, {
+    barberId: 3, locationId: 2, serviceIds: [7],
+    startsAt: slot.startsAt, endsAt: slot.endsAt,
+    totalPrice: 500, durationMinutes: 45,
+    customerName: 'Customer', customerPhone: '+380671234567',
+  })
+})

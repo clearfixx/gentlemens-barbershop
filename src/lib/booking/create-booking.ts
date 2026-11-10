@@ -1,5 +1,5 @@
 import { assertBookingSlotAvailable } from './booking-slot.ts'
-import { prepareBookingRequest, validateBookingRequestShape, type BookingQuote, type BookingRequest } from './booking-request.ts'
+import { prepareBookingRequest, snapshotBookingRequest, type BookingQuote, type BookingRequest } from './booking-request.ts'
 import { throwBookingConflictIfApplicable } from './booking-errors.ts'
 import type { BarberOffering, ServiceSnapshot } from './resolve-offering.ts'
 import type { ZonedSlot } from './zoned-availability.ts'
@@ -21,22 +21,12 @@ export async function createBooking<T>(input: {
   loadAvailableSlots: (quote: BookingQuote) => Promise<ZonedSlot[]>
   persist: (quote: BookingQuote) => Promise<T>
 }): Promise<T> {
-  validateBookingRequestShape(input.request)
-  // Keep one immutable request snapshot across asynchronous catalog and slot
-  // lookups. A caller mutating the original object must not change the intent
-  // between validation and persistence.
-  const request: BookingRequest = {
-    barberId: input.request.barberId,
-    locationId: input.request.locationId,
-    serviceIds: [...input.request.serviceIds],
-    startsAt: input.request.startsAt,
-    customerName: input.request.customerName,
-    customerPhone: input.request.customerPhone,
-    ...(input.request.customerEmail !== undefined ? { customerEmail: input.request.customerEmail } : {}),
-  }
+  const request = snapshotBookingRequest(input.request)
   const catalog = await input.loadCatalog({ ...request, serviceIds: [...request.serviceIds] })
   const quote = prepareBookingRequest({ request, ...catalog })
-  const slots = await input.loadAvailableSlots(quote)
+  // The availability adapter may inspect the quote but must not mutate the
+  // authoritative values subsequently checked and persisted.
+  const slots = await input.loadAvailableSlots({ ...quote, serviceIds: [...quote.serviceIds] })
   assertBookingSlotAvailable(quote, slots)
 
   // Availability is advisory: another transaction may reserve the slot
