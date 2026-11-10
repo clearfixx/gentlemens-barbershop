@@ -1,2 +1,2 @@
 42759640713
-# retry 2: compare request first line only
+# retry 3: retain generated SQL indentation

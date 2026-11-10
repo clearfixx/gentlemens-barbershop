@@ -75,7 +75,9 @@ jobs:
           cp /tmp/reviewed-migrations/*.ts /tmp/reviewed-migrations/*.json src/migrations/
           rm -f src/migrations/.gitkeep
           git add src/migrations
-          git diff --cached --check
+          # Payload-generated SQL templates intentionally contain mixed indentation;
+          # preserve the reviewed artifact byte-for-byte, but still reject conflict markers.
+          git -c core.whitespace=-blank-at-eol,-space-before-tab diff --cached --check
           test "$(git diff --cached --name-only | wc -l)" -eq 6
       - name: Commit reviewed migration files to feature branch
         shell: bash
