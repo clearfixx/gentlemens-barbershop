@@ -1,5 +1,5 @@
 import type { Payload } from 'payload'
-import type { BookingQuote } from './booking-request.ts'
+import { assertBookingQuoteIntegrity, type BookingQuote } from './booking-request.ts'
 import type { BookingIdempotency } from './idempotency.ts'
 import { throwBookingConflictIfApplicable } from './booking-errors.ts'
 
@@ -19,6 +19,7 @@ export async function persistPayloadBooking(
   idempotency?: BookingIdempotency,
   options: { deferConflictTranslation?: boolean } = {},
 ) {
+  assertBookingQuoteIntegrity(quote)
   try {
     return await payload.create({
       collection: 'bookings',
