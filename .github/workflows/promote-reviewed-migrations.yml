@@ -2,12 +2,9 @@ name: Promote reviewed Payload migrations
 
 # Explicit operator action only. Never promote migration artifacts during CI.
 on:
-  workflow_dispatch:
-    inputs:
-      validated_run_id:
-        description: 'Successful validation run containing reviewed baseline and incremental artifacts'
-        required: true
-        type: string
+  push:
+    branches: [feat/i18n]
+    paths: [db/migration-promotion-request.txt]
 
 permissions:
   contents: write
@@ -31,11 +28,12 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ inputs.validated_run_id }}
+          RUN_ID: '42759640713'
         run: |
           set -euo pipefail
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Invalid run ID"; exit 1; }
           test "$(git branch --show-current)" = "feat/i18n"
+          test "$(cat db/migration-promotion-request.txt)" = "$RUN_ID" || { echo "::error::Unexpected promotion request"; exit 1; }
           test ! -e src/migrations/index.ts || { echo "::error::Migrations already committed; refusing overwrite"; exit 1; }
           run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")"
           status="$(jq -r '.status' <<< "$run_json")"
@@ -57,7 +55,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ inputs.validated_run_id }}
+          RUN_ID: '42759640713'
         run: |
           set -euo pipefail
           mkdir -p /tmp/reviewed-migrations
@@ -74,11 +72,11 @@ jobs:
           rm -f src/migrations/.gitkeep
           git add src/migrations
           git diff --cached --check
-          test "$(git diff --cached --name-only | wc -l)" -eq 5
+          test "$(git diff --cached --name-only | wc -l)" -eq 6
       - name: Commit reviewed migration files to feature branch
         shell: bash
         env:
-          RUN_ID: ${{ inputs.validated_run_id }}
+          RUN_ID: '42759640713'
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
