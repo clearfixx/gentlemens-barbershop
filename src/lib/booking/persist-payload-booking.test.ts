@@ -74,3 +74,23 @@ test('writes retry metadata in the same Payload create operation', async () => {
   assert.equal(args?.data.idempotencyRequestHash, 'a'.repeat(64))
   assert.equal(args?.data.status, 'pending')
 })
+
+test('rejects inconsistent quote totals and intervals before privileged writes', async () => {
+  let creates = 0
+  const payload = {
+    create: async () => { creates++; return { id: 42 } },
+  } as unknown as Payload
+  for (const malformed of [
+    { ...quote, durationMinutes: 89 },
+    { ...quote, endsAt: quote.startsAt },
+    { ...quote, endsAt: 'invalid' },
+    { ...quote, endsAt: '2030-01-02T10:30:00Z' },
+    { ...quote, totalPrice: -1 },
+    { ...quote, totalPrice: Number.NaN },
+    { ...quote, durationMinutes: 481 },
+    { ...quote, customerName: '' },
+  ]) {
+    await assert.rejects(persistPayloadBooking(payload, malformed), RangeError)
+  }
+  assert.equal(creates, 0)
+})
