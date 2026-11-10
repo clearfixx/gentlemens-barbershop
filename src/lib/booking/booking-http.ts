@@ -1,6 +1,7 @@
 import { BookingIdempotencyConflictError } from './idempotency.ts'
 import { BookingSlotConflictError } from './booking-errors.ts'
 import { BookingAuthenticationError, BookingContactMismatchError } from './booking-identity.ts'
+import { BookingRateLimitedError } from './submit-authenticated-booking.ts'
 import { snapshotBookingRequest, type BookingRequest } from './booking-request.ts'
 
 export type BookingHttpInput = { request: BookingRequest; idempotencyKey: string }
@@ -25,6 +26,9 @@ export function parseBookingHttpInput(body: unknown, idempotencyKey: string | nu
 
 /** Public HTTP mapping: never leak SQL, Payload, or customer details. */
 export function bookingHttpError(error: unknown): { status: number; message: string } | null {
+  if (error instanceof BookingRateLimitedError) {
+    return { status: 429, message: 'Booking requests temporarily limited' }
+  }
   if (error instanceof BookingAuthenticationError) {
     return { status: 401, message: 'Authentication required' }
   }
