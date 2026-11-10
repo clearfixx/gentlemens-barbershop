@@ -43,9 +43,9 @@ For an additional read-only diagnostic on the target database, run:
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/booking-integrity-preflight.sql
 ```
 
-The query reports counts for invalid intervals, incomplete idempotency metadata, duplicate scope/key groups and overlapping active-booking pairs. **All four counts must be zero** before applying the migration. The two subsequent queries show up to 100 conflicting booking pairs and duplicate retry-key groups for manual investigation. Do not automatically delete customer bookings to make migration pass.
+The query reports counts for invalid intervals, incomplete idempotency metadata, duplicate scope/key groups and overlapping active-booking pairs. **All four counts must be zero** before running the controlled SQL deployment. The two subsequent queries show up to 100 conflicting booking pairs and duplicate retry-key groups for manual investigation. Do not automatically delete customer bookings to make migration pass.
 
-This is a point-in-time preflight, not a concurrency barrier. Stop booking writes during migration or otherwise guarantee no new conflicting records can be inserted between preflight and constraint creation. Execute in a controlled maintenance window with a database backup and a reviewed rollback plan. The preflight does not apply the migration and does not establish that the database concurrency tests have passed.
+This is a point-in-time preflight, not a concurrency barrier. Stop booking writes during migration or otherwise guarantee no new conflicting records can be inserted between preflight and constraint creation. Execute in a controlled maintenance window with a database backup and a reviewed rollback plan. The preflight does not apply the constraints and does not establish that the database concurrency tests have passed.
 
 ## Disposable SQL smoke test
 
@@ -57,7 +57,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/booking-integrity-smoke.sql
 
 This script creates a temporary table with similar constraint expressions, tests accepted adjacent slots, different barbers, cancelled slots, and expected SQLSTATEs for overlap (`23P01`), invalid intervals/incomplete retry metadata (`23514`) and duplicate retry keys (`23505`). It rolls back its test transaction.
 
-**Important:** This is a constraint-expression smoke test, not a migration integration test and not a two-connection concurrency test. It requires permission to install or use `btree_gist`. Do not run it against production; use a disposable database. The disposable probe uses a stricter `num_nonnulls` check than the currently deployed constraint. It is not proof that the deployed constraint has the identical definition.
+**Important:** This is a constraint-expression smoke test, not a migration integration test and not a two-connection concurrency test. It requires permission to install or use `btree_gist`. Do not run it against production; use a disposable database. The probe uses a `num_nonnulls` formulation equivalent to the expected all-or-none metadata rule, but it is not proof that the installed database has the identical constraint definition.
 
 ## Idempotent persistence boundary
 
@@ -65,7 +65,7 @@ This script creates a temporary table with similar constraint expressions, tests
 
 **Required integration contract:** `insert` must atomically persist the booking and all retry metadata. The first failed insert transaction must be rolled back before `readExisting` runs again. That read must be a fresh query with visibility of the winning committed transaction, under the trusted scope/key, and must not return records belonging to another principal. Do not invoke the helper from a public endpoint until these conditions are enforced by the concrete Payload/PostgreSQL adapter. Unit tests use in-memory callbacks; they do not validate transaction isolation or database connectivity.
 
-## Installed migration verification
+## Installed integrity verification
 
 After applying the approved booking SQL deployment on a **disposable** database, verify the actual PostgreSQL schema (rather than only a temporary copy of the constraint expressions):
 
