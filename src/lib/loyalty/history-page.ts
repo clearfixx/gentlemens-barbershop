@@ -1,6 +1,6 @@
 import type { LoyaltyPrincipal, LoyaltyHistoryItem } from './read-own-loyalty.ts'
 import type { LoyaltySqlClient } from './sql-read-repository.ts'
-import { LoyaltyAccessError } from './read-own-loyalty.ts'
+import { authenticatedCustomerId } from './read-own-loyalty.ts'
 
 export type LoyaltyHistoryPage = {
   entries: readonly LoyaltyHistoryItem[]
@@ -14,12 +14,7 @@ export async function getOwnLoyaltyHistoryPage(
   client: LoyaltySqlClient,
   options: { limit?: number; before?: string } = {},
 ): Promise<LoyaltyHistoryPage> {
-  if (!principal || principal.role !== 'customer' ||
-    (typeof principal.id !== 'string' && typeof principal.id !== 'number') ||
-    !/^[1-9][0-9]*$/.test(String(principal.id)) ||
-    !Number.isSafeInteger(Number(principal.id))) {
-    throw new LoyaltyAccessError()
-  }
+  const customerId = authenticatedCustomerId(principal)
   const limit = options.limit ?? 20
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_LOYALTY_PAGE_SIZE) {
     throw new RangeError('Invalid loyalty page size')
@@ -40,7 +35,7 @@ export async function getOwnLoyaltyHistoryPage(
       AND ($2::bigint IS NULL OR id < $2::bigint)
     ORDER BY id DESC
     LIMIT $3::integer
-  `, [String(principal.id), before ?? null, limit + 1])
+  `, [customerId, before ?? null, limit + 1])
 
   if (result.rows.length > limit + 1) throw new Error('Unexpected loyalty page length')
   const items = result.rows.map((value): LoyaltyHistoryItem => {
