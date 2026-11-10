@@ -123,3 +123,47 @@ test('concurrent booking does not hide unrelated persistence failures', async ()
     persist: async () => { throw failure },
   }), error => error === failure)
 })
+
+test('caller mutation during asynchronous catalog lookup cannot change booking intent', async () => {
+  const mutable = { ...request, serviceIds: [...request.serviceIds] }
+  let releaseCatalog: (() => void) | undefined
+  let catalogStarted: (() => void) | undefined
+  const started = new Promise<void>(resolve => { catalogStarted = resolve })
+  const waitForCatalog = new Promise<void>(resolve => { releaseCatalog = resolve })
+  const operation = createBooking({
+    request: mutable,
+    loadCatalog: async received => {
+      // Even the catalog loader must not receive a reference to the snapshot.
+      received.serviceIds.push(999)
+      catalogStarted?.()
+      await waitForCatalog
+      return catalog
+    },
+    loadAvailableSlots: async quote => {
+      assert.deepEqual(quote.serviceIds, [7])
+      assert.equal(quote.customerName, 'Customer')
+      assert.equal(quote.startsAt, request.startsAt)
+      return [slot]
+    },
+    persist: async quote => ({ serviceIds: quote.serviceIds, customerName: quote.customerName }),
+  })
+  await started
+  mutable.serviceIds[0] = 8
+  mutable.customerName = 'Changed after validation'
+  mutable.startsAt = '2030-01-02T11:00:00.000Z'
+  releaseCatalog?.()
+  const result = await operation
+  assert.deepEqual(result, { serviceIds: [7], customerName: 'Customer' })
+})
+
+test('invalid request still fails before any asynchronous catalog call', async () => {
+  let calls = 0
+  const invalid = { ...request, serviceIds: [7, 7] }
+  await assert.rejects(createBooking({
+    request: invalid,
+    loadCatalog: async () => { calls++; return catalog },
+    loadAvailableSlots: async () => [slot],
+    persist: async () => ({ id: 1 }),
+  }), RangeError)
+  assert.equal(calls, 0)
+})
