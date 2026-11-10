@@ -38,7 +38,7 @@ CREATE FUNCTION loyalty_apply(
   p_bonus bigint,
   p_reverse_id bigint DEFAULT NULL
 ) RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = pg_catalog, public, pg_temp AS $
+SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   current_xp bigint;
   current_bonus bigint;
