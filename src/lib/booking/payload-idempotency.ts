@@ -19,9 +19,9 @@ export async function persistIdempotentPayloadBooking(
 ) {
   try {
     return await replayOrCreateBooking({
-    token,
-    findExisting: key => findExistingPayloadBooking(payload, key),
-    insert: async () => persistPayloadBooking(payload, quote, token, { deferConflictTranslation: true }),
+      token,
+      findExisting: key => findExistingPayloadBooking(payload, key),
+      insert: async () => persistPayloadBooking(payload, quote, token, { deferConflictTranslation: true }),
   })
   } catch (error) {
     return throwBookingConflictIfApplicable(error)
@@ -40,5 +40,10 @@ export async function findExistingPayloadBooking(payload: Payload, token: Bookin
   })
   const existing = result.docs[0]
   if (!existing) return null
-  return { booking: existing, idempotency_request_hash: existing.idempotencyRequestHash ?? null }
+  return {
+    booking: existing,
+    idempotency_scope: existing.idempotencyScope ?? null,
+    idempotency_key: existing.idempotencyKey ?? null,
+    idempotency_request_hash: existing.idempotencyRequestHash ?? null,
+  }
 }
