@@ -59,75 +59,33 @@ jobs:
           set -euo pipefail
           pnpm exec payload migrate:create --disable-transpile --help
           pnpm exec payload migrate:status --disable-transpile --help
-      - name: Generate versioned Payload migration candidate for review
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Generation is schema-only; never apply this candidate to the CI database.
-          # A timeout prevents a hidden interactive prompt from stalling CI.
-          CI=1 timeout 90s pnpm db:migrate:create -- ci-localization-candidate --force-accept-warning
-          test -n "$(find src/migrations -maxdepth 1 -type f -name '*.ts' -print -quit)"
-          echo "Generated migration candidates:"
-          find src/migrations -maxdepth 1 -type f -print
-      - name: Classify generated migration safety
+      - name: Verify committed migrations and rehearse on fresh production-mode database
         shell: bash
         run: |
           set -euo pipefail
           python3 scripts/test-classify-payload-migration.py
-          # Exit 2 means an identified unsafe bootstrap. Any other failure
-          # (including a missing migration) must fail CI rather than pass.
-          set +e
-          python3 scripts/classify-payload-migration.py src/migrations
-          classification_status=$?
-          set -e
-          if [ "$classification_status" -ne 2 ]; then
-            echo "::error::Expected unsafe bootstrap classification (2), got $classification_status"
-            exit 1
-          fi
-          echo "Generated bootstrap correctly blocked pending baseline review"
-      - name: Rehearse generated bootstrap on a disposable empty database
-        shell: bash
-        run: |
-          set -euo pipefail
-          # This database is deliberately empty. Never point this test at
-          # the populated CI database or a production connection string.
-          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_migration_bootstrap_ci
-          # Payload 3.93.0 generates value imports for TS-only Migrate*Args.
-          # Normalize the generated *CI-only* candidate to type imports.
-          # Never silently rewrite a committed production migration.
           python3 scripts/test-normalize-generated-payload-migration.py
-          python3 scripts/normalize-generated-payload-migration.py src/migrations
+          python3 scripts/check-localization-incremental.py src/migrations
+          test "$(find src/migrations -maxdepth 1 -name '*.json' | wc -l)" -eq 2
+          test "$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l)" -eq 2
+          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_migration_bootstrap_ci
           DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
-            CI=1 timeout 120s pnpm db:migrate
+            NODE_ENV=production CI=1 timeout 120s pnpm db:migrate
           PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
             -d gentlemens_migration_bootstrap_ci -c "
               DO \$\$ BEGIN
-                IF to_regclass('public.users') IS NULL
-                  OR to_regclass('public.services') IS NULL
+                IF (SELECT count(*) FROM payload_migrations) <> 2
+                  OR to_regclass('public.users') IS NULL
                   OR to_regclass('public.bookings') IS NULL
                   OR to_regclass('public.translations') IS NULL
-                THEN RAISE EXCEPTION 'Bootstrap migration omitted required tables';
+                THEN RAISE EXCEPTION 'Committed production migrations did not initialize expected schema';
                 END IF;
               END \$\$;"
-          # A second invocation must not replay the initial CREATE TABLE statements.
           DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
-            CI=1 timeout 120s pnpm db:migrate
-          PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
-            -d gentlemens_migration_bootstrap_ci -c "
-              DO \$\$ BEGIN
-                IF (SELECT count(*) FROM payload_migrations) <> 1 THEN
-                  RAISE EXCEPTION 'Expected exactly one recorded migration';
-                END IF;
-              END \$\$;"
-          echo "Bootstrap and repeat migration succeeded on isolated empty database only"
-      - name: Upload generated migration candidate for manual review
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: payload-migration-candidate
-          path: src/migrations/
-          if-no-files-found: warn
-          retention-days: 7
+            NODE_ENV=production CI=1 timeout 120s pnpm db:migrate
+          PGPASSWORD=postgres psql -XAt -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_migration_bootstrap_ci \
+            -c "SELECT count(*) FROM payload_migrations" | grep -qx '2'
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint
@@ -981,26 +939,18 @@ jobs:
           node-version: "24"
       - name: Install current dependencies
         run: pnpm install --frozen-lockfile
-      - name: Download historical migration and snapshot
-        uses: actions/download-artifact@v4
-        with:
-          name: prelocalization-migration-snapshot-candidate
-          path: src/migrations
       - name: Download historical PostgreSQL schema inventory
         uses: actions/download-artifact@v4
         with:
           name: prelocalization-baseline-schema
           path: baseline-review
-      - name: Generate incremental migration against historical snapshot
+      - name: Verify committed migration set
         shell: bash
         run: |
           set -euo pipefail
-          test "$(find src/migrations -maxdepth 1 -type f -name '*.json' | wc -l)" -eq 1
-          test "$(find src/migrations -maxdepth 1 -type f -name '*.ts' ! -name index.ts | wc -l)" -eq 1
-          CI=1 timeout 90s pnpm db:migrate:create -- ci-localization-incremental --force-accept-warning
-          test "$(find src/migrations -maxdepth 1 -type f -name '*.json' | wc -l)" -eq 2
-          echo "Generated incremental migration candidate from historical Payload snapshot"
-          find src/migrations -maxdepth 1 -type f -printf '%f\n'
+          test "$(find src/migrations -maxdepth 1 -name '*.json' | wc -l)" -eq 2
+          test "$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l)" -eq 2
+          test -s src/migrations/index.ts
       - name: Test historical schema equivalence gate
         run: python3 -m unittest discover -s scripts -p 'test_verify_historical_baseline.py'
       - name: Test migration safety checker against destructive SQL
@@ -1055,9 +1005,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Generated Payload 3.93 imports TypeScript types as runtime values.
-          # Normalize only disposable CI artifacts, never committed migrations.
-          python3 scripts/normalize-generated-payload-migration.py src/migrations
+          # Rehearse the committed, previously normalized migration files unchanged.
           mkdir -p /tmp/incremental-migration
           mv src/migrations/*ci_localization_incremental.* /tmp/incremental-migration/
           # Apply only the historical bootstrap to a fresh, isolated database.
@@ -1117,7 +1065,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' \
             -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/incremental-final.txt
           diff -u /tmp/incremental-before.txt /tmp/incremental-final.txt
-      - name: Upload incremental migration candidate for manual review
+      - name: Upload committed migration rehearsal artifacts
         uses: actions/upload-artifact@v4
         with:
           name: payload-incremental-migration-candidate
