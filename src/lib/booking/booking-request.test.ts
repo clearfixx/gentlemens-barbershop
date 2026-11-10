@@ -83,3 +83,16 @@ test('rejects invalid runtime request shapes before dereferencing fields', () =>
     assert.throws(() => prepareBookingRequest({ ...fixture(), request: value as never }), RangeError)
   }
 })
+
+
+test('rejects duplicate catalog records instead of using an arbitrary service price', () => {
+  const input = fixture()
+  input.services.push({ id: 7, isActive: true, price: 999, durationMinutes: 30 })
+  assert.throws(() => prepareBookingRequest(input), /ambiguous service/)
+})
+
+test('rejects duplicate barber offerings with conflicting overrides', () => {
+  const input = fixture()
+  input.barber.offerings.push({ service: 7, priceOverride: 999, durationOverrideMinutes: 30 })
+  assert.throws(() => prepareBookingRequest(input), /ambiguous barber offering/)
+})
