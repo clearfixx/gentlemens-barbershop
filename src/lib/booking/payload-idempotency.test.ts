@@ -204,3 +204,40 @@ test('quote changes cannot reuse a retry fingerprint from the original request',
   )
   assert.equal(calls, 0)
 })
+
+test('invalid retry scope and key are rejected before Payload I/O', async () => {
+  let calls = 0
+  const payload = {
+    find: async () => { calls++; return { docs: [] } },
+    create: async () => { calls++; return { id: 42 } },
+  } as unknown as Payload
+
+  for (const invalid of [
+    { ...token, scope: '' },
+    { ...token, scope: 'customer:1 OR 1=1' },
+    { ...token, key: '' },
+    { ...token, key: ' '.repeat(5) },
+    { ...token, key: 'a'.repeat(161) },
+  ]) {
+    await assert.rejects(
+      persistIdempotentPayloadBooking(payload, quote, invalid),
+      RangeError,
+    )
+  }
+  assert.equal(calls, 0)
+})
+
+test('malformed quote is rejected before Payload I/O even with a valid retry token', async () => {
+  let calls = 0
+  const payload = {
+    find: async () => { calls++; return { docs: [] } },
+    create: async () => { calls++; return { id: 42 } },
+  } as unknown as Payload
+  await assert.rejects(
+    persistIdempotentPayloadBooking(payload, {
+      ...quote, startsAt: 'not-a-date',
+    }, token),
+    RangeError,
+  )
+  assert.equal(calls, 0)
+})
