@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   assertIdempotencyReplay,
+  assertBookingIdempotencyIdentity,
+  isBookingIdempotencyUniqueViolation,
   BookingIdempotencyConflictError,
   bookingRequestFingerprint,
   prepareBookingIdempotency,
@@ -76,4 +78,41 @@ test('rejects non-string idempotency scope and key', () => {
       scope: 'customer:123', key: value as never, request,
     }), RangeError)
   }
+})
+
+test('retry identity requires matching trusted scope, key and request hash', () => {
+  const expected = prepareBookingIdempotency({ scope: 'customer:123', key: 'retry_1', request })
+  const existing = {
+    idempotency_scope: expected.scope,
+    idempotency_key: expected.key,
+    idempotency_request_hash: expected.requestHash,
+  }
+  assert.doesNotThrow(() => assertBookingIdempotencyIdentity(expected, existing))
+  for (const mismatch of [
+    { ...existing, idempotency_scope: 'customer:456' },
+    { ...existing, idempotency_key: 'retry_2' },
+    { ...existing, idempotency_request_hash: '0'.repeat(64) },
+    { ...existing, idempotency_scope: null },
+  ]) {
+    assert.throws(() => assertBookingIdempotencyIdentity(expected, mismatch),
+      BookingIdempotencyConflictError)
+  }
+})
+
+test('only the expected PostgreSQL retry unique index is recognized', () => {
+  assert.equal(isBookingIdempotencyUniqueViolation({
+    code: '23505', constraint: 'bookings_idempotency_scope_key_unique',
+  }), true)
+  assert.equal(isBookingIdempotencyUniqueViolation(new Error('Wrapped', {
+    cause: { code: '23505', constraint: 'bookings_idempotency_scope_key_unique' },
+  })), true)
+  for (const failure of [
+    { code: '23505', constraint: 'users_email_idx' },
+    { code: '23P01', constraint: 'bookings_idempotency_scope_key_unique' },
+    { code: '23505' },
+    null,
+  ]) assert.equal(isBookingIdempotencyUniqueViolation(failure), false)
+  const cycle: { cause?: unknown } = {}
+  cycle.cause = cycle
+  assert.equal(isBookingIdempotencyUniqueViolation(cycle), false)
 })
