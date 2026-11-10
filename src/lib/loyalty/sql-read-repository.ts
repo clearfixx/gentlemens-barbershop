@@ -1,29 +1,19 @@
-import type { LoyaltyReadRepository, LoyaltySnapshot, LoyaltyHistoryItem } from './read-own-loyalty.ts'
+import type { LoyaltyReadRepository, LoyaltySnapshot } from './read-own-loyalty.ts'
 
 /**
  * Adapter for a trusted, server-side SQL connection. Not connected to an HTTP
  * route until the loyalty tables are installed via reviewed migrations.
- * A single statement reads balances and history from one MVCC snapshot.
+ * A single statement reads the balance. History is fetched separately via
+ * bounded keyset pagination; never load an unbounded ledger into a snapshot.
  */
 export interface LoyaltySqlClient {
   query(sql: string, parameters: readonly unknown[]): Promise<{ rows: readonly unknown[] }>
 }
 
 const CUSTOMER_SNAPSHOT_SQL = `
-SELECT a.customer_id::text AS customer_id, a.xp::text AS xp, a.bonus::text AS bonus,
-  COALESCE(
-    (SELECT jsonb_agg(jsonb_build_object(
-      'id', e.id::text,
-      'kind', e.kind,
-      'xpDelta', e.xp_delta::text,
-      'bonusDelta', e.bonus_delta::text,
-      'source', e.source,
-      'createdAt', to_char(e.created_at AT TIME ZONE 'UTC',
-        'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
-    ) ORDER BY e.id)
-    FROM loyalty_entries e WHERE e.customer_id = a.customer_id),
-    '[]'::jsonb
-  ) AS history
+SELECT a.customer_id::text AS customer_id,
+  a.xp::text AS xp,
+  a.bonus::text AS bonus
 FROM loyalty_accounts a
 WHERE a.customer_id = $1::bigint
 `
@@ -49,24 +39,6 @@ function integer(value: unknown, field: string, allowNegative = false): number {
   return result
 }
 
-function historyItem(value: unknown): LoyaltyHistoryItem {
-  const row = record(value)
-  if (typeof row.id !== 'string' || !/^[1-9][0-9]*$/.test(row.id) ||
-    (row.kind !== 'earn' && row.kind !== 'redeem' && row.kind !== 'reverse') ||
-    typeof row.source !== 'string' || !row.source.trim() ||
-    typeof row.createdAt !== 'string' || !Number.isFinite(Date.parse(row.createdAt))) {
-    throw new Error('Invalid loyalty history entry')
-  }
-  return {
-    id: row.id,
-    kind: row.kind,
-    xpDelta: integer(row.xpDelta, 'history xp delta', true),
-    bonusDelta: integer(row.bonusDelta, 'history bonus delta', true),
-    source: row.source,
-    createdAt: row.createdAt,
-  }
-}
-
 export function createLoyaltySqlReadRepository(client: LoyaltySqlClient): LoyaltyReadRepository {
   return {
     async findCustomerSnapshot(customerId: string): Promise<LoyaltySnapshot | null> {
@@ -81,12 +53,11 @@ export function createLoyaltySqlReadRepository(client: LoyaltySqlClient): Loyalt
       if (row.customer_id !== customerId) {
         throw new Error('Loyalty repository customer mismatch')
       }
-      if (!Array.isArray(row.history)) throw new Error('Invalid loyalty history')
       return {
         customerId,
         xp: integer(row.xp, 'xp'),
         bonus: integer(row.bonus, 'bonus'),
-        history: row.history.map(historyItem),
+        history: [],
       }
     },
   }

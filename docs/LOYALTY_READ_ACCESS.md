@@ -16,8 +16,7 @@ integration tests for cross-account access.
 ## PostgreSQL read adapter
 
 `src/lib/loyalty/sql-read-repository.ts` implements the read contract using
-one parameterized SQL statement, returning the balance and ordered ledger
-history from the same PostgreSQL MVCC snapshot. The customer ID comes from
+one parameterized SQL statement returning only the customer's balance. The customer ID comes from
 the authenticated principal; numeric IDs and bigint balances are validated
 before being returned. This adapter is not exposed through HTTP until the
 loyalty schema is installed through a reviewed migration and role permissions
@@ -31,3 +30,13 @@ newest first, using keyset pagination (`id < before`). The limit is 1–50
 requests one extra row to determine whether another page exists. The cursor
 and page size are validated before any database access. This is an internal
 server-only module, not yet a public route.
+
+## Bounded reads by design
+
+The balance snapshot deliberately returns an empty `history` array for
+backward compatibility with the read contract. Ledger history must be loaded
+separately using `getOwnLoyaltyHistoryPage` (maximum 50 entries). This
+prevents an unbounded aggregate of every historical event on each dashboard
+refresh. Before exposing HTTP APIs, consider separating balance and history
+into distinct response types rather than retaining the empty compatibility
+field.
