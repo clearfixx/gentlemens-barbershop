@@ -54,3 +54,26 @@ test('rejects corrupt rows and excess query results', async () => {
   await assert.rejects(() => getOwnLoyaltyHistoryPage({ id: 7, role: 'customer' }, excess,
     { limit: 1 }), /page length/)
 })
+
+
+test('rejects out-of-order, duplicate and out-of-cursor history rows', async () => {
+  for (const rows of [
+    [entry(3), entry(4)],
+    [entry(4), entry(4)],
+    [entry(6)],
+  ]) {
+    const client: LoyaltySqlClient = { async query() { return { rows } } }
+    await assert.rejects(() => getOwnLoyaltyHistoryPage(
+      { id: 7, role: 'customer' }, client, { before: '6' }), /order or cursor/)
+  }
+})
+
+test('rejects noncanonical and impossible database timestamps', async () => {
+  for (const created_at of ['2026-11-10', '2026-02-30T08:00:00.000Z', '2026-11-10T08:00:00+00:00']) {
+    const client: LoyaltySqlClient = {
+      async query() { return { rows: [{ ...entry(1), created_at }] } },
+    }
+    await assert.rejects(() => getOwnLoyaltyHistoryPage(
+      { id: 7, role: 'customer' }, client), /Invalid loyalty entry/)
+  }
+})
