@@ -30,3 +30,17 @@ test('rejects invalid catalog money and duration values', () => {
   assert.throws(() => resolveBookingOffering(service, [{ service: 4, durationOverrideMinutes: 0 }]), RangeError)
   assert.throws(() => resolveBookingOffering({ ...service, price: 10.5 }, [{ service: 4 }]), RangeError)
 })
+
+
+test('rejects ambiguous duplicate barber offerings instead of choosing a price', () => {
+  assert.throws(() => resolveBookingOffering(service, [
+    { service: 4, priceOverride: 400 },
+    { service: { id: 4 }, priceOverride: 700 },
+  ]), /ambiguous/)
+})
+
+test('rejects invalid service identity and malformed offerings', () => {
+  assert.throws(() => resolveBookingOffering({ ...service, id: 0 }, [{ service: 0 }]), RangeError)
+  assert.throws(() => resolveBookingOffering(service, null as never), RangeError)
+  assert.throws(() => resolveBookingOffering(service, [null] as never), RangeError)
+})
