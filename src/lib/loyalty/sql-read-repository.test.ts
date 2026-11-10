@@ -27,7 +27,7 @@ test('uses one parameterized statement scoped to authenticated customer', async 
   assert.equal(result.history[1]?.bonusDelta, -10)
   assert.equal(calls.length, 1)
   assert.deepEqual(calls[0]?.params, ['42'])
-  assert.match(calls[0]?.sql ?? '', /WHERE a.customer_id = \\$1::bigint/)
+  assert.match(calls[0]?.sql ?? '', /WHERE a.customer_id = \$1::bigint/)
   assert.match(calls[0]?.sql ?? '', /WHERE e.customer_id = a.customer_id/)
 })
 
