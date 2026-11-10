@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { Payload } from 'payload'
 import type { BookingQuote } from './booking-request.ts'
-import { BookingIdempotencyConflictError } from './idempotency.ts'
+import { BookingIdempotencyConflictError, bookingRequestFingerprint } from './idempotency.ts'
 import { persistIdempotentPayloadBooking } from './payload-idempotency.ts'
 
 const quote: BookingQuote = {
@@ -12,7 +12,7 @@ const quote: BookingQuote = {
   durationMinutes: 60, totalPrice: 500,
   customerName: 'Customer', customerPhone: '+380671234567',
 }
-const token = { scope: 'customer:1', key: 'request-1', requestHash: 'a'.repeat(64) }
+const token = { scope: 'customer:1', key: 'request-1', requestHash: bookingRequestFingerprint(quote) }
 
 test('existing Payload booking is replayed without creating a second booking', async () => {
   let creates = 0
@@ -177,4 +177,30 @@ test('duplicate retry rows after a unique conflict are never silently replayed',
     BookingIdempotencyConflictError,
   )
   assert.equal(reads, 2)
+})
+
+test('inconsistent retry fingerprint fails before reading or writing Payload', async () => {
+  let calls = 0
+  const payload = {
+    find: async () => { calls++; return { docs: [] } },
+    create: async () => { calls++; return { id: 42 } },
+  } as unknown as Payload
+  await assert.rejects(
+    persistIdempotentPayloadBooking(payload, quote, { ...token, requestHash: '0'.repeat(64) }),
+    BookingIdempotencyConflictError,
+  )
+  assert.equal(calls, 0)
+})
+
+test('quote changes cannot reuse a retry fingerprint from the original request', async () => {
+  let calls = 0
+  const payload = {
+    find: async () => { calls++; return { docs: [] } },
+    create: async () => { calls++; return { id: 42 } },
+  } as unknown as Payload
+  await assert.rejects(
+    persistIdempotentPayloadBooking(payload, { ...quote, serviceIds: [8] }, token),
+    BookingIdempotencyConflictError,
+  )
+  assert.equal(calls, 0)
 })
