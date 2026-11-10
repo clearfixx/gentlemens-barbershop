@@ -23,6 +23,47 @@ export type BookingQuote = {
   customerEmail?: string
 }
 
+/** Validate untrusted booking input before any catalog or availability I/O. */
+export function validateBookingRequestShape(value: unknown): asserts value is BookingRequest {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new RangeError('Invalid booking request')
+  }
+  const request = value as Record<string, unknown>
+  if (![request.barberId, request.locationId].every(id =>
+    typeof id === 'number' && Number.isSafeInteger(id) && id > 0)) {
+    throw new RangeError('Invalid barber or location identifier')
+  }
+  if (!Array.isArray(request.serviceIds) || request.serviceIds.length < 1 ||
+      request.serviceIds.length > 10 ||
+      !request.serviceIds.every(id => typeof id === 'number' && Number.isSafeInteger(id) && id > 0) ||
+      new Set(request.serviceIds).size !== request.serviceIds.length) {
+    throw new RangeError('Invalid service selection')
+  }
+  if (typeof request.customerName !== 'string' ||
+      !request.customerName.trim() || request.customerName.trim().length > 120 ||
+      typeof request.customerPhone !== 'string' ||
+      !/^\+?[0-9 ()-]{7,24}$/.test(request.customerPhone.trim())) {
+    throw new RangeError('Invalid customer contact details')
+  }
+  if (request.customerEmail !== undefined &&
+      (typeof request.customerEmail !== 'string' ||
+       (request.customerEmail.trim() !== '' &&
+        (request.customerEmail.trim().length > 254 ||
+         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.customerEmail.trim()))))) {
+    throw new RangeError('Invalid email')
+  }
+  if (typeof request.startsAt !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(request.startsAt)) {
+    throw new RangeError('Start must be an explicit UTC timestamp')
+  }
+  const start = new Date(request.startsAt)
+  if (!Number.isFinite(start.getTime()) ||
+      (request.startsAt !== start.toISOString() &&
+       request.startsAt !== start.toISOString().replace('.000Z', 'Z'))) {
+    throw new RangeError('Start must be an explicit UTC timestamp')
+  }
+}
+
 /**
  * Validates request shape and derives the complete appointment from trusted
  * catalog data. This does not reserve a slot; the database must still enforce
@@ -35,6 +76,7 @@ export function prepareBookingRequest(input: {
   services: ServiceSnapshot[]
 }): BookingQuote {
   const { request, barber, location, services } = input
+  validateBookingRequestShape(request)
   if (![request.barberId, request.locationId].every(id => Number.isSafeInteger(id) && id > 0) ||
       !barber.isActive || !location.isActive ||
       request.barberId !== barber.id || request.locationId !== location.id ||
