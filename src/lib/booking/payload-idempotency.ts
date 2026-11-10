@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import type { BookingQuote } from './booking-request.ts'
-import type { BookingIdempotency } from './idempotency.ts'
+import { BookingIdempotencyConflictError, type BookingIdempotency } from './idempotency.ts'
 import { throwBookingConflictIfApplicable } from './booking-errors.ts'
 import { replayOrCreateBooking } from './idempotent-replay.ts'
 import { persistPayloadBooking } from './persist-payload-booking.ts'
@@ -22,7 +22,7 @@ export async function persistIdempotentPayloadBooking(
       token,
       findExisting: key => findExistingPayloadBooking(payload, key),
       insert: async () => persistPayloadBooking(payload, quote, token, { deferConflictTranslation: true }),
-  })
+    })
   } catch (error) {
     return throwBookingConflictIfApplicable(error)
   }
@@ -32,12 +32,15 @@ export async function persistIdempotentPayloadBooking(
 export async function findExistingPayloadBooking(payload: Payload, token: BookingIdempotency) {
   const { scope, key } = token
   const result = await payload.find({
-    collection: 'bookings', overrideAccess: true, depth: 0, limit: 1,
+    collection: 'bookings', overrideAccess: true, depth: 0, limit: 2,
     where: { and: [
       { idempotencyScope: { equals: scope } },
       { idempotencyKey: { equals: key } },
     ] },
   })
+  // A unique index should make this impossible. Fail closed if the index is
+  // missing or the database has already become inconsistent.
+  if (result.docs.length > 1) throw new BookingIdempotencyConflictError()
   const existing = result.docs[0]
   if (!existing) return null
   return {
