@@ -1,2 +1,2 @@
 42759640713
-# retry after validating normalized CI artifacts
+# retry 2: compare request first line only

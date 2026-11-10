@@ -33,7 +33,7 @@ jobs:
           set -euo pipefail
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Invalid run ID"; exit 1; }
           test "$(git branch --show-current)" = "feat/i18n"
-          test "$(cat db/migration-promotion-request.txt)" = "$RUN_ID" || { echo "::error::Unexpected promotion request"; exit 1; }
+          test "$(head -n 1 db/migration-promotion-request.txt)" = "$RUN_ID" || { echo "::error::Unexpected promotion request"; exit 1; }
           test ! -e src/migrations/index.ts || { echo "::error::Migrations already committed; refusing overwrite"; exit 1; }
           run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")"
           status="$(jq -r '.status' <<< "$run_json")"
