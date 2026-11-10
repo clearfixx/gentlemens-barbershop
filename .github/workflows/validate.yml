@@ -1065,6 +1065,43 @@ jobs:
             -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/incremental-repeat.txt
           diff -u /tmp/incremental-before.txt /tmp/incremental-repeat.txt
           echo "Versioned incremental migration preserved legacy data and is repeatable"
+      - name: Verify read-only historical schema adoption review
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The reference contains the baseline and localization migration.
+          # A valid review reference must contain ONLY the baseline.
+          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_baseline_reference_ci
+          # Rebuild the reference from the historical baseline alone.
+          mkdir -p /tmp/localization-delta-review
+          mv src/migrations/*ci_localization_incremental.* /tmp/localization-delta-review/
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_baseline_reference_ci" \
+            CI=1 timeout 120s pnpm db:migrate
+          mv /tmp/localization-delta-review/* src/migrations/
+          export BASELINE_REFERENCE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_baseline_reference_ci"
+          # A localized target must be refused: schema is not historical.
+          set +e
+          bash scripts/review-historical-baseline.sh > /tmp/baseline-review-negative.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          # Create an unversioned legacy target from baseline reference.
+          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_legacy_adoption_ci
+          docker run --rm --network host -e DATABASE_URL="$BASELINE_REFERENCE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --no-owner --no-privileges --exclude-table=public.payload_migrations' \
+            | psql -X -v ON_ERROR_STOP=1 "postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci" >/dev/null
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci"
+          bash scripts/review-historical-baseline.sh
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT to_regclass('public.payload_migrations') IS NULL" | grep -qx t
+          # A seemingly harmless extra index must fail the complete DDL gate.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'CREATE INDEX adoption_test_extra_idx ON services (id)'
+          set +e
+          bash scripts/review-historical-baseline.sh > /tmp/baseline-review-drift.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          grep -q 'REFUSED:' /tmp/baseline-review-drift.log
       - name: Reject unregistered baseline on an existing database
         shell: bash
         run: |
