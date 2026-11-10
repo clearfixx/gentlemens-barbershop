@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import type { BookingQuote } from './booking-request.ts'
-import { BookingIdempotencyConflictError, bookingRequestFingerprint, type BookingIdempotency } from './idempotency.ts'
+import { BookingIdempotencyConflictError, prepareBookingIdempotency, type BookingIdempotency } from './idempotency.ts'
 import { throwBookingConflictIfApplicable } from './booking-errors.ts'
 import { replayOrCreateBooking } from './idempotent-replay.ts'
 import { persistPayloadBooking } from './persist-payload-booking.ts'
@@ -20,7 +20,12 @@ export async function persistIdempotentPayloadBooking(
   // Do not let a caller attach a valid-looking retry key to a different quote.
   // This is an internal consistency check; the scope still must come from
   // authenticated server context, never from the request body.
-  if (token.requestHash !== bookingRequestFingerprint(quote)) {
+  const expected = prepareBookingIdempotency({
+    scope: token.scope,
+    key: token.key,
+    request: quote,
+  })
+  if (token.requestHash !== expected.requestHash) {
     throw new BookingIdempotencyConflictError()
   }
   try {
