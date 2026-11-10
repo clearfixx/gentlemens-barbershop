@@ -29,7 +29,7 @@ function fixture(overrides: {
     find: async (args: { collection: string; overrideAccess?: boolean; where?: unknown; limit?: number }) => {
       reads.push(args)
       const docs = args.collection === 'barber-schedules'
-        ? [{ weeklyShifts: [{ weekday: '3', startMinute: 540, endMinute: 660 }] }]
+        ? [{ weeklyShifts: [{ weekday: '3', startMinute: 540, endMinute: 720 }] }]
         : args.collection === 'bookings' ? (overrides.bookings ?? [])
         : args.collection === 'barber-time-off' ? (overrides.timeOff ?? [])
         : []
