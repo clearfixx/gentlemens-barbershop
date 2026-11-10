@@ -26,7 +26,7 @@ BEGIN
   SELECT indexdef INTO idempotency_index_definition
   FROM pg_indexes
   WHERE schemaname = 'public' AND tablename = 'bookings'
-    AND indexname = 'bookings_idempotency_scope_key_unique';
+    AND indexname = 'bookings_idempotency_unique';
   IF idempotency_index_definition IS NULL
     OR idempotency_index_definition NOT LIKE '%CREATE UNIQUE INDEX%'
     OR idempotency_index_definition NOT LIKE '%idempotency_scope%'
@@ -37,7 +37,7 @@ BEGIN
   SELECT pg_get_constraintdef(oid) INTO interval_definition
   FROM pg_constraint
   WHERE conrelid = 'public.bookings'::regclass
-    AND conname = 'bookings_valid_interval' AND contype = 'c';
+    AND conname = 'bookings_valid_time_range' AND contype = 'c';
   IF interval_definition IS NULL OR interval_definition NOT LIKE '%ends_at%'
     OR interval_definition NOT LIKE '%starts_at%' THEN
     RAISE EXCEPTION 'Booking interval constraint missing or unexpected: %', interval_definition;
@@ -46,8 +46,10 @@ BEGIN
   SELECT pg_get_constraintdef(oid) INTO completeness_definition
   FROM pg_constraint
   WHERE conrelid = 'public.bookings'::regclass
-    AND conname = 'bookings_idempotency_complete' AND contype = 'c';
-  IF completeness_definition IS NULL OR completeness_definition NOT LIKE '%num_nonnulls%' THEN
+    AND conname = 'bookings_idempotency_fields_together' AND contype = 'c';
+  IF completeness_definition IS NULL OR completeness_definition NOT LIKE '%idempotency_scope%'
+    OR completeness_definition NOT LIKE '%idempotency_key%'
+    OR completeness_definition NOT LIKE '%idempotency_request_hash%' THEN
     RAISE EXCEPTION 'Booking retry completeness constraint missing or unexpected: %', completeness_definition;
   END IF;
 
