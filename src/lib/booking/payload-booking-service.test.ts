@@ -56,7 +56,7 @@ test('replays an existing booking without querying catalog or availability', asy
     find: async ({ collection }: { collection: string }) => {
       calls.push(collection)
       assert.equal(collection, 'bookings')
-      return { docs: [{ id: 123, idempotencyRequestHash: token.requestHash }] }
+      return { docs: [{ id: 123, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: token.requestHash }] }
     },
     findByID: async () => { throw Error('Catalog must not be queried on replay') },
     create: async () => { throw Error('Replay must not insert a booking') },
@@ -70,7 +70,7 @@ test('replays an existing booking without querying catalog or availability', asy
 test('rejects a reused key with changed request before catalog lookup', async () => {
   const token = prepareBookingIdempotency({ scope: 'customer:42', key: 'retry-2', request })
   const payload = {
-    find: async () => ({ docs: [{ id: 123, idempotencyRequestHash: token.requestHash }] }),
+    find: async () => ({ docs: [{ id: 123, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: token.requestHash }] }),
     findByID: async () => { throw Error('Catalog must not be queried') },
     create: async () => { throw Error('Booking must not be created') },
   } as unknown as Payload
@@ -78,4 +78,41 @@ test('rejects a reused key with changed request before catalog lookup', async ()
     createIdempotentPayloadBooking(payload, { ...request, customerName: 'Changed' }, token.scope, token.key),
     { name: 'BookingIdempotencyConflictError' },
   )
+})
+
+test('service rejects a replay with another owner before querying the catalog', async () => {
+  const token = prepareBookingIdempotency({ scope: 'customer:42', key: 'owner-check', request })
+  const payload = {
+    find: async () => ({ docs: [{ id: 123, idempotencyScope: 'customer:other', idempotencyKey: token.key, idempotencyRequestHash: token.requestHash }] }),
+    findByID: async () => { throw Error('No catalog lookup on replay') },
+    create: async () => { throw Error('No write on replay') },
+  } as unknown as Payload
+  await assert.rejects(createIdempotentPayloadBooking(payload, request, token.scope, token.key),
+    { name: 'BookingIdempotencyConflictError' })
+})
+
+test('service uses a request snapshot across asynchronous retry lookup', async () => {
+  const mutable = { ...request, serviceIds: [...request.serviceIds] }
+  const token = prepareBookingIdempotency({ scope: 'customer:42', key: 'snapshot-check', request: mutable })
+  let started!: () => void
+  let release!: () => void
+  const entered = new Promise<void>(resolve => { started = resolve })
+  const barrier = new Promise<void>(resolve => { release = resolve })
+  const payload = {
+    find: async () => {
+      started()
+      await barrier
+      return { docs: [{ id: 123, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: token.requestHash }] }
+    },
+    findByID: async () => { throw Error('No catalog lookup on replay') },
+    create: async () => { throw Error('No write on replay') },
+  } as unknown as Payload
+  const pending = createIdempotentPayloadBooking(payload, mutable, token.scope, token.key)
+  await entered
+  mutable.serviceIds[0] = 999
+  mutable.customerName = 'Changed'
+  release()
+  const result = await pending
+  assert.equal(result.replayed, true)
+  assert.equal(result.booking.id, 123)
 })

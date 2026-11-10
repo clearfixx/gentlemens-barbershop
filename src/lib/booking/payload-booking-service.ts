@@ -1,12 +1,21 @@
 import type { Payload } from 'payload'
-import { assertIdempotencyReplay, prepareBookingIdempotency } from './idempotency.ts'
+import { assertBookingIdempotencyIdentity, prepareBookingIdempotency } from './idempotency.ts'
 import { findExistingPayloadBooking, persistIdempotentPayloadBooking } from './payload-idempotency.ts'
 import { createBooking } from './create-booking.ts'
-import type { BookingRequest } from './booking-request.ts'
+import { validateBookingRequestShape, type BookingQuote, type BookingRequest } from './booking-request.ts'
 import { getBarberAvailability } from './get-barber-availability.ts'
 import { localDayMinute } from './local-time.ts'
 import { loadBookingCatalog } from './load-booking-catalog.ts'
 import { persistPayloadBooking } from './persist-payload-booking.ts'
+
+async function loadPayloadAvailableSlots(payload: Payload, quote: BookingQuote) {
+  const location = await payload.findByID({
+    collection: 'locations', id: quote.locationId, depth: 0, overrideAccess: true,
+  })
+  if (!location.isActive || !location.timeZone) throw new RangeError('Booking location is unavailable')
+  const date = localDayMinute(new Date(quote.startsAt), location.timeZone).date
+  return getBarberAvailability({ payload, barberId: quote.barberId, date, durationMinutes: quote.durationMinutes })
+}
 
 /**
  * Internal trusted booking boundary. No route is exposed.
@@ -17,19 +26,7 @@ export async function createPayloadBooking(payload: Payload, request: BookingReq
   return createBooking({
     request,
     loadCatalog: input => loadBookingCatalog(payload, input),
-    loadAvailableSlots: async quote => {
-      const location = await payload.findByID({
-        collection: 'locations', id: quote.locationId, depth: 0, overrideAccess: true,
-      })
-      if (!location.isActive || !location.timeZone) {
-        throw new RangeError('Booking location is unavailable')
-      }
-      const date = localDayMinute(new Date(quote.startsAt), location.timeZone).date
-      return getBarberAvailability({
-        payload, barberId: quote.barberId, date,
-        durationMinutes: quote.durationMinutes,
-      })
-    },
+    loadAvailableSlots: quote => loadPayloadAvailableSlots(payload, quote),
     persist: quote => persistPayloadBooking(payload, quote),
   })
 }
@@ -46,29 +43,24 @@ export async function createIdempotentPayloadBooking(
   identityScope: string,
   key: string,
 ) {
-  const token = prepareBookingIdempotency({ scope: identityScope, key, request })
+  validateBookingRequestShape(request)
+  const snapshot: BookingRequest = {
+    barberId: request.barberId, locationId: request.locationId,
+    serviceIds: [...request.serviceIds], startsAt: request.startsAt,
+    customerName: request.customerName, customerPhone: request.customerPhone,
+    ...(request.customerEmail !== undefined ? { customerEmail: request.customerEmail } : {}),
+  }
+  const token = prepareBookingIdempotency({ scope: identityScope, key, request: snapshot })
   const existing = await findExistingPayloadBooking(payload, token)
   if (existing) {
-    assertIdempotencyReplay(token, existing)
+    assertBookingIdempotencyIdentity(token, existing)
     return { booking: existing.booking, replayed: true }
   }
   try {
     return await createBooking({
-      request,
+      request: snapshot,
       loadCatalog: input => loadBookingCatalog(payload, input),
-      loadAvailableSlots: async quote => {
-        const location = await payload.findByID({
-          collection: 'locations', id: quote.locationId, depth: 0, overrideAccess: true,
-        })
-        if (!location.isActive || !location.timeZone) {
-          throw new RangeError('Booking location is unavailable')
-        }
-        const date = localDayMinute(new Date(quote.startsAt), location.timeZone).date
-        return getBarberAvailability({
-          payload, barberId: quote.barberId, date,
-          durationMinutes: quote.durationMinutes,
-        })
-      },
+      loadAvailableSlots: quote => loadPayloadAvailableSlots(payload, quote),
       persist: quote => persistIdempotentPayloadBooking(payload, quote, token),
     })
   } catch (error) {
@@ -77,7 +69,7 @@ export async function createIdempotentPayloadBooking(
     if (error instanceof RangeError && error.message === 'Selected booking slot is unavailable') {
       const winner = await findExistingPayloadBooking(payload, token)
       if (winner) {
-        assertIdempotencyReplay(token, winner)
+        assertBookingIdempotencyIdentity(token, winner)
         return { booking: winner.booking, replayed: true }
       }
     }
