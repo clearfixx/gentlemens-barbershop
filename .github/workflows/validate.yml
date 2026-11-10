@@ -135,6 +135,7 @@ jobs:
           # The CI database has been initialized by the existing Payload tests.
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/loyalty/disposable-schema.sql
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/loyalty/test-disposable-ledger.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/loyalty/test-disposable-role.sql
       - name: Install database booking integrity constraints
         env:
           PGPASSWORD: postgres

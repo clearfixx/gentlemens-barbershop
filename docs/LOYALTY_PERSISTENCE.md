@@ -30,3 +30,14 @@ can still change tables, and the application currently has no separate
 restricted database role. Before migration activation, provision a non-owner
 runtime role, grant only the required SELECT and EXECUTE privileges, and test
 that direct balance writes and ledger INSERT/UPDATE/DELETE are denied.
+
+## Restricted-role rehearsal
+
+The prototype function now runs as `SECURITY DEFINER` with an explicit
+`pg_catalog, public, pg_temp` search path. The disposable CI fixture creates a
+non-login runtime role, grants read access and narrowly scoped function
+execution, then proves that earning works while direct account updates,
+ledger inserts/deletes and overspending are refused. The entire fixture is
+rolled back. The role is **not** a deployed production identity. The function
+owner must be a dedicated trusted owner in production; no untrusted user may
+create objects in schemas in the function search path.
