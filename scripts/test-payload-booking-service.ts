@@ -55,6 +55,37 @@ async function main() {
     createIdempotentPayloadBooking(payload, { ...retryRequest, customerName: 'Different customer' }, 'ci:customer:retry', 'stable-key'),
     { name: 'BookingIdempotencyConflictError' },
   )
+  // A cancelled booking remains the outcome of its original retry token.
+  // The slot can be sold again, but the old key must never create a second row.
+  await payload.update({
+    collection: 'bookings', id: firstRetry.booking.id, overrideAccess: true,
+    data: { status: 'cancelled' },
+  })
+  const afterCancellation = await createIdempotentPayloadBooking(
+    payload, retryRequest, 'ci:customer:retry', 'stable-key',
+  )
+  assert.equal(afterCancellation.replayed, true)
+  assert.equal(afterCancellation.booking.id, firstRetry.booking.id)
+  const resold = await createIdempotentPayloadBooking(
+    payload, retryRequest, 'ci:customer:replacement', 'new-key',
+  )
+  assert.equal(resold.replayed, false)
+  assert.notEqual(resold.booking.id, firstRetry.booking.id)
+  const oldKeyAfterResale = await createIdempotentPayloadBooking(
+    payload, retryRequest, 'ci:customer:retry', 'stable-key',
+  )
+  assert.equal(oldKeyAfterResale.replayed, true)
+  assert.equal(oldKeyAfterResale.booking.id, firstRetry.booking.id)
+  const resaleRows = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: { and: [
+      { barber: { equals: barberId } },
+      { startsAt: { equals: retryRequest.startsAt } },
+    ] },
+  })
+  assert.equal(resaleRows.totalDocs, 2)
+  assert.deepEqual(resaleRows.docs.map(row => row.status).sort(), ['cancelled', 'pending'])
+
   // Race two complete booking requests, not just direct persistence calls.
   // The PostgreSQL uniqueness/exclusion constraints must converge them on
   // exactly one booking, with the other response marked as a replay.
