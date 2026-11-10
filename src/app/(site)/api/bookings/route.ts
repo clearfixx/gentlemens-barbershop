@@ -30,8 +30,9 @@ export async function POST(request: Request) {
     const payload = await getPayload({ config })
     const authentication = await payload.auth({ headers: request.headers })
     const user = authentication.user
-    const actor = user && user.collection === 'users'
-      ? { id: Number(user.id), role: String(user.role), email: String(user.email) }
+    const actor = user && 'role' in user && 'email' in user &&
+      typeof user.role === 'string' && typeof user.email === 'string'
+      ? { id: Number(user.id), role: user.role, email: user.email }
       : null
 
     const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
