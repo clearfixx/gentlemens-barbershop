@@ -105,16 +105,24 @@ export function prepareBookingRequest(input: {
        request.startsAt !== start.toISOString().replace('.000Z', 'Z'))) {
     throw new RangeError('Start must be an explicit UTC timestamp')
   }
+  if (!Array.isArray(services) || !Array.isArray(barber.offerings)) {
+    throw new RangeError('Invalid booking catalog')
+  }
   const selected = request.serviceIds.map(id => {
-    const service = services.find(item => item.id === id)
-    if (!service) throw new RangeError('Unknown service')
+    const matches = services.filter(item => item && item.id === id)
+    if (matches.length !== 1) throw new RangeError('Unknown or ambiguous service')
+    const service = matches[0]
     return resolveBookingOffering(service, barber.offerings)
   })
   const durationMinutes = selected.reduce((sum, item) => sum + item.durationMinutes, 0)
   const totalPrice = selected.reduce((sum, item) => sum + item.price, 0)
   if (!Number.isSafeInteger(totalPrice) || !Number.isSafeInteger(durationMinutes) ||
       durationMinutes > 480) throw new RangeError('Appointment exceeds allowed limits')
-  const endsAt = new Date(start.getTime() + durationMinutes * 60000).toISOString()
+  const endTime = start.getTime() + durationMinutes * 60000
+  if (!Number.isFinite(endTime) || Math.abs(endTime) > 8.64e15) {
+    throw new RangeError('Booking interval exceeds supported date range')
+  }
+  const endsAt = new Date(endTime).toISOString()
   return {
     barberId: barber.id, locationId: location.id,
     serviceIds: [...request.serviceIds], startsAt: start.toISOString(), endsAt,
