@@ -16,7 +16,7 @@ export function parseBookingHttpInput(body: unknown, idempotencyKey: string | nu
   const allowed = new Set(['barberId', 'locationId', 'serviceIds', 'startsAt', 'customerName', 'customerPhone', 'customerEmail'])
   if (fields.some(field => !allowed.has(field))) throw new RangeError('Unexpected booking field')
   if (typeof idempotencyKey !== 'string' ||
-      !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(idempotencyKey)) {
+      !/^[A-Za-z0-9][A-Za-z0-9_:-]{7,127}$/.test(idempotencyKey)) {
     throw new RangeError('Invalid idempotency key')
   }
   return { request: snapshotBookingRequest(body as BookingRequest), idempotencyKey }
