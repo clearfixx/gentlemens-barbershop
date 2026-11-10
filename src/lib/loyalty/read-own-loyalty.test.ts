@@ -20,7 +20,7 @@ test('guests, barbers and admins cannot use the customer-only read model', async
   const repository: LoyaltyReadRepository = {
     async findCustomerSnapshot() { queries++; return null },
   }
-  for (const principal of [null, { id: 1, role: 'barber' }, { id: 1, role: 'admin' }, { id: '', role: 'customer' }]) {
+  for (const principal of [null, { id: 1, role: 'barber' }, { id: 1, role: 'admin' }, { id: '', role: 'customer' }, { id: 'new', role: 'customer' }, { id: '01', role: 'customer' }, { id: 0, role: 'customer' }, { id: Number.MAX_SAFE_INTEGER + 1, role: 'customer' }]) {
     await assert.rejects(() => getOwnLoyalty(principal, repository), LoyaltyAccessError)
   }
   assert.equal(queries, 0)
@@ -28,8 +28,8 @@ test('guests, barbers and admins cannot use the customer-only read model', async
 
 test('new customer has an empty snapshot and no shared account', async () => {
   const repository: LoyaltyReadRepository = { async findCustomerSnapshot() { return null } }
-  assert.deepEqual(await getOwnLoyalty({ id: 'new', role: 'customer' }, repository),
-    { customerId: 'new', xp: 0, bonus: 0, history: [] })
+  assert.deepEqual(await getOwnLoyalty({ id: '8', role: 'customer' }, repository),
+    { customerId: '8', xp: 0, bonus: 0, history: [] })
 })
 
 test('rejects cross-customer repository responses and corrupt balances', async () => {
