@@ -29,16 +29,22 @@ export class LoyaltyAccessError extends Error {
   }
 }
 
+/** Shared trusted-principal validation for balance and history reads. */
+export function authenticatedCustomerId(principal: LoyaltyPrincipal): string {
+  if (!principal || principal.role !== 'customer' ||
+    (typeof principal.id !== 'string' && typeof principal.id !== 'number') ||
+    !/^[1-9][0-9]*$/.test(String(principal.id)) ||
+    !Number.isSafeInteger(Number(principal.id))) {
+    throw new LoyaltyAccessError()
+  }
+  return String(principal.id)
+}
+
 export async function getOwnLoyalty(
   principal: LoyaltyPrincipal,
   repository: LoyaltyReadRepository,
 ): Promise<LoyaltySnapshot> {
-  if (!principal || principal.role !== 'customer' ||
-    (typeof principal.id !== 'string' && typeof principal.id !== 'number') ||
-    !String(principal.id).trim()) {
-    throw new LoyaltyAccessError()
-  }
-  const customerId = String(principal.id)
+  const customerId = authenticatedCustomerId(principal)
   const snapshot = await repository.findCustomerSnapshot(customerId)
   if (!snapshot) return { customerId, xp: 0, bonus: 0, history: [] }
   if (snapshot.customerId !== customerId) {
