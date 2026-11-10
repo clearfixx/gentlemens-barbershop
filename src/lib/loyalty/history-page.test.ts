@@ -41,6 +41,9 @@ test('rejects invalid identity, cursor, limit before database access', async () 
     { before: '1 OR TRUE' }), /cursor/)
   await assert.rejects(() => getOwnLoyaltyHistoryPage({ id: 7, role: 'customer' }, client,
     { limit: 51 }), /page size/)
+  for (const id of ['new', '01', '9007199254740992', 0]) {
+    await assert.rejects(() => getOwnLoyaltyHistoryPage({ id, role: 'customer' }, client), /authentication/)
+  }
   assert.equal(calls, 0)
 })
 
