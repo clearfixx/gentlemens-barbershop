@@ -1,4 +1,4 @@
-import { assertBookingContactEmail, bookingIdentityScope, type BookingActor } from './booking-identity.ts'
+import { assertBookingContactEmail, bookingIdentityScope, BookingRateLimitedError, type BookingActor } from './booking-identity.ts'
 import { parseBookingHttpInput } from './booking-http.ts'
 import type { BookingRequest } from './booking-request.ts'
 
@@ -22,11 +22,4 @@ export async function submitAuthenticatedBooking<T>(input: {
   const parsed = parseBookingHttpInput(input.body, input.idempotencyKey)
   assertBookingContactEmail(input.actor?.email, parsed.request.customerEmail)
   return input.create(parsed.request, scope, parsed.idempotencyKey)
-}
-
-export class BookingRateLimitedError extends Error {
-  constructor() {
-    super('Booking requests temporarily limited')
-    this.name = 'BookingRateLimitedError'
-  }
 }
