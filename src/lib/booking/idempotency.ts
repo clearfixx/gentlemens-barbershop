@@ -55,3 +55,41 @@ export function assertIdempotencyReplay(
     throw new BookingIdempotencyConflictError()
   }
 }
+
+/**
+ * Identify only the unique index reserved for booking retry keys.
+ * Unrelated SQLSTATE 23505 violations must retain their original error.
+ */
+export function isBookingIdempotencyUniqueViolation(error: unknown): boolean {
+  const seen = new Set<object>()
+  let current: unknown = error
+  for (let depth = 0; depth < 8; depth++) {
+    if (!current || typeof current !== 'object' || seen.has(current)) return false
+    seen.add(current)
+    const value = current as { code?: unknown; constraint?: unknown; cause?: unknown }
+    if (value.code === '23505' &&
+        value.constraint === 'bookings_idempotency_scope_key_unique') return true
+    current = value.cause
+  }
+  return false
+}
+
+/**
+ * Replay only a row fetched under the exact trusted scope and key.
+ * Never trust a hash match alone: two different customers can send the
+ * same request payload.
+ */
+export function assertBookingIdempotencyIdentity(
+  expected: BookingIdempotency,
+  existing: {
+    idempotency_scope: string | null
+    idempotency_key: string | null
+    idempotency_request_hash: string | null
+  },
+): void {
+  if (existing.idempotency_scope !== expected.scope ||
+      existing.idempotency_key !== expected.key) {
+    throw new BookingIdempotencyConflictError()
+  }
+  assertIdempotencyReplay(expected, existing)
+}
