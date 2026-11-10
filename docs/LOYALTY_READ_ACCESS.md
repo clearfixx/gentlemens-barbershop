@@ -40,3 +40,7 @@ prevents an unbounded aggregate of every historical event on each dashboard
 refresh. Before exposing HTTP APIs, consider separating balance and history
 into distinct response types rather than retaining the empty compatibility
 field.
+
+## Shared authenticated identity validation
+
+Balance and paginated history share one customer-principal validator. Only positive canonical decimal IDs within JavaScript's safe-integer range are accepted, matching numeric Payload user IDs. Invalid identities fail before database access. The caller must still bind the principal to a verified server-side session, never request input.
