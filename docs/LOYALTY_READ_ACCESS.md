@@ -44,3 +44,7 @@ field.
 ## Shared authenticated identity validation
 
 Balance and paginated history share one customer-principal validator. Only positive canonical decimal IDs within JavaScript's safe-integer range are accepted, matching numeric Payload user IDs. Invalid identities fail before database access. The caller must still bind the principal to a verified server-side session, never request input.
+
+## Defensive history integrity checks
+
+The keyset history reader verifies that returned ledger IDs are strictly descending, unique and below the supplied cursor, even if a SQL adapter or test double returns malformed results. It also rejects noncanonical or impossible UTC timestamps. These checks complement the SQL ordering and parameterization; they do not replace database permissions or transaction isolation.
