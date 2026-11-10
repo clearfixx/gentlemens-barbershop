@@ -38,6 +38,7 @@ export async function getOwnLoyaltyHistoryPage(
   `, [customerId, before ?? null, limit + 1])
 
   if (result.rows.length > limit + 1) throw new Error('Unexpected loyalty page length')
+  let previousId = before === undefined ? null : BigInt(before)
   const items = result.rows.map((value): LoyaltyHistoryItem => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       throw new Error('Invalid loyalty entry')
@@ -47,9 +48,17 @@ export async function getOwnLoyaltyHistoryPage(
       !Number.isSafeInteger(Number(row.id)) ||
       (row.kind !== 'earn' && row.kind !== 'redeem' && row.kind !== 'reverse') ||
       typeof row.source !== 'string' || !row.source.trim() ||
-      typeof row.created_at !== 'string' || !Number.isFinite(Date.parse(row.created_at))) {
+      typeof row.created_at !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(row.created_at) ||
+      !Number.isFinite(Date.parse(row.created_at)) ||
+      new Date(row.created_at).toISOString() !== row.created_at) {
       throw new Error('Invalid loyalty entry')
     }
+    const entryId = BigInt(row.id)
+    if (previousId !== null && entryId >= previousId) {
+      throw new Error('Loyalty history order or cursor violation')
+    }
+    previousId = entryId
     const xpDelta = Number(row.xp_delta)
     const bonusDelta = Number(row.bonus_delta)
     if (!Number.isSafeInteger(xpDelta) || !Number.isSafeInteger(bonusDelta) ||
