@@ -17,7 +17,7 @@ const token = { scope: 'customer:1', key: 'request-1', requestHash: 'a'.repeat(6
 test('existing Payload booking is replayed without creating a second booking', async () => {
   let creates = 0
   const payload = {
-    find: async () => ({ docs: [{ id: 42, idempotencyRequestHash: token.requestHash }] }),
+    find: async () => ({ docs: [{ id: 42, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: token.requestHash }] }),
     create: async () => { creates++; throw Error('Must not create') },
   } as unknown as Payload
   const result = await persistIdempotentPayloadBooking(payload, quote, token)
@@ -44,7 +44,7 @@ test('new booking persists token in the same Payload create call', async () => {
 
 test('different payload on same key fails without insertion', async () => {
   const payload = {
-    find: async () => ({ docs: [{ id: 42, idempotencyRequestHash: 'b'.repeat(64) }] }),
+    find: async () => ({ docs: [{ id: 42, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: 'b'.repeat(64) }] }),
     create: async () => { throw Error('Must not create') },
   } as unknown as Payload
   await assert.rejects(persistIdempotentPayloadBooking(payload, quote, token),
@@ -55,7 +55,7 @@ test('unique-index race recovers the winner through a second Payload read', asyn
   let reads = 0
   const payload = {
     find: async () => ({ docs: ++reads === 1 ? [] : [
-      { id: 42, idempotencyRequestHash: token.requestHash },
+      { id: 42, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: token.requestHash },
     ] }),
     create: async () => { throw { code: '23505', constraint: 'bookings_idempotency_unique' } },
   } as unknown as Payload
@@ -69,7 +69,7 @@ test('slot exclusion race replays the same key when the winner committed', async
   let reads = 0
   const payload = {
     find: async () => ({ docs: ++reads === 1 ? [] : [
-      { id: 42, idempotencyRequestHash: token.requestHash },
+      { id: 42, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: token.requestHash },
     ] }),
     create: async () => { throw { code: '23P01', constraint: 'bookings_no_active_overlap' } },
   } as unknown as Payload
@@ -91,7 +91,7 @@ test('slot exclusion race never replays a different request fingerprint', async 
   let reads = 0
   const payload = {
     find: async () => ({ docs: ++reads === 1 ? [] : [
-      { id: 42, idempotencyRequestHash: 'b'.repeat(64) },
+      { id: 42, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: 'b'.repeat(64) },
     ] }),
     create: async () => { throw { code: '23P01', constraint: 'bookings_no_active_overlap' } },
   } as unknown as Payload
@@ -100,4 +100,36 @@ test('slot exclusion race never replays a different request fingerprint', async 
     BookingIdempotencyConflictError,
   )
   assert.equal(reads, 2)
+})
+
+test('Payload replay refuses a mismatched scope even when the fingerprint matches', async () => {
+  const payload = {
+    find: async () => ({ docs: [{
+      id: 42,
+      idempotencyScope: 'customer:other',
+      idempotencyKey: token.key,
+      idempotencyRequestHash: token.requestHash,
+    }] }),
+    create: async () => { throw Error('Must not create') },
+  } as unknown as Payload
+  await assert.rejects(
+    persistIdempotentPayloadBooking(payload, quote, token),
+    BookingIdempotencyConflictError,
+  )
+})
+
+test('Payload replay refuses a mismatched key even when the fingerprint matches', async () => {
+  const payload = {
+    find: async () => ({ docs: [{
+      id: 42,
+      idempotencyScope: token.scope,
+      idempotencyKey: 'other-request',
+      idempotencyRequestHash: token.requestHash,
+    }] }),
+    create: async () => { throw Error('Must not create') },
+  } as unknown as Payload
+  await assert.rejects(
+    persistIdempotentPayloadBooking(payload, quote, token),
+    BookingIdempotencyConflictError,
+  )
 })
