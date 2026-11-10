@@ -22,8 +22,20 @@ export async function createBooking<T>(input: {
   persist: (quote: BookingQuote) => Promise<T>
 }): Promise<T> {
   validateBookingRequestShape(input.request)
-  const catalog = await input.loadCatalog(input.request)
-  const quote = prepareBookingRequest({ request: input.request, ...catalog })
+  // Keep one immutable request snapshot across asynchronous catalog and slot
+  // lookups. A caller mutating the original object must not change the intent
+  // between validation and persistence.
+  const request: BookingRequest = {
+    barberId: input.request.barberId,
+    locationId: input.request.locationId,
+    serviceIds: [...input.request.serviceIds],
+    startsAt: input.request.startsAt,
+    customerName: input.request.customerName,
+    customerPhone: input.request.customerPhone,
+    ...(input.request.customerEmail !== undefined ? { customerEmail: input.request.customerEmail } : {}),
+  }
+  const catalog = await input.loadCatalog({ ...request, serviceIds: [...request.serviceIds] })
+  const quote = prepareBookingRequest({ request, ...catalog })
   const slots = await input.loadAvailableSlots(quote)
   assertBookingSlotAvailable(quote, slots)
 
