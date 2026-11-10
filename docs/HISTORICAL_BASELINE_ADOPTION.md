@@ -39,3 +39,25 @@ The CI scenario seeds legacy records, fingerprints them, registers the baseline,
 applies the localization delta, verifies the fingerprints and ledger count, and
 rejects replay. **This is a rehearsal-only mechanism, not a production adoption
 command.** Do not rename or remove the database restriction to run it in production.
+
+## Production change-control checklist (not an executable procedure)
+
+Before authorizing any future production adoption implementation, require:
+
+- Verified restorable backup, recorded database version and extension inventory,
+  and an agreed maintenance window with all application writers stopped.
+- A restored production snapshot that passes the full schema comparison and
+  business-data integrity checks, with any legitimate drift explicitly reviewed.
+- Independent approval of the exact migration names, Payload migration-ledger
+  schema, and expected before/after data fingerprints.
+- A write procedure that keeps the final schema verification and ledger
+  registration inside one protected maintenance boundary; the current
+  pre-transaction read-only comparison alone cannot prevent concurrent DDL.
+- Rollback instructions tested on the restored snapshot. Rolling back a failed
+  release means restoring the verified backup; do **not** run the baseline
+  migration's destructive `down` statements on populated data.
+- A release gate that confirms the incremental migration succeeds on the
+  restored snapshot, with no changed legacy records and exactly two ledger rows.
+
+**Status:** production baseline adoption remains blocked. The isolated CI
+rehearsal does not waive these requirements.

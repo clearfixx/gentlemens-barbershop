@@ -1139,6 +1139,44 @@ jobs:
           status=$?
           set -e
           test "$status" -ne 0
+      - name: Verify baseline adoption rejects schema drift and wrong target without writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          export BASELINE_REFERENCE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_baseline_reference_ci"
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci"
+          # The previous step has registered both migrations. Re-registration
+          # must refuse and leave the existing ledger unchanged.
+          set +e
+          CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-duplicate.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT string_agg(name, ',' ORDER BY id) FROM payload_migrations" \
+            | grep -qx '20261110_050350,20261110_050437_ci_localization_incremental'
+          # An unrelated database name must not be writable even with approval.
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_barbershop"
+          set +e
+          CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-wrong-target.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          grep -q 'may write ONLY' /tmp/adoption-wrong-target.log
+          # A schema-drifted unversioned copy must not receive a ledger.
+          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_legacy_drift_ci
+          docker run --rm --network host -e DATABASE_URL="$BASELINE_REFERENCE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --no-owner --no-privileges --exclude-table=public.payload_migrations' \
+            | psql -X -v ON_ERROR_STOP=1 "postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_drift_ci" >/dev/null
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_drift_ci"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'ALTER TABLE services ADD COLUMN unexpected_ci text'
+          set +e
+          CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-drift.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT to_regclass('public.payload_migrations') IS NULL" | grep -qx t
       - name: Reject unregistered baseline on an existing database
         shell: bash
         run: |
