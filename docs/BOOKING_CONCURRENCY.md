@@ -51,3 +51,9 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/booking-integrity-smoke.sql
 This script creates a temporary table with the same constraint expressions, tests accepted adjacent slots, different barbers, cancelled slots, and expected SQLSTATEs for overlap (`23P01`), invalid intervals/incomplete retry metadata (`23514`) and duplicate retry keys (`23505`). It rolls back its test transaction.
 
 **Important:** This is a constraint-expression smoke test, not a migration integration test and not a two-connection concurrency test. It requires permission to install or use `btree_gist`. Do not run it against production; use a disposable database. The idempotency completeness check uses `num_nonnulls` so SQL three-valued NULL logic cannot silently accept partially filled metadata.
+
+## Idempotent persistence boundary
+
+`src/lib/booking/persist-idempotently.ts` provides an internal replay algorithm with injected `readExisting` and `insert` callbacks. It checks scope, key and request hash before returning an existing row. On the exact `23505` error for `bookings_idempotency_scope_key_unique`, it re-reads the committed row; missing rows and unrelated errors are propagated.
+
+**Required integration contract:** `insert` must atomically persist the booking and all retry metadata. The first failed insert transaction must be rolled back before `readExisting` runs again. That read must be a fresh query with visibility of the winning committed transaction, under the trusted scope/key, and must not return records belonging to another principal. Do not invoke the helper from a public endpoint until these conditions are enforced by the concrete Payload/PostgreSQL adapter. Unit tests use in-memory callbacks; they do not validate transaction isolation or database connectivity.
