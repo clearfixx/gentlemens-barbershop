@@ -54,6 +54,15 @@ for role in reference target; do
     exit 2
   fi
 done
+# pg_dump 17 emits a different random psql guard token on each invocation.
+# These two lines are not database DDL; normalize only their opaque token,
+# leaving every SQL statement and schema object byte-for-byte comparable.
+for role in reference target; do
+  sed -E -i \
+    -e 's/^\\\\restrict [[:alnum:]]+$/\\\\restrict <random-guard>/' \
+    -e 's/^\\\\unrestrict [[:alnum:]]+$/\\\\unrestrict <random-guard>/' \
+    "$work/$role.sql"
+done
 if ! diff -u "$work/reference.sql" "$work/target.sql"; then
   echo "REFUSED: historical database differs from reviewed baseline schema" >&2
   exit 1
