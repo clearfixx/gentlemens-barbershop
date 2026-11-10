@@ -40,8 +40,19 @@ psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
 # Both exports use the same pg_dump binary and flags to avoid formatting drift.
 for role in reference target; do
   if [[ "$role" == reference ]]; then url="$BASELINE_REFERENCE_URL"; else url="$DATABASE_URL"; fi
-  pg_dump "$url" --schema-only --no-owner --no-privileges \
-    --exclude-table=public.payload_migrations > "$work/$role.sql"
+  # Use PostgreSQL 17's client for both dumps, regardless of runner OS.
+  # The CI runner may otherwise default to an older incompatible pg_dump.
+  if pg_dump --version | grep -Eq 'PostgreSQL\\) 17\\.'; then
+    pg_dump "$url" --schema-only --no-owner --no-privileges \
+      --exclude-table=public.payload_migrations > "$work/$role.sql"
+  elif command -v docker >/dev/null 2>&1; then
+    docker run --rm --network host -e DATABASE_URL="$url" postgres:17-alpine \
+      sh -c 'pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges --exclude-table=public.payload_migrations' \
+      > "$work/$role.sql"
+  else
+    echo "PostgreSQL 17 pg_dump or Docker is required" >&2
+    exit 2
+  fi
 done
 if ! diff -u "$work/reference.sql" "$work/target.sql"; then
   echo "REFUSED: historical database differs from reviewed baseline schema" >&2
