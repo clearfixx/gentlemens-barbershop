@@ -71,3 +71,15 @@ test('accepts valid UTC timestamps with or without zero milliseconds', () => {
   input.request.startsAt = '2030-01-02T09:00:00Z'
   assert.equal(prepareBookingRequest(input).startsAt, '2030-01-02T09:00:00.000Z')
 })
+
+test('rejects invalid runtime request shapes before dereferencing fields', () => {
+  for (const value of [null, [], {}, { ...fixture().request, startsAt: null },
+    { ...fixture().request, customerName: 42 },
+    { ...fixture().request, customerPhone: {} },
+    { ...fixture().request, customerEmail: [] },
+    { ...fixture().request, serviceIds: [7, '8'] },
+    { ...fixture().request, serviceIds: new Array(100).fill(7) },
+  ]) {
+    assert.throws(() => prepareBookingRequest({ ...fixture(), request: value as never }), RangeError)
+  }
+})
