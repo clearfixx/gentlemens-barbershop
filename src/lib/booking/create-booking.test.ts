@@ -65,3 +65,17 @@ test('preserves unrelated persistence errors for diagnostics', async () => {
     persist: async () => { throw failure },
   }), error => error === failure)
 })
+
+test('rejects malformed input without performing catalog I/O', async () => {
+  let calls = 0
+  for (const bad of [null, {}, { ...request, customerName: 12 },
+    { ...request, startsAt: 'invalid' }, { ...request, serviceIds: [7, 7] }]) {
+    await assert.rejects(createBooking({
+      request: bad as never,
+      loadCatalog: async () => { calls++; return catalog },
+      loadAvailableSlots: async () => [slot],
+      persist: async () => ({ id: 1 }),
+    }), RangeError)
+  }
+  assert.equal(calls, 0)
+})
