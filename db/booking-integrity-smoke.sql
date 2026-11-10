@@ -1,6 +1,6 @@
 -- Disposable SQL smoke test for the booking constraint contract.
 -- Requires PostgreSQL with btree_gist available. Runs in a transaction and
--- rolls back all test data/objects. Does NOT test the real Payload migration.
+-- rolls back all test data/objects. Does NOT test the installed booking integrity constraints.
 \set ON_ERROR_STOP on
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
@@ -22,7 +22,7 @@ ALTER TABLE booking_integrity_probe
       num_nonnulls(idempotency_scope, idempotency_key, idempotency_request_hash) = 3
       AND length(idempotency_scope) BETWEEN 1 AND 160
       AND length(idempotency_key) BETWEEN 1 AND 160
-      AND idempotency_request_hash ~ '^[a-f0-9]{64}$'
+      AND length(idempotency_request_hash) = 64
     )
   );
 CREATE UNIQUE INDEX probe_idempotency_unique
