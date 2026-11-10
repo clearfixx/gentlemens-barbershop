@@ -59,8 +59,8 @@ done
 # leaving every SQL statement and schema object byte-for-byte comparable.
 for role in reference target; do
   sed -E -i \
-    -e 's/^\\\\restrict [[:alnum:]]+$/\\\\restrict <random-guard>/' \
-    -e 's/^\\\\unrestrict [[:alnum:]]+$/\\\\unrestrict <random-guard>/' \
+    -e 's/^\\restrict [[:alnum:]]+$/\\restrict <random-guard>/' \
+    -e 's/^\\unrestrict [[:alnum:]]+$/\\unrestrict <random-guard>/' \
     "$work/$role.sql"
 done
 if ! diff -u "$work/reference.sql" "$work/target.sql"; then
