@@ -39,3 +39,15 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/booking-integrity-preflight.sql
 The query reports counts for invalid intervals, incomplete idempotency metadata, duplicate scope/key groups and overlapping active-booking pairs. **All four counts must be zero** before applying the migration. The two subsequent queries show up to 100 conflicting booking pairs and duplicate retry-key groups for manual investigation. Do not automatically delete customer bookings to make migration pass.
 
 This is a point-in-time preflight, not a concurrency barrier. Stop booking writes during migration or otherwise guarantee no new conflicting records can be inserted between preflight and constraint creation. Execute in a controlled maintenance window with a database backup and a reviewed rollback plan. The preflight does not apply the migration and does not establish that the database concurrency tests have passed.
+
+## Disposable SQL smoke test
+
+After preparing a disposable PostgreSQL database, run:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/booking-integrity-smoke.sql
+```
+
+This script creates a temporary table with the same constraint expressions, tests accepted adjacent slots, different barbers, cancelled slots, and expected SQLSTATEs for overlap (`23P01`), invalid intervals/incomplete retry metadata (`23514`) and duplicate retry keys (`23505`). It rolls back its test transaction.
+
+**Important:** This is a constraint-expression smoke test, not a migration integration test and not a two-connection concurrency test. It requires permission to install or use `btree_gist`. Do not run it against production; use a disposable database. The idempotency completeness check uses `num_nonnulls` so SQL three-valued NULL logic cannot silently accept partially filled metadata.
