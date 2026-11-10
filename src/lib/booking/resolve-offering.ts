@@ -19,11 +19,16 @@ export function resolveBookingOffering(
   service: ServiceSnapshot,
   offerings: BarberOffering[],
 ): { serviceId: number; price: number; durationMinutes: number } {
-  if (!service.isActive) throw new RangeError('Service is not available')
-  const offering = offerings.find(item =>
-    (typeof item.service === 'number' ? item.service : item.service.id) === service.id,
+  if (!Number.isSafeInteger(service.id) || service.id <= 0 || !service.isActive) {
+    throw new RangeError('Service is not available')
+  }
+  if (!Array.isArray(offerings)) throw new RangeError('Invalid barber offerings')
+  const matches = offerings.filter(item =>
+    item && (typeof item.service === 'number' ? item.service : item.service?.id) === service.id,
   )
-  if (!offering) throw new RangeError('Barber does not offer this service')
+  // Duplicate offerings make server-side pricing ambiguous. Fail closed.
+  if (matches.length !== 1) throw new RangeError('Missing or ambiguous barber offering')
+  const offering = matches[0]
   const price = offering.priceOverride ?? service.price
   const durationMinutes = offering.durationOverrideMinutes ?? service.durationMinutes
   if (!Number.isSafeInteger(price) || price < 0 ||
