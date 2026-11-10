@@ -241,3 +241,20 @@ test('malformed quote is rejected before Payload I/O even with a valid retry tok
   )
   assert.equal(calls, 0)
 })
+
+test('inconsistent quote interval cannot replay an existing booking', async () => {
+  let reads = 0
+  const payload = {
+    find: async () => { reads++; return { docs: [{
+      id: 42, idempotencyScope: token.scope,
+      idempotencyKey: token.key, idempotencyRequestHash: token.requestHash,
+    }] } },
+  } as unknown as Payload
+  await assert.rejects(
+    persistIdempotentPayloadBooking(payload, {
+      ...quote, endsAt: '2030-01-02T09:30:00.000Z',
+    }, token),
+    RangeError,
+  )
+  assert.equal(reads, 0)
+})
