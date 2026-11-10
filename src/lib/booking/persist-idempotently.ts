@@ -31,7 +31,10 @@ export async function persistBookingIdempotently<T extends StoredBookingRetry>(i
   }
 
   try {
-    return await insert()
+    const created = await insert()
+    // Never accept an adapter returning a booking for another retry identity.
+    assertBookingIdempotencyIdentity(token, created)
+    return created
   } catch (error) {
     if (!isBookingIdempotencyUniqueViolation(error)) throw error
     // A concurrent transaction may have committed the same retry key.
