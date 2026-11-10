@@ -38,3 +38,10 @@ export class BookingContactMismatchError extends Error {
     this.name = 'BookingContactMismatchError'
   }
 }
+
+export class BookingRateLimitedError extends Error {
+  constructor() {
+    super('Booking requests temporarily limited')
+    this.name = 'BookingRateLimitedError'
+  }
+}
