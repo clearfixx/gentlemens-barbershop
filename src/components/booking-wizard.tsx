@@ -30,6 +30,9 @@ export function BookingWizard({ locations, barbers, services, today, maxDate, lo
   const selectedBarber = barbers.find(item => item.id === barberId)
   const eligibleServices = services.filter(item => selectedBarber?.serviceIds.includes(item.id))
 
+  const rateLimitedMessage = t.booking.rateLimited
+  const unavailableMessage = t.booking.unavailable
+
   useEffect(() => {
     if (!barberId || !serviceId || !date) return
     const controller = new AbortController()
@@ -40,18 +43,18 @@ export function BookingWizard({ locations, barbers, services, today, maxDate, lo
         const response = await fetch(`/api/availability?barber=${barberId}&service=${serviceId}&date=${date}`, {
           signal: controller.signal, cache: 'no-store',
         })
-        if (!response.ok) throw new Error(response.status === 429 ? t.booking.rateLimited : t.booking.unavailable)
+        if (!response.ok) throw new Error(response.status === 429 ? rateLimitedMessage : unavailableMessage)
         const data = await response.json() as Availability
         if (active) setAvailability(data)
       } catch (cause) {
-        if (active && !controller.signal.aborted) setError(cause instanceof Error ? cause.message : t.booking.unavailable)
+        if (active && !controller.signal.aborted) setError(cause instanceof Error ? cause.message : unavailableMessage)
       } finally {
         if (active) setLoading(false)
       }
     }
     void run()
     return () => { active = false; controller.abort() }
-  }, [barberId, serviceId, date])
+  }, [barberId, serviceId, date, rateLimitedMessage, unavailableMessage])
 
   const resetAvailability = () => { setAvailability(null); setSelectedSlot(''); setError(''); setLoading(false) }
   const stepNames = t.booking.steps
