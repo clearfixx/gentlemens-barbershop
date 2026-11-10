@@ -79,3 +79,15 @@ applying the localization delta. The gate intentionally does not claim full
 schema equivalence: indexes, foreign keys, constraints, enum labels, extensions,
 and custom production alterations require separate review. It must not be used
 to automatically mark a baseline migration as applied in production.
+
+## Production migration entry-point guard
+
+`pnpm db:migrate` now executes the read-only PostgreSQL unversioned-schema
+preflight **before** invoking Payload. It refuses to run without `DATABASE_URL`
+or the `psql` client, and fails closed if existing business tables have no
+migration ledger or have an empty ledger. The CI integration test invokes the
+actual migration command against an unversioned populated schema and confirms
+that no migration ledger was created. This does **not** register a historical
+baseline for pre-existing production data. Baseline adoption still requires a
+verified schema and separately reviewed explicit registration; do not bypass
+the guard or manually insert ledger rows without that review.

@@ -961,6 +961,22 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/check-localization-incremental.py src/migrations
+      - name: Verify migration entry point refuses unversioned populated schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'CREATE TABLE public.services (id integer PRIMARY KEY)'
+          set +e
+          CI=1 timeout 30s pnpm db:migrate > /tmp/migrate-unversioned.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ] || [ "$status" -eq 124 ]; then
+            echo "::error::Migration entry point did not reject unversioned legacy data"
+            exit 1
+          fi
+          grep -q UNVERSIONED_PAYLOAD_SCHEMA /tmp/migrate-unversioned.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT to_regclass('public.payload_migrations') IS NULL" | grep -qx 't'
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'DROP TABLE public.services'
       - name: Reject legacy schema with missing migration ledger
         shell: bash
         run: |

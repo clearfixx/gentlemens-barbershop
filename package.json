@@ -14,7 +14,7 @@
     "generate:importmap": "payload generate:importmap",
     "bootstrap:admin": "node --experimental-strip-types scripts/bootstrap-admin.ts",
     "db:migrate:create": "payload migrate:create --disable-transpile",
-    "db:migrate": "payload migrate --disable-transpile",
+    "db:migrate": "bash scripts/run-payload-migrations.sh",
     "db:migrate:status": "payload migrate:status --disable-transpile"
   },
   "dependencies": {
