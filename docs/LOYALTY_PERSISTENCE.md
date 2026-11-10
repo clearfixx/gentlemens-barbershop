@@ -19,3 +19,14 @@ migrations, so no production schema is changed. Before production use:
 - Add reviewed migration, data backfill, concurrency tests, and operational
   rollback plan; do not deploy prototype SQL directly.
 - Approve XP rates, bonus earning rules, levels and discounts separately.
+
+## Ledger integrity and privilege boundary
+
+The disposable prototype now rejects UPDATE and DELETE on ledger entries
+through database triggers and revokes the function's default PUBLIC execute
+privilege. CI tests attempt ledger mutation and cross-customer reversal.
+This is defense in depth, **not** production authorization: the database owner
+can still change tables, and the application currently has no separate
+restricted database role. Before migration activation, provision a non-owner
+runtime role, grant only the required SELECT and EXECUTE privileges, and test
+that direct balance writes and ledger INSERT/UPDATE/DELETE are denied.

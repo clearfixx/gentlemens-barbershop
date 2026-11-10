@@ -93,3 +93,20 @@ END $$;
 -- The application role must not mutate balances or the append-only ledger
 -- directly. Grant EXECUTE on loyalty_apply only to a trusted service role.
 -- Actual grants/revokes require review of production database roles.
+
+-- Defense in depth: the prototype tables are append-only from the
+-- perspective of ordinary SQL callers. All writes must be performed by
+-- the trusted function under a future separately provisioned service role.
+-- These triggers are not a substitute for database-role separation.
+CREATE FUNCTION loyalty_forbid_ledger_mutation() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'Loyalty history is append-only';
+END $$;
+CREATE TRIGGER loyalty_entries_no_update
+  BEFORE UPDATE OR DELETE ON loyalty_entries
+  FOR EACH ROW EXECUTE FUNCTION loyalty_forbid_ledger_mutation();
+
+-- Do not allow an ordinary application role to invoke an unrestricted
+-- function by default. Explicit grants must be part of the reviewed rollout.
+REVOKE ALL ON FUNCTION loyalty_apply(bigint, varchar, varchar, varchar, bigint, bigint, bigint) FROM PUBLIC;
