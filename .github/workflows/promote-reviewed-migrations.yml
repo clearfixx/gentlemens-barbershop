@@ -1,0 +1,88 @@
+name: Promote reviewed Payload migrations
+
+# Explicit operator action only. Never promote migration artifacts during CI.
+on:
+  workflow_dispatch:
+    inputs:
+      validated_run_id:
+        description: 'Successful validation run containing reviewed baseline and incremental artifacts'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: migration-promotion-feat-i18n
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: github.ref == 'refs/heads/feat/i18n'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - name: Validate source run and unchanged migration inputs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.validated_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Invalid run ID"; exit 1; }
+          test "$(git branch --show-current)" = "feat/i18n"
+          test ! -e src/migrations/index.ts || { echo "::error::Migrations already committed; refusing overwrite"; exit 1; }
+          run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")"
+          status="$(jq -r '.status' <<< "$run_json")"
+          conclusion="$(jq -r '.conclusion' <<< "$run_json")"
+          source_branch="$(jq -r '.head_branch' <<< "$run_json")"
+          source_sha="$(jq -r '.head_sha' <<< "$run_json")"
+          test "$status" = completed && test "$conclusion" = success && test "$source_branch" = feat/i18n || {
+            echo "::error::Source validation run must be successful on feat/i18n"; exit 1;
+          }
+          git merge-base --is-ancestor "$source_sha" HEAD || {
+            echo "::error::Validated commit is not an ancestor of this branch"; exit 1;
+          }
+          # Promotion workflow changes are allowed; migration generation inputs are not.
+          git diff --quiet "$source_sha" HEAD -- package.json pnpm-lock.yaml src/payload.config.ts src/payload scripts/check-localization-incremental.py scripts/normalize-generated-payload-migration.py || {
+            echo "::error::Migration inputs changed since validation"; exit 1;
+          }
+          echo "SOURCE_SHA=$source_sha" >> "$GITHUB_ENV"
+      - name: Download reviewed migration candidate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.validated_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/reviewed-migrations
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name payload-incremental-migration-candidate \
+            --dir /tmp/reviewed-migrations
+          test "$(find /tmp/reviewed-migrations -maxdepth 1 -name '*.json' | wc -l)" -eq 2
+          test "$(find /tmp/reviewed-migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l)" -eq 2
+          test -s /tmp/reviewed-migrations/index.ts
+          python3 scripts/check-localization-incremental.py /tmp/reviewed-migrations
+          python3 scripts/normalize-generated-payload-migration.py /tmp/reviewed-migrations
+          grep -q 'ci_localization_incremental' /tmp/reviewed-migrations/index.ts
+          cp /tmp/reviewed-migrations/*.ts /tmp/reviewed-migrations/*.json src/migrations/
+          rm -f src/migrations/.gitkeep
+          git add src/migrations
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 5
+      - name: Commit reviewed migration files to feature branch
+        shell: bash
+        env:
+          RUN_ID: ${{ inputs.validated_run_id }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(db): version reviewed baseline and localization migrations (run $RUN_ID)"
+          # Fail if branch moved concurrently; never force-push.
+          git push origin HEAD:refs/heads/feat/i18n
