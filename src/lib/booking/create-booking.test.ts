@@ -79,3 +79,47 @@ test('rejects malformed input without performing catalog I/O', async () => {
   }
   assert.equal(calls, 0)
 })
+
+test('concurrent attempts both pass advisory availability but database conflict rejects one', async () => {
+  // Simulates the required database exclusion guarantee, not a PostgreSQL integration test.
+  let entered = 0
+  let releaseBoth: (() => void) | undefined
+  const barrier = new Promise<void>(resolve => { releaseBoth = resolve })
+  let reserved = false
+  let successfulWrites = 0
+  let availabilityReads = 0
+  const attempt = () => createBooking({
+    request,
+    loadCatalog: async () => catalog,
+    loadAvailableSlots: async () => {
+      availabilityReads++
+      return [slot]
+    },
+    persist: async () => {
+      entered++
+      if (entered === 2) releaseBoth?.()
+      await barrier
+      if (reserved) throw { code: '23P01', constraint: 'bookings_no_active_overlap' }
+      reserved = true
+      successfulWrites++
+      return { id: 42 }
+    },
+  })
+  const results = await Promise.allSettled([attempt(), attempt()])
+  assert.equal(availabilityReads, 2)
+  assert.equal(successfulWrites, 1)
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1)
+  const rejected = results.find(result => result.status === 'rejected')
+  assert.ok(rejected && rejected.status === 'rejected')
+  assert.ok(rejected.reason instanceof BookingSlotConflictError)
+})
+
+test('concurrent booking does not hide unrelated persistence failures', async () => {
+  const failure = { code: '40001', message: 'serialization failure' }
+  await assert.rejects(createBooking({
+    request,
+    loadCatalog: async () => catalog,
+    loadAvailableSlots: async () => [slot],
+    persist: async () => { throw failure },
+  }), error => error === failure)
+})
