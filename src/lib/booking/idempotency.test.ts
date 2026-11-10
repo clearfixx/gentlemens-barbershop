@@ -49,3 +49,31 @@ test('replays require the exact original request fingerprint', () => {
     BookingIdempotencyConflictError,
   )
 })
+
+
+test('equivalent canonical UTC timestamps share the retry fingerprint', () => {
+  assert.equal(bookingRequestFingerprint(request), bookingRequestFingerprint({
+    ...request, startsAt: '2030-01-02T09:00:00Z',
+  }))
+})
+
+test('malformed booking intent fails before fingerprinting or replay preparation', () => {
+  for (const bad of [null, {}, { ...request, startsAt: 'invalid' },
+    { ...request, serviceIds: [7, 7] }, { ...request, customerPhone: null }]) {
+    assert.throws(() => bookingRequestFingerprint(bad as never), RangeError)
+    assert.throws(() => prepareBookingIdempotency({
+      scope: 'customer:123', key: 'retry_123', request: bad as never,
+    }), RangeError)
+  }
+})
+
+test('rejects non-string idempotency scope and key', () => {
+  for (const value of [null, 1, {}, []]) {
+    assert.throws(() => prepareBookingIdempotency({
+      scope: value as never, key: 'retry_123', request,
+    }), RangeError)
+    assert.throws(() => prepareBookingIdempotency({
+      scope: 'customer:123', key: value as never, request,
+    }), RangeError)
+  }
+})
