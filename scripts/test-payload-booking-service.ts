@@ -93,7 +93,50 @@ async function main() {
     ] },
   })
   assert.equal(mismatchedStored.totalDocs, 1)
-  console.info('Trusted booking service: catalog, schedule, persistence and duplicate-slot rejection verified')
+  // A different retry key must not bypass the existing appointment's slot.
+  const overlappingRequest = { ...request, startsAt: '2037-01-02T09:30:00.000Z' }
+  await assert.rejects(
+    createIdempotentPayloadBooking(payload, overlappingRequest, 'ci:customer:overlap', 'different-key'),
+    { name: 'RangeError', message: 'Selected booking slot is unavailable' },
+  )
+  const overlappingStored = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: { and: [
+      { idempotencyScope: { equals: 'ci:customer:overlap' } },
+      { idempotencyKey: { equals: 'different-key' } },
+    ] },
+  })
+  assert.equal(overlappingStored.totalDocs, 0)
+
+  // Cancelling an appointment releases the slot. An idempotent retry of the
+  // cancelled request still returns its original record, not the new booking.
+  await payload.update({
+    collection: 'bookings', id: created.id, overrideAccess: true,
+    data: { status: 'cancelled' },
+  })
+  const replacement = await createPayloadBooking(payload, request)
+  assert.notEqual(replacement.id, created.id)
+  assert.equal(replacement.status, 'pending')
+  const cancelledRows = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: { and: [
+      { barber: { equals: barberId } },
+      { startsAt: { equals: request.startsAt } },
+    ] },
+  })
+  assert.equal(cancelledRows.totalDocs, 2)
+  assert.deepEqual(cancelledRows.docs.map(row => row.status).sort(), ['cancelled', 'pending'])
+
+  // No-show/completed appointments should not occupy a future slot either;
+  // database exclusion and application availability must agree on status.
+  await payload.update({
+    collection: 'bookings', id: replacement.id, overrideAccess: true,
+    data: { status: 'no_show' },
+  })
+  const afterNoShow = await createPayloadBooking(payload, request)
+  assert.notEqual(afterNoShow.id, replacement.id)
+  assert.equal(afterNoShow.status, 'pending')
+  console.info('Trusted booking service: catalog, schedule, persistence and retry isolation, overlap rejection and status-based slot release verified')
 }
 
 main().then(
