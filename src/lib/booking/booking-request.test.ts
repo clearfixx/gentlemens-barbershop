@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { prepareBookingRequest } from './booking-request.ts'
+import { assertBookingQuoteIntegrity, prepareBookingRequest } from './booking-request.ts'
 
 const fixture = () => ({
   request: {
@@ -95,4 +95,34 @@ test('rejects duplicate barber offerings with conflicting overrides', () => {
   const input = fixture()
   input.barber.offerings.push({ service: 7, priceOverride: 999, durationOverrideMinutes: 30 })
   assert.throws(() => prepareBookingRequest(input), /ambiguous barber offering/)
+})
+
+test('normalized server quote satisfies persistence invariants', () => {
+  const input = fixture()
+  input.request.startsAt = '2030-01-02T09:00:00Z'
+  assert.doesNotThrow(() => assertBookingQuoteIntegrity(prepareBookingRequest(input)))
+})
+
+test('quote validation rejects impossible totals and intervals', () => {
+  const quote = prepareBookingRequest(fixture())
+  for (const malformed of [
+    { ...quote, endsAt: quote.startsAt },
+    { ...quote, endsAt: '2030-01-02T10:29:00.000Z' },
+    { ...quote, endsAt: '2030-01-02T10:30:00Z' },
+    { ...quote, durationMinutes: Number.NaN },
+    { ...quote, totalPrice: Number.POSITIVE_INFINITY },
+    { ...quote, totalPrice: -1 },
+  ]) {
+    assert.throws(() => assertBookingQuoteIntegrity(malformed), RangeError)
+  }
+})
+
+test('quote derivation preserves trimmed optional email and validates its shape', () => {
+  const input = fixture()
+  const withEmail = { ...input, request: { ...input.request, customerEmail: '  test@example.com  ' } }
+  assert.equal(prepareBookingRequest(withEmail).customerEmail, 'test@example.com')
+  assert.throws(() => prepareBookingRequest({
+    ...input,
+    request: { ...input.request, customerEmail: 'invalid@' },
+  }), RangeError)
 })
