@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import type { BookingRequest } from './booking-request.ts'
+import { validateBookingRequestShape, type BookingRequest } from './booking-request.ts'
 
 export class BookingIdempotencyConflictError extends Error {
   constructor() {
@@ -19,11 +19,12 @@ export type BookingIdempotency = {
  * prices. The same retry must keep its identity even if the catalog changes.
  */
 export function bookingRequestFingerprint(request: BookingRequest): string {
+  validateBookingRequestShape(request)
   const canonical = JSON.stringify({
     barberId: request.barberId,
     locationId: request.locationId,
     serviceIds: request.serviceIds,
-    startsAt: request.startsAt,
+    startsAt: new Date(request.startsAt).toISOString(),
     customerName: request.customerName.trim(),
     customerPhone: request.customerPhone.trim(),
     customerEmail: request.customerEmail?.trim() || null,
@@ -37,10 +38,10 @@ export function prepareBookingIdempotency(input: {
   request: BookingRequest
 }): BookingIdempotency {
   const { scope, key, request } = input
-  if (!scope || scope.length > 160 || !/^[a-zA-Z0-9:_-]+$/.test(scope)) {
+  if (typeof scope !== 'string' || !scope || scope.length > 160 || !/^[a-zA-Z0-9:_-]+$/.test(scope)) {
     throw new RangeError('Invalid idempotency scope')
   }
-  if (!key || key.length > 160 || !/^[a-zA-Z0-9:_-]+$/.test(key)) {
+  if (typeof key !== 'string' || !key || key.length > 160 || !/^[a-zA-Z0-9:_-]+$/.test(key)) {
     throw new RangeError('Invalid idempotency key')
   }
   return { scope, key, requestHash: bookingRequestFingerprint(request) }
