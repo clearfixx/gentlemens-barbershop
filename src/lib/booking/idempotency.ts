@@ -68,7 +68,7 @@ export function isBookingIdempotencyUniqueViolation(error: unknown): boolean {
     seen.add(current)
     const value = current as { code?: unknown; constraint?: unknown; cause?: unknown }
     if (value.code === '23505' &&
-        value.constraint === 'bookings_idempotency_scope_key_unique') return true
+        value.constraint === 'bookings_idempotency_unique') return true
     current = value.cause
   }
   return false
