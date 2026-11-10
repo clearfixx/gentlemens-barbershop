@@ -15,7 +15,7 @@ const row = {
   idempotency_key: token.key,
   idempotency_request_hash: token.requestHash,
 }
-const uniqueError = { code: '23505', constraint: 'bookings_idempotency_scope_key_unique' }
+const uniqueError = { code: '23505', constraint: 'bookings_idempotency_unique' }
 
 test('existing retry returns the committed row without inserting', async () => {
   let inserts = 0
