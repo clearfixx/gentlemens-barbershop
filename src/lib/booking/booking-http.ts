@@ -1,5 +1,6 @@
 import { BookingIdempotencyConflictError } from './idempotency.ts'
 import { BookingSlotConflictError } from './booking-errors.ts'
+import { BookingAuthenticationError, BookingContactMismatchError } from './booking-identity.ts'
 import { snapshotBookingRequest, type BookingRequest } from './booking-request.ts'
 
 export type BookingHttpInput = { request: BookingRequest; idempotencyKey: string }
@@ -24,6 +25,12 @@ export function parseBookingHttpInput(body: unknown, idempotencyKey: string | nu
 
 /** Public HTTP mapping: never leak SQL, Payload, or customer details. */
 export function bookingHttpError(error: unknown): { status: number; message: string } | null {
+  if (error instanceof BookingAuthenticationError) {
+    return { status: 401, message: 'Authentication required' }
+  }
+  if (error instanceof BookingContactMismatchError) {
+    return { status: 403, message: 'Booking contact does not match account' }
+  }
   if (error instanceof BookingIdempotencyConflictError) {
     return { status: 409, message: 'Idempotency key conflicts with an existing request' }
   }
