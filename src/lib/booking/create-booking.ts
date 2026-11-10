@@ -20,11 +20,14 @@ export async function createBooking<T>(input: {
   loadCatalog: (request: BookingRequest) => Promise<BookingCatalog>
   loadAvailableSlots: (quote: BookingQuote) => Promise<ZonedSlot[]>
   persist: (quote: BookingQuote) => Promise<T>
+  /** Test seam for deterministic clock-boundary verification. */
+  now?: () => number
 }): Promise<T> {
+  const now = input.now ?? Date.now
   const request = snapshotBookingRequest(input.request)
   // The public availability feed hides elapsed slots; the trusted write path
   // must independently reject them, including callers that bypass the UI.
-  if (Date.parse(request.startsAt) <= Date.now()) {
+  if (Date.parse(request.startsAt) <= now()) {
     throw new RangeError('Booking start must be in the future')
   }
   const catalog = await input.loadCatalog({ ...request, serviceIds: [...request.serviceIds] })
@@ -35,7 +38,7 @@ export async function createBooking<T>(input: {
   assertBookingSlotAvailable(quote, slots)
   // Availability I/O can take time. Never insert a slot that elapsed while
   // the request was waiting for the catalog or schedule lookup.
-  if (Date.parse(quote.startsAt) <= Date.now()) {
+  if (Date.parse(quote.startsAt) <= now()) {
     throw new RangeError('Booking start must be in the future')
   }
 

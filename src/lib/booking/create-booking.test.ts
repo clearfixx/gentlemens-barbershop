@@ -210,29 +210,41 @@ test('rejects past or already-started appointments before catalog I/O', async ()
   assert.equal(catalogCalls, 0)
 })
 
-test('rejects a slot that expires while the availability lookup is in progress', async () => {
+test('rejects a slot that expires while availability is pending without wall-clock sleeps', async () => {
+  const startsAt = '2030-01-02T09:00:00.000Z'
+  const startMs = Date.parse(startsAt)
+  let clock = startMs - 60_000
   let release!: () => void
   let entered!: () => void
   const started = new Promise<void>(resolve => { entered = resolve })
   const barrier = new Promise<void>(resolve => { release = resolve })
-  const startsAt = new Date(Date.now() + 150).toISOString()
-  const endsAt = new Date(Date.parse(startsAt) + 45 * 60_000).toISOString()
   let writes = 0
   const pending = createBooking({
     request: { ...request, startsAt },
+    now: () => clock,
     loadCatalog: async () => catalog,
     loadAvailableSlots: async () => {
       entered()
       await barrier
-      return [{ startsAt, endsAt, localStartMinute: 540 }]
+      return [slot]
     },
     persist: async () => { writes++; return { id: 1 } },
   })
   await started
-  // No wall-clock sleep: block the event loop until the selected instant
-  // has elapsed, then release the asynchronous availability lookup.
-  while (Date.now() <= Date.parse(startsAt)) { /* intentional test clock boundary */ }
+  clock = startMs
   release()
   await assert.rejects(pending, { name: 'RangeError', message: 'Booking start must be in the future' })
   assert.equal(writes, 0)
+})
+
+test('accepts an appointment when both checks see a future start', async () => {
+  const startMs = Date.parse(request.startsAt)
+  const result = await createBooking({
+    request,
+    now: () => startMs - 1,
+    loadCatalog: async () => catalog,
+    loadAvailableSlots: async () => [slot],
+    persist: async () => ({ id: 42 }),
+  })
+  assert.equal(result.id, 42)
 })
