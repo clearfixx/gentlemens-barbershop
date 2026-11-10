@@ -130,3 +130,27 @@ export function prepareBookingRequest(input: {
     ...(customerEmail ? { customerEmail } : {}),
   }
 }
+
+/**
+ * Validate the derived quote again at the persistence boundary.
+ * This does not re-price services or prove availability; those require
+ * trusted catalog lookups and PostgreSQL's exclusion constraint.
+ */
+export function assertBookingQuoteIntegrity(value: BookingQuote): void {
+  validateBookingRequestShape(value)
+  if (!Number.isSafeInteger(value.durationMinutes) ||
+      value.durationMinutes < 5 || value.durationMinutes > 480 ||
+      !Number.isSafeInteger(value.totalPrice) || value.totalPrice < 0) {
+    throw new RangeError('Invalid booking quote totals')
+  }
+  if (typeof value.endsAt !== 'string') {
+    throw new RangeError('Invalid booking quote interval')
+  }
+  const start = Date.parse(value.startsAt)
+  const end = Date.parse(value.endsAt)
+  if (!Number.isFinite(end) || end <= start ||
+      new Date(end).toISOString() !== value.endsAt ||
+      end - start !== value.durationMinutes * 60_000) {
+    throw new RangeError('Invalid booking quote interval')
+  }
+}
