@@ -14,7 +14,7 @@ export type StoredBookingRetry = {
  * Internal persistence adapter boundary, not a transaction implementation.
  *
  * The caller MUST make insert atomic with its booking row and retry metadata,
- * backed by bookings_idempotency_scope_key_unique. readExisting must query by
+ * backed by bookings_idempotency_unique. readExisting must query by
  * the trusted scope/key (not by hash), and must use a fresh DB read after the
  * failed insert transaction has been rolled back.
  */
