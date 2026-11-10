@@ -133,3 +133,48 @@ test('Payload replay refuses a mismatched key even when the fingerprint matches'
     BookingIdempotencyConflictError,
   )
 })
+
+test('Payload retry lookup requests two rows to detect missing unique index', async () => {
+  let lookupLimit: number | undefined
+  const payload = {
+    find: async (args: { limit: number }) => {
+      lookupLimit = args.limit
+      return { docs: [] }
+    },
+    create: async () => ({ id: 44 }),
+  } as unknown as Payload
+  await persistIdempotentPayloadBooking(payload, quote, token)
+  assert.equal(lookupLimit, 2)
+})
+
+test('duplicate retry rows fail closed instead of replaying an arbitrary booking', async () => {
+  let creates = 0
+  const payload = {
+    find: async () => ({ docs: [
+      { id: 42, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: token.requestHash },
+      { id: 43, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: token.requestHash },
+    ] }),
+    create: async () => { creates++; throw Error('Must not create') },
+  } as unknown as Payload
+  await assert.rejects(
+    persistIdempotentPayloadBooking(payload, quote, token),
+    BookingIdempotencyConflictError,
+  )
+  assert.equal(creates, 0)
+})
+
+test('duplicate retry rows after a unique conflict are never silently replayed', async () => {
+  let reads = 0
+  const payload = {
+    find: async () => ({ docs: ++reads === 1 ? [] : [
+      { id: 42, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: token.requestHash },
+      { id: 43, idempotencyScope: token.scope, idempotencyKey: token.key, idempotencyRequestHash: token.requestHash },
+    ] }),
+    create: async () => { throw { code: '23505', constraint: 'bookings_idempotency_unique' } },
+  } as unknown as Payload
+  await assert.rejects(
+    persistIdempotentPayloadBooking(payload, quote, token),
+    BookingIdempotencyConflictError,
+  )
+  assert.equal(reads, 2)
+})
