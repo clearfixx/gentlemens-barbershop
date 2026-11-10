@@ -27,3 +27,15 @@ Before enabling public booking writes, run a disposable PostgreSQL integration t
 The migration uses `btree_gist` and must be applied by a database role permitted to create that extension. Review existing data for overlapping active bookings, duplicate idempotency pairs, incomplete retry metadata, and invalid time intervals before running it. A failed migration must not be bypassed by disabling the constraints.
 
 **Limitations:** These constraints are not a complete booking transaction implementation. The public write endpoint remains disabled until the persistence adapter, transaction boundaries, replay handling and live PostgreSQL concurrency tests are reviewed. The down migration removes the added constraints/index but deliberately leaves the shared extension installed.
+
+## Read-only migration preflight
+
+Before applying the integrity migration to an existing database, run:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/booking-integrity-preflight.sql
+```
+
+The query reports counts for invalid intervals, incomplete idempotency metadata, duplicate scope/key groups and overlapping active-booking pairs. **All four counts must be zero** before applying the migration. The two subsequent queries show up to 100 conflicting booking pairs and duplicate retry-key groups for manual investigation. Do not automatically delete customer bookings to make migration pass.
+
+This is a point-in-time preflight, not a concurrency barrier. Stop booking writes during migration or otherwise guarantee no new conflicting records can be inserted between preflight and constraint creation. Execute in a controlled maintenance window with a database backup and a reviewed rollback plan. The preflight does not apply the migration and does not establish that the database concurrency tests have passed.
