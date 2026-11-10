@@ -16,21 +16,28 @@ The booking domain performs catalog validation, server-side pricing, and an advi
 
 Before enabling public booking writes, run a disposable PostgreSQL integration test with two independent connections and simultaneous inserts for the same barber/interval, plus independent idempotency-key collisions. Verify that exactly one active booking commits, no partial idempotency metadata survives a rollback, and adjacent non-overlapping intervals can both commit. Review migrations and their rollback plan separately.
 
-## Database migration (2026-11-10)
+## Authoritative booking integrity deployment
 
-`src/migrations/20261110_110000_booking_integrity.ts` adds:
-- `bookings_valid_interval`: end must be after start.
-- `bookings_idempotency_complete`: retry metadata must be entirely absent or complete with a 64-character lowercase SHA-256 digest.
-- `bookings_idempotency_scope_key_unique`: partial unique index for non-null scope/key pairs.
-- `bookings_no_active_overlap`: GiST exclusion for `pending` and `confirmed` appointments of the same barber, using half-open UTC time ranges.
+Booking constraints are installed through the existing reviewed SQL deployment path:
+`scripts/apply-booking-integrity.sh`, which runs
+`db/constraints/preflight-booking-integrity.sql`,
+`db/constraints/booking-no-overlap.sql`,
+`db/constraints/booking-idempotency.sql`, and
+`db/constraints/verify-booking-integrity.sql` within a single transaction, after explicit approval.
 
-The migration uses `btree_gist` and must be applied by a database role permitted to create that extension. Review existing data for overlapping active bookings, duplicate idempotency pairs, incomplete retry metadata, and invalid time intervals before running it. A failed migration must not be bypassed by disabling the constraints.
+The authoritative PostgreSQL objects are:
+- `bookings_valid_time_range` (interval order),
+- `bookings_idempotency_fields_together` (retry metadata completeness),
+- `bookings_idempotency_unique` (scope/key uniqueness), and
+- `bookings_no_active_overlap` (same-barber active slot exclusion).
 
-**Limitations:** These constraints are not a complete booking transaction implementation. The public write endpoint remains disabled until the persistence adapter, transaction boundaries, replay handling and live PostgreSQL concurrency tests are reviewed. The down migration removes the added constraints/index but deliberately leaves the shared extension installed.
+A redundant third Payload migration was removed after GitHub Actions run 42790890318 exposed a hard requirement that the two reviewed Payload migrations remain unchanged. That extra migration also contained malformed duplicated SQL and conflicting object definitions. Do not restore it. Production application of the existing SQL deployment path still requires a backup, maintenance window and real database verification.
+
+**Limitations:** Database constraints are only one component. The public booking write path must remain restricted until transaction, replay and live database concurrency tests pass.
 
 ## Read-only migration preflight
 
-Before applying the integrity migration to an existing database, run:
+For an additional read-only diagnostic on the target database, run:
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/booking-integrity-preflight.sql
@@ -48,24 +55,24 @@ After preparing a disposable PostgreSQL database, run:
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/booking-integrity-smoke.sql
 ```
 
-This script creates a temporary table with the same constraint expressions, tests accepted adjacent slots, different barbers, cancelled slots, and expected SQLSTATEs for overlap (`23P01`), invalid intervals/incomplete retry metadata (`23514`) and duplicate retry keys (`23505`). It rolls back its test transaction.
+This script creates a temporary table with similar constraint expressions, tests accepted adjacent slots, different barbers, cancelled slots, and expected SQLSTATEs for overlap (`23P01`), invalid intervals/incomplete retry metadata (`23514`) and duplicate retry keys (`23505`). It rolls back its test transaction.
 
-**Important:** This is a constraint-expression smoke test, not a migration integration test and not a two-connection concurrency test. It requires permission to install or use `btree_gist`. Do not run it against production; use a disposable database. The idempotency completeness check uses `num_nonnulls` so SQL three-valued NULL logic cannot silently accept partially filled metadata.
+**Important:** This is a constraint-expression smoke test, not a migration integration test and not a two-connection concurrency test. It requires permission to install or use `btree_gist`. Do not run it against production; use a disposable database. The disposable probe uses a stricter `num_nonnulls` check than the currently deployed constraint. It is not proof that the deployed constraint has the identical definition.
 
 ## Idempotent persistence boundary
 
-`src/lib/booking/persist-idempotently.ts` provides an internal replay algorithm with injected `readExisting` and `insert` callbacks. It checks scope, key and request hash before returning an existing row. On the exact `23505` error for `bookings_idempotency_scope_key_unique`, it re-reads the committed row; missing rows and unrelated errors are propagated.
+`src/lib/booking/persist-idempotently.ts` provides an internal replay algorithm with injected `readExisting` and `insert` callbacks. It checks scope, key and request hash before returning an existing row. On the exact `23505` error for `bookings_idempotency_unique`, it re-reads the committed row; missing rows and unrelated errors are propagated.
 
 **Required integration contract:** `insert` must atomically persist the booking and all retry metadata. The first failed insert transaction must be rolled back before `readExisting` runs again. That read must be a fresh query with visibility of the winning committed transaction, under the trusted scope/key, and must not return records belonging to another principal. Do not invoke the helper from a public endpoint until these conditions are enforced by the concrete Payload/PostgreSQL adapter. Unit tests use in-memory callbacks; they do not validate transaction isolation or database connectivity.
 
 ## Installed migration verification
 
-After applying migrations on a **disposable** database, verify the actual PostgreSQL schema (rather than only a temporary copy of the constraint expressions):
+After applying the approved booking SQL deployment on a **disposable** database, verify the actual PostgreSQL schema (rather than only a temporary copy of the constraint expressions):
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/booking-integrity-verify.sql
 ```
 
-This read-only check inspects `pg_constraint` and `pg_indexes` for the installed booking overlap exclusion, interval check, null-safe retry metadata check, and unique retry index. It raises an error if a required object is missing or has an unexpected broad shape. It does not prove all predicates are semantically correct, nor does it replace two-connection concurrency testing.
+This read-only check inspects `pg_constraint` and `pg_indexes` for the installed booking overlap exclusion, interval check, retry metadata check, and unique retry index. It raises an error if a required object is missing or has an unexpected broad shape. It does not prove all predicates are semantically correct, nor does it replace two-connection concurrency testing.
 
 The idempotent persistence helper additionally checks the retry identity on a newly inserted row. A concrete database adapter must ensure that a failed identity check cannot leave a committed incorrect row; validation after commit is only a defensive assertion, **not** a transaction guarantee.
