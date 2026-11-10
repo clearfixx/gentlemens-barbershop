@@ -101,14 +101,14 @@ test('retry identity requires matching trusted scope, key and request hash', () 
 
 test('only the expected PostgreSQL retry unique index is recognized', () => {
   assert.equal(isBookingIdempotencyUniqueViolation({
-    code: '23505', constraint: 'bookings_idempotency_scope_key_unique',
+    code: '23505', constraint: 'bookings_idempotency_unique',
   }), true)
   assert.equal(isBookingIdempotencyUniqueViolation(new Error('Wrapped', {
-    cause: { code: '23505', constraint: 'bookings_idempotency_scope_key_unique' },
+    cause: { code: '23505', constraint: 'bookings_idempotency_unique' },
   })), true)
   for (const failure of [
     { code: '23505', constraint: 'users_email_idx' },
-    { code: '23P01', constraint: 'bookings_idempotency_scope_key_unique' },
+    { code: '23P01', constraint: 'bookings_idempotency_unique' },
     { code: '23505' },
     null,
   ]) assert.equal(isBookingIdempotencyUniqueViolation(failure), false)
