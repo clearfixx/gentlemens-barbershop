@@ -116,3 +116,99 @@ test('service uses a request snapshot across asynchronous retry lookup', async (
   assert.equal(result.replayed, true)
   assert.equal(result.booking.id, 123)
 })
+
+test('booking service performs all internal availability reads with server access', async () => {
+  const reads: Array<{ collection: string; overrideAccess?: boolean }> = []
+  const payload = {
+    findByID: async (args: { collection: string; overrideAccess?: boolean }) => {
+      reads.push(args)
+      assert.equal(args.overrideAccess, true)
+      if (args.collection === 'barbers') return {
+        id: 3, location: 2, isActive: true,
+        serviceOfferings: [{ service: 7, priceOverride: 650, durationOverrideMinutes: 60 }],
+      }
+      if (args.collection === 'locations') return { id: 2, isActive: true, timeZone: 'Europe/Kyiv' }
+      if (args.collection === 'services') return { id: 7, isActive: true, price: 500, durationMinutes: 45 }
+      throw Error('Unexpected collection')
+    },
+    find: async (args: { collection: string; overrideAccess?: boolean }) => {
+      reads.push(args)
+      assert.equal(args.overrideAccess, true)
+      if (args.collection === 'barber-schedules') return {
+        docs: [{ weeklyShifts: [{ weekday: '3', startMinute: 0, endMinute: 180 }] }],
+        hasNextPage: false,
+      }
+      return { docs: [], hasNextPage: false }
+    },
+    create: async () => ({ id: 99 }),
+  } as unknown as Payload
+  await createPayloadBooking(payload, request)
+  assert.ok(reads.some(read => read.collection === 'bookings'))
+  assert.ok(reads.some(read => read.collection === 'barber-time-off'))
+  assert.ok(reads.every(read => read.overrideAccess === true))
+})
+
+test('a retry whose slot became unavailable replays only its exact committed booking', async () => {
+  const token = prepareBookingIdempotency({ scope: 'customer:42', key: 'lost-slot', request })
+  let bookingReads = 0
+  let writes = 0
+  const payload = {
+    findByID: async ({ collection }: { collection: string }) => {
+      if (collection === 'barbers') return { id: 3, location: 2, isActive: true, serviceOfferings: [{ service: 7, durationOverrideMinutes: 60 }] }
+      if (collection === 'locations') return { id: 2, isActive: true, timeZone: 'Europe/Kyiv' }
+      if (collection === 'services') return { id: 7, isActive: true, price: 500, durationMinutes: 45 }
+      throw Error('Unexpected collection')
+    },
+    find: async ({ collection }: { collection: string }) => {
+      if (collection === 'bookings') {
+        bookingReads++
+        return { docs: bookingReads === 1 ? [] : [{
+          id: 123, startsAt: request.startsAt, endsAt: '2030-01-01T23:30:00.000Z',
+          status: 'pending', idempotencyScope: token.scope,
+          idempotencyKey: token.key, idempotencyRequestHash: token.requestHash,
+        }], hasNextPage: false }
+      }
+      if (collection === 'barber-schedules') return {
+        docs: [{ weeklyShifts: [{ weekday: '3', startMinute: 0, endMinute: 180 }] }],
+        hasNextPage: false,
+      }
+      return { docs: [], hasNextPage: false }
+    },
+    create: async () => { writes++; throw Error('Must not create') },
+  } as unknown as Payload
+  const result = await createIdempotentPayloadBooking(payload, request, token.scope, token.key)
+  assert.equal(result.replayed, true)
+  assert.equal(result.booking.id, 123)
+  assert.equal(writes, 0)
+  assert.equal(bookingReads, 3)
+})
+
+test('a different booking occupying the slot cannot be replayed as this request', async () => {
+  const payload = {
+    findByID: async ({ collection }: { collection: string }) => {
+      if (collection === 'barbers') return { id: 3, location: 2, isActive: true, serviceOfferings: [{ service: 7, durationOverrideMinutes: 60 }] }
+      if (collection === 'locations') return { id: 2, isActive: true, timeZone: 'Europe/Kyiv' }
+      if (collection === 'services') return { id: 7, isActive: true, price: 500, durationMinutes: 45 }
+      throw Error('Unexpected collection')
+    },
+    find: async ({ collection, where }: { collection: string; where?: unknown }) => {
+      if (collection === 'bookings') {
+        const lookup = JSON.stringify(where).includes('idempotencyScope')
+        return { docs: lookup ? [] : [{
+          id: 456, startsAt: request.startsAt, endsAt: '2030-01-01T23:30:00.000Z',
+          status: 'confirmed',
+        }], hasNextPage: false }
+      }
+      if (collection === 'barber-schedules') return {
+        docs: [{ weeklyShifts: [{ weekday: '3', startMinute: 0, endMinute: 180 }] }],
+        hasNextPage: false,
+      }
+      return { docs: [], hasNextPage: false }
+    },
+    create: async () => { throw Error('Must not create') },
+  } as unknown as Payload
+  await assert.rejects(
+    createIdempotentPayloadBooking(payload, request, 'customer:42', 'occupied-slot'),
+    { name: 'RangeError', message: 'Selected booking slot is unavailable' },
+  )
+})
