@@ -1,5 +1,5 @@
 import { assertBookingSlotAvailable } from './booking-slot.ts'
-import { prepareBookingRequest, type BookingQuote, type BookingRequest } from './booking-request.ts'
+import { prepareBookingRequest, validateBookingRequestShape, type BookingQuote, type BookingRequest } from './booking-request.ts'
 import { throwBookingConflictIfApplicable } from './booking-errors.ts'
 import type { BarberOffering, ServiceSnapshot } from './resolve-offering.ts'
 import type { ZonedSlot } from './zoned-availability.ts'
@@ -21,6 +21,7 @@ export async function createBooking<T>(input: {
   loadAvailableSlots: (quote: BookingQuote) => Promise<ZonedSlot[]>
   persist: (quote: BookingQuote) => Promise<T>
 }): Promise<T> {
+  validateBookingRequestShape(input.request)
   const catalog = await input.loadCatalog(input.request)
   const quote = prepareBookingRequest({ request: input.request, ...catalog })
   const slots = await input.loadAvailableSlots(quote)
