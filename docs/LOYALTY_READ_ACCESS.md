@@ -22,3 +22,12 @@ the authenticated principal; numeric IDs and bigint balances are validated
 before being returned. This adapter is not exposed through HTTP until the
 loyalty schema is installed through a reviewed migration and role permissions
 are restricted. The full-history query must be paginated before high-volume use.
+
+## Bounded history pagination
+
+`getOwnLoyaltyHistoryPage` reads only the authenticated customer's entries,
+newest first, using keyset pagination (`id < before`). The limit is 1–50
+(default 20); the cursor is an opaque-to-the-UI numeric ledger ID. The query
+requests one extra row to determine whether another page exists. The cursor
+and page size are validated before any database access. This is an internal
+server-only module, not yet a public route.
