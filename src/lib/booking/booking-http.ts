@@ -1,7 +1,6 @@
 import { BookingIdempotencyConflictError } from './idempotency.ts'
 import { BookingSlotConflictError } from './booking-errors.ts'
-import { BookingAuthenticationError, BookingContactMismatchError } from './booking-identity.ts'
-import { BookingRateLimitedError } from './submit-authenticated-booking.ts'
+import { BookingAuthenticationError, BookingContactMismatchError, BookingRateLimitedError } from './booking-identity.ts'
 import { snapshotBookingRequest, type BookingRequest } from './booking-request.ts'
 
 export type BookingHttpInput = { request: BookingRequest; idempotencyKey: string }
