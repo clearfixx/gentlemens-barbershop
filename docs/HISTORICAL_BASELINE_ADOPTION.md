@@ -27,3 +27,15 @@ registration and the subsequent incremental migration require a separate
 reviewed transactional procedure. No production migration is executed here.
 
 Do not use the application's live production database as the reference.
+
+## Disposable rehearsal of baseline registration
+
+The command `scripts/adopt-disposable-historical-baseline.sh` is intentionally
+restricted to the exact database name `gentlemens_legacy_adoption_ci` and requires
+`CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply`. It repeats the full read-only DDL
+comparison, checks for concurrent sessions, and registers the historical ledger
+in one PostgreSQL transaction using a transaction-scoped advisory lock.
+The CI scenario seeds legacy records, fingerprints them, registers the baseline,
+applies the localization delta, verifies the fingerprints and ledger count, and
+rejects replay. **This is a rehearsal-only mechanism, not a production adoption
+command.** Do not rename or remove the database restriction to run it in production.

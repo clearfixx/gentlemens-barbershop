@@ -1102,6 +1102,43 @@ jobs:
           set -e
           test "$status" -ne 0
           grep -q 'REFUSED:' /tmp/baseline-review-drift.log
+      - name: Rehearse explicit baseline adoption and incremental migration on isolated legacy copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          export BASELINE_REFERENCE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_baseline_reference_ci"
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci"
+          # Remove deliberate drift from the previous negative test.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'DROP INDEX adoption_test_extra_idx'
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/seed-prelocalization-rehearsal.sql
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/adoption-before.txt
+          # Registration must never occur without the explicit disposable-only approval.
+          set +e
+          bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-unapproved.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT to_regclass('public.payload_migrations') IS NULL" | grep -qx t
+          CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT name FROM payload_migrations" | grep -qx '20261110_050350'
+          CI=1 timeout 120s pnpm db:migrate
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/adoption-after.txt
+          diff -u /tmp/adoption-before.txt /tmp/adoption-after.txt
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT count(*) FROM payload_migrations" | grep -qx '2'
+          CI=1 timeout 120s pnpm db:migrate
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT count(*) FROM payload_migrations" | grep -qx '2'
+          # Refuse replay of baseline adoption after the migration ledger exists.
+          set +e
+          CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-replay.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
       - name: Reject unregistered baseline on an existing database
         shell: bash
         run: |
