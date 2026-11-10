@@ -1164,11 +1164,12 @@ jobs:
           test "$status" -ne 0
           grep -q 'may write ONLY' /tmp/adoption-wrong-target.log
           # A schema-drifted unversioned copy must not receive a ledger.
-          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_legacy_drift_ci
+          PGPASSWORD=postgres dropdb -h localhost -U postgres gentlemens_legacy_adoption_ci
+          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_legacy_adoption_ci
           docker run --rm --network host -e DATABASE_URL="$BASELINE_REFERENCE_URL" postgres:17-alpine \
             sh -c 'pg_dump "$DATABASE_URL" --no-owner --no-privileges --exclude-table=public.payload_migrations' \
-            | psql -X -v ON_ERROR_STOP=1 "postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_drift_ci" >/dev/null
-          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_drift_ci"
+            | psql -X -v ON_ERROR_STOP=1 "postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci" >/dev/null
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci"
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'ALTER TABLE services ADD COLUMN unexpected_ci text'
           set +e
           CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-drift.log 2>&1
