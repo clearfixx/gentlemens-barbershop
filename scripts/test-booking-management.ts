@@ -58,6 +58,7 @@ async function createdBooking(barberId: number, startsAt: string) {
   bookings.push(bookingId)
   return bookingId
 }
+async function run() {
 try {
   // Fixtures are distinct from the existing customer, barber and ten bookings.
   const adminId = await id(sql`
@@ -131,3 +132,11 @@ try {
   for (const userId of users) await db.execute(sql`DELETE FROM users WHERE id = ${userId}`)
   console.info('Fixture cleanup completed')
 }
+}
+
+// Payload's PostgreSQL pool can keep Node's event loop alive after assertions.
+// Explicitly exit only after fixture cleanup and propagate test failures.
+run().then(
+  () => process.exit(0),
+  error => { console.error(error); process.exit(1) },
+)
