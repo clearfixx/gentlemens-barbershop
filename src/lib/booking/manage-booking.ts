@@ -31,7 +31,7 @@ type BookingRow = {
   location_id: number
   starts_at: Date
   barber_user_id: number | null
-  cancellation_deadline_minutes: number
+  cancellation_deadline_minutes: number | null
 }
 
 /**
@@ -82,7 +82,9 @@ export async function changeBookingStatus(input: {
     if (!actor) throw new BookingManagementError(404, 'Booking not found')
     const now = input.now ?? new Date()
     const deadlineMinutes = resolveCancellationDeadlineMinutes(
-      Number(row.cancellation_deadline_minutes),
+      row.cancellation_deadline_minutes == null
+        ? null
+        : Number(row.cancellation_deadline_minutes),
     )
     const decision = decideBookingTransition({
       actor, from: row.status, to, startsAt: row.starts_at, now,
