@@ -3,6 +3,8 @@ import * as migration_20261110_050437_ci_localization_incremental from './202611
 
 import * as migration_20261111_120000_booking_cancellation_policy from './20261111_120000_booking_cancellation_policy';
 
+import * as migration_20261111_121000_barber_account_binding from './20261111_121000_barber_account_binding';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -18,5 +20,10 @@ export const migrations = [
     up: migration_20261111_120000_booking_cancellation_policy.up,
     down: migration_20261111_120000_booking_cancellation_policy.down,
     name: '20261111_120000_booking_cancellation_policy',
+  },
+  {
+    up: migration_20261111_121000_barber_account_binding.up,
+    down: migration_20261111_121000_barber_account_binding.down,
+    name: '20261111_121000_barber_account_binding',
   },
 ];
