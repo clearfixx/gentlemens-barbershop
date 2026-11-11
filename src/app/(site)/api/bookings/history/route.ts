@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     const parsePositive = (key: string, fallback: number) => {
       const values = url.searchParams.getAll(key)
       if (values.length === 0) return fallback
-      if (values.length !== 1 || !/^[1-9]\\d*$/.test(values[0])) {
+      if (values.length !== 1 || !/^[1-9]\d*$/.test(values[0])) {
         throw new BookingManagementError(400, 'Invalid pagination')
       }
       return Number(values[0])
