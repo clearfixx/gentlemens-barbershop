@@ -1,5 +1,5 @@
 # Run from the repository root in PowerShell.
-# Deliberately refuse any database except the disposable local integration instance.
+# Refuse any database except the disposable local integration instance.
 [CmdletBinding()]
 param(
     [switch]$Apply
@@ -16,19 +16,26 @@ if ($env:DATABASE_URL -cne $expected) {
 
 $container = 'barbershop-integration-pg17'
 $running = docker inspect -f '{{.State.Running}}' $container 2>$null
-if ($LASTEXITCODE -ne 0 -or $running.Trim() -ne 'true') {
+if ($LASTEXITCODE -ne 0 -or @($running)[0].Trim() -ne 'true') {
     throw 'The isolated PostgreSQL container is not running.'
 }
 
+# psql inside the container connects through a Unix socket by default.
+# inet_server_port() is NULL for socket connections, so do not use it
+# to verify the host-side published port.
 $identity = @'
-SELECT current_database() || ':' || current_user || ':' ||
-       inet_server_port()::text;
+SELECT current_database() || ':' || current_user;
 '@ | docker exec -i $container psql -X -At -v ON_ERROR_STOP=1 -U barbershop_test -d barbershop_integration
-if ($LASTEXITCODE -ne 0 -or $identity.Trim() -ne 'barbershop_integration:barbershop_test:5432') {
+if ($LASTEXITCODE -ne 0 -or (@($identity) -join '').Trim() -ne 'barbershop_integration:barbershop_test') {
     throw 'Database identity verification failed.'
 }
 
-Write-Host 'Verified disposable integration database.' -ForegroundColor Green
+$publishedPorts = @(docker port $container '5432/tcp' 2>$null)
+if ($LASTEXITCODE -ne 0 -or -not ($publishedPorts | Where-Object { $_ -match '^(127\.0\.0\.1|\[::1\]):55432$' })) {
+    throw 'Expected loopback-only PostgreSQL port mapping is missing.'
+}
+
+Write-Host 'Verified disposable integration database and loopback port.' -ForegroundColor Green
 if ($Apply) {
     Write-Host 'Applying reviewed Payload migrations to isolated integration database only.' -ForegroundColor Yellow
     pnpm exec payload migrate --disable-transpile
