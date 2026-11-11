@@ -5,7 +5,13 @@ import { decideBookingTransition, type BookingStatus } from './booking-status-po
 import { canCustomerCancelBooking, resolveCancellationDeadlineMinutes } from './cancellation-policy.ts'
 
 export class BookingManagementError extends Error {
-  constructor(public readonly statusCode: number, message: string) { super(message) }
+  readonly statusCode: number
+
+  constructor(statusCode: number, message: string) {
+    super(message)
+    this.name = 'BookingManagementError'
+    this.statusCode = statusCode
+  }
 }
 
 const statuses = new Set<BookingStatus>(['pending', 'confirmed', 'completed', 'cancelled', 'no_show'])
