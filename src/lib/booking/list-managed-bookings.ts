@@ -1,4 +1,4 @@
-import type { Payload } from 'payload'
+import type { Payload, Where } from 'payload'
 import type { BookingPrincipal } from './booking-access.ts'
 import { BookingManagementError } from './manage-booking.ts'
 
@@ -23,7 +23,7 @@ export async function listManagedBookings(input: {
     throw new BookingManagementError(400, 'Invalid pagination')
   }
 
-  let where: Parameters<Payload['find']>[0]['where']
+  let where: Where | undefined
   if (principal.role === 'customer') {
     where = { customer: { equals: principal.id } }
   } else if (principal.role === 'barber') {
