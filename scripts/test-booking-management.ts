@@ -121,6 +121,42 @@ try {
   assert.equal((await events(third)).length, 2)
   await denied(third, unrelated, 'cancelled', 409)
 
+  // Two independent actors race to confirm the same pending booking.
+  // The row lock must serialize them: exactly one succeeds and one gets 409.
+  const raced = await createdBooking(assignedId, '2040-01-03T09:00:00Z')
+  const race = await Promise.allSettled([
+    changeBookingStatus({ payload, principal: admin, bookingId: raced, to: 'confirmed' }),
+    changeBookingStatus({ payload, principal: assigned, bookingId: raced, to: 'confirmed' }),
+  ])
+  const successes = race.filter(item => item.status === 'fulfilled')
+  const failures = race.filter(item => item.status === 'rejected')
+  assert.equal(successes.length, 1, 'exactly one concurrent update must succeed')
+  assert.equal(failures.length, 1, 'second concurrent update must be rejected')
+  assert.ok(failures[0].status === 'rejected' &&
+    failures[0].reason instanceof BookingManagementError &&
+    failures[0].reason.statusCode === 409)
+  assert.equal(await status(raced), 'confirmed')
+  const raceEvents = await events(raced)
+  assert.equal(raceEvents.length, 1, 'concurrent updates must write exactly one audit event')
+  assert.equal(raceEvents[0].action, 'confirmed')
+  assert.equal(raceEvents[0].previous_status, 'pending')
+  assert.ok([adminId, barberId].includes(Number(raceEvents[0].actor_id)))
+
+  // Competing terminal transitions must not produce two different outcomes.
+  const terminalRace = await Promise.allSettled([
+    changeBookingStatus({ payload, principal: admin, bookingId: raced, to: 'cancelled' }),
+    changeBookingStatus({ payload, principal: assigned, bookingId: raced, to: 'completed',
+      now: new Date('2040-01-03T10:00:00Z') }),
+  ])
+  assert.equal(terminalRace.filter(item => item.status === 'fulfilled').length, 1)
+  const terminalFailure = terminalRace.find(item => item.status === 'rejected')
+  assert.ok(terminalFailure?.status === 'rejected' &&
+    terminalFailure.reason instanceof BookingManagementError &&
+    terminalFailure.reason.statusCode === 409)
+  assert.ok(['cancelled', 'completed'].includes(String(await status(raced))))
+  assert.equal((await events(raced)).length, 2, 'one confirmation plus one terminal audit event')
+  console.info('PASS: concurrent status updates serialize correctly and never duplicate audit events')
+
   console.info('PASS: admin/barber ownership, transitions, terminal states, deadlines and atomic audit events')
 } finally {
   // FK order: events -> bookings -> barbers -> users. Never touch pre-existing IDs.
