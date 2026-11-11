@@ -35,10 +35,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.28.2
+          version: 11.9.0
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "24.22.3"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Booking availability unit tests
@@ -861,10 +861,10 @@ jobs:
           persist-credentials: false
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.28.2
+          version: 11.9.0
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "24.22.3"
       - name: Install frozen baseline dependencies
         run: pnpm install --frozen-lockfile
       - name: Initialize baseline Payload schema on isolated PostgreSQL
@@ -948,10 +948,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.28.2
+          version: 11.9.0
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "24.22.3"
       - name: Install current dependencies
         run: pnpm install --frozen-lockfile
       - name: Download historical PostgreSQL schema inventory
@@ -1271,10 +1271,10 @@ jobs:
           persist-credentials: false
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.28.2
+          version: 10.28.2 # Historical baseline checkout requires pnpm 10
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "24.22.3"
       - name: Install baseline dependencies
         working-directory: baseline-source
         run: pnpm install --frozen-lockfile
