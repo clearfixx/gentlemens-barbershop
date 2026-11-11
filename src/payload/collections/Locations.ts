@@ -1,3 +1,4 @@
+import { isValidCancellationDeadlineMinutes } from '../../lib/booking/cancellation-policy.ts'
 import type { CollectionConfig } from 'payload'
 
 export const Locations: CollectionConfig = {
@@ -15,6 +16,14 @@ export const Locations: CollectionConfig = {
     { name: 'city', type: 'text', required: true },
     { name: 'address', type: 'text', required: true },
     { name: 'phone', type: 'text' },
+    {
+      name: 'cancellationDeadlineMinutes', type: 'number', required: true,
+      defaultValue: 60, min: 0, max: 10080,
+      admin: { description: 'Minimum whole minutes before appointment start for customer self-cancellation. Zero permits cancellation until the start.' },
+      validate: (value: unknown) => isValidCancellationDeadlineMinutes(value)
+        ? true
+        : 'Enter a whole number of minutes between 0 and 10080.',
+    },
     {
       name: 'timeZone', type: 'text', required: true, defaultValue: 'Europe/Kyiv',
       admin: { description: 'IANA timezone identifier, e.g. Europe/Kyiv.' },
