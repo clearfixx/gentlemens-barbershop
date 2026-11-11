@@ -22,7 +22,7 @@ export async function persistPayloadBooking(
   assertBookingQuoteIntegrity(quote)
   // The idempotency scope is derived from the authenticated Payload account
   // by submitAuthenticatedBooking; never take this ID from the booking body.
-  const customerId = idempotency && /^user:[1-9]\\d*$/.test(idempotency.scope)
+  const customerId = idempotency && /^user:[1-9]\d*$/.test(idempotency.scope)
     ? Number(idempotency.scope.slice(5))
     : null
   if (customerId !== null && (!Number.isSafeInteger(customerId) || customerId <= 0)) {
