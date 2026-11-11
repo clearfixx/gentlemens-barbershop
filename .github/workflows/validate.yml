@@ -861,7 +861,7 @@ jobs:
           persist-credentials: false
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.9.0
+          version: 10.28.2
       - uses: actions/setup-node@v4
         with:
           node-version: "24.22.3"
@@ -1272,6 +1272,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 10.28.2 # Historical baseline checkout requires pnpm 10
+          package_json_file: baseline-source/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: "24.22.3"
