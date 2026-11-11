@@ -5,6 +5,8 @@ import * as migration_20261111_120000_booking_cancellation_policy from './202611
 
 import * as migration_20261111_121000_barber_account_binding from './20261111_121000_barber_account_binding';
 
+import * as migration_20261111_122000_booking_events from './20261111_122000_booking_events';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -25,5 +27,10 @@ export const migrations = [
     up: migration_20261111_121000_barber_account_binding.up,
     down: migration_20261111_121000_barber_account_binding.down,
     name: '20261111_121000_barber_account_binding',
+  },
+  {
+    up: migration_20261111_122000_booking_events.up,
+    down: migration_20261111_122000_booking_events.down,
+    name: '20261111_122000_booking_events',
   },
 ];
