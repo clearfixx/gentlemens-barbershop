@@ -995,7 +995,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Rehearse the committed, previously normalized migration files unchanged.
+          # This job tests the historical localization upgrade, not later
+          # Booking Management schema additions. Keep those migrations out of
+          # this isolated rehearsal; the main checks job applies all of them.
+          mkdir -p /tmp/booking-migrations-outside-historical-rehearsal
+          mv src/migrations/*booking*.ts src/migrations/*barber_account_binding.ts \
+            /tmp/booking-migrations-outside-historical-rehearsal/
+          # Rehearse the committed, previously normalized localization files unchanged.
           mkdir -p /tmp/incremental-migration
           mv src/migrations/*ci_localization_incremental.* /tmp/incremental-migration/
           # Apply only the historical bootstrap to a fresh, isolated database.
