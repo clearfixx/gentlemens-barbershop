@@ -149,6 +149,12 @@
   font-size:clamp(13px,.86vw,16px);font-weight:500;
 }
 .site-header.floating-header .site-nav__anchors a:hover{color:var(--gold)}
+.site-header.floating-header .site-nav__anchors a{position:relative}
+.site-header.floating-header .site-nav__anchors a[aria-current="location"]{color:var(--gold)}
+.site-header.floating-header .site-nav__anchors a[aria-current="location"]::after{
+  content:"";position:absolute;left:0;right:0;bottom:-9px;height:2px;
+  border-radius:2px;background:var(--gold);
+}
 .internal-nav-menu{position:relative;display:flex;align-items:center;flex:0 0 auto;padding-left:clamp(12px,1.6vw,26px);border-left:1px solid color-mix(in srgb,var(--gold) 28%,transparent)}
 .internal-nav-menu__trigger{display:grid;place-items:center;width:42px;height:44px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--ink);cursor:pointer}
 .internal-nav-menu__trigger:hover,.internal-nav-menu__trigger[aria-expanded=true]{background:color-mix(in srgb,var(--gold) 13%,transparent)}
