@@ -1,6 +1,7 @@
 import './home-page.css'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Metadata } from 'next'
 import { getPayload } from 'payload'
 import { notFound } from 'next/navigation'
@@ -117,7 +118,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         {barbers.docs.length ? <div className="home-team-grid">
           {barbers.docs.slice(0, 4).map(barber => <article className="home-team-card" key={barber.id}>
             {barber.portrait && typeof barber.portrait === 'object' && barber.portrait.url
-              ? <img className="home-team-card__portrait" src={barber.portrait.url} alt={barber.portrait.alt || barber.name} loading="lazy" />
+              ? <Image className="home-team-card__portrait" src={barber.portrait.url} alt={barber.portrait.alt || barber.name} width={500} height={625} unoptimized />
               : <div className="home-team-card__placeholder" aria-hidden="true">{barber.name.slice(0, 1).toUpperCase()}</div>}
             <div className="home-team-card__caption">
               <h3>{barber.name}</h3>
