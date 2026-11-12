@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { LogIn, LogOut } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { Locale } from '@/i18n/config'
@@ -16,6 +17,7 @@ type SessionUser = {
 
 export function AuthNavControl({ locale }: { locale: Locale }) {
   const uk = locale === 'uk'
+  const router = useRouter()
   const [user, setUser] = useState<SessionUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -72,9 +74,10 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
       if (!response.ok) throw new Error('Logout failed')
       setOpen(false)
       setUser(null)
-      window.location.assign(`/${locale}`)
+      router.replace(`/${locale}`)
+      router.refresh()
     } catch {
-      setSigningOutError(true)
+      setSignOutError(true)
       setSigningOut(false)
     }
   }
@@ -121,7 +124,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
       <p className="auth-nav__identity">{name}</p>
       <Link role="menuitem" href={`/${locale}/booking`} onClick={() => setOpen(false)}>{uk ? 'Новий запис' : 'Book a visit'}</Link>
       <Link role="menuitem" href={`/${locale}/catalog`} onClick={() => setOpen(false)}>{uk ? 'Каталог' : 'Catalog'}</Link>
-      {user.role === 'admin' && <a role="menuitem" href="/admin">{uk ? 'Адміністрування' : 'Admin'}</a>}
+      {user.role === 'admin' && <Link role="menuitem" href="/admin">{uk ? 'Адміністрування' : 'Admin'}</Link>}
       {signOutError && <p role="alert" className="auth-nav__error">{uk ? 'Не вдалося вийти. Спробуй ще раз.' : 'Could not log out. Please retry.'}</p>}
       <button type="button" role="menuitem" disabled={signingOut} onClick={() => void signOut()}>
         <LogOut size={18} strokeWidth={1.75} aria-hidden="true" /> {uk ? 'Вийти' : 'Log out'}
