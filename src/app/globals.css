@@ -86,3 +86,32 @@
 
 .site-brand__logo{display:block;width:210px;max-width:100%;height:auto;max-height:66px;object-fit:contain}
 .hero-chair{display:block;width:100%;height:100%;object-fit:contain}
+
+
+/* Approved split-theme Hero and floating glass navigation (no scroll scene). */
+.landing{position:relative}
+.floating-header{position:fixed;top:clamp(12px,2.2vw,30px);left:clamp(12px,3vw,54px);right:clamp(12px,3vw,54px);width:auto;z-index:100;min-height:62px;padding:10px clamp(16px,2.4vw,32px);border:1px solid transparent;border-radius:18px;background:transparent;box-shadow:none;transition:background-color .35s ease,border-color .35s ease,backdrop-filter .35s ease}
+.floating-header--scrolled{background:color-mix(in srgb,var(--paper) 78%,transparent);border-color:color-mix(in srgb,var(--ink) 12%,transparent);-webkit-backdrop-filter:blur(15px);backdrop-filter:blur(15px)}
+.floating-header .site-brand__logo{width:clamp(135px,14vw,195px);max-height:55px}
+.floating-header .site-nav a{color:var(--ink)}
+.floating-header .site-nav a:hover{color:var(--gold)}
+.floating-header .header-booking{background:var(--gold);border-color:var(--gold);color:#201711;font-weight:700;letter-spacing:0;text-transform:none;border-radius:5px}
+.hero{isolation:isolate;min-height:100svh;display:grid;grid-template-columns:minmax(0,48%) minmax(0,52%);align-items:center;gap:0;padding:clamp(115px,14vh,160px) clamp(26px,5vw,90px) 85px;overflow:hidden;background:var(--paper)}
+.hero::before{content:"";position:absolute;inset:0;z-index:-2;background-image:linear-gradient(90deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 95%,transparent) 20%,color-mix(in srgb,var(--paper) 40%,transparent) 47%,transparent 68%),url('/images/hero/barbershop-interior.webp');background-size:cover;background-position:center;pointer-events:none}
+:root[data-theme=dark] .hero::before{background-image:linear-gradient(90deg,#201711 0%,rgba(32,23,17,.94) 19%,rgba(32,23,17,.48) 48%,rgba(32,23,17,.10) 76%),url('/images/hero/barbershop-interior.webp')}
+.hero-copy{position:relative;z-index:2;max-width:500px}
+.hero .eyebrow{color:var(--ink);font-size:12px;letter-spacing:.16em;font-weight:500}
+.hero h1{font:400 clamp(52px,5.5vw,92px)/.98 Georgia,serif;letter-spacing:.015em;margin:25px 0 20px}
+.hero h1 em{font-style:normal;color:var(--ink)}
+.hero-copy>p:not(.eyebrow){max-width:360px;color:var(--ink);line-height:1.5;font-size:clamp(14px,1.1vw,18px)}
+.hero-actions{gap:14px;margin-top:26px}
+.hero-actions .cta{background:var(--gold);color:#201711;border-color:var(--gold);text-transform:none;letter-spacing:0;font-weight:600;min-height:48px}
+.hero-secondary{display:inline-flex;min-height:48px;align-items:center;justify-content:center;padding:12px 24px;border:1px solid color-mix(in srgb,var(--ink) 45%,transparent);border-radius:5px;text-decoration:none;font-size:14px}
+.hero-art{position:relative;z-index:1;min-height:0;height:min(75svh,790px);display:flex;align-items:center;justify-content:center;background:none;border:0;box-shadow:none;border-radius:0}
+.hero-chair{width:100%;height:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 24px 28px rgba(0,0,0,.24))}
+.hero-slide-progress{display:flex;align-items:center;gap:22px;margin-top:32px;font-size:12px;font-weight:700}
+.hero-slide-progress__track{display:block;width:110px;height:2px;background:linear-gradient(90deg,var(--gold) 45%,color-mix(in srgb,var(--ink) 25%,transparent) 45%)}
+.scroll-mouse{z-index:3;bottom:18px}
+@media(max-width:1050px){.floating-header{gap:12px}.hero{grid-template-columns:48% 52%}.hero h1{font-size:clamp(43px,6vw,72px)}}
+@media(max-width:720px){.floating-header{top:10px;left:10px;right:10px;min-height:60px;padding:8px 12px;flex-wrap:wrap}.floating-header .site-brand__logo{width:125px}.floating-header .site-header__actions{gap:4px}.floating-header .header-booking{padding:9px;font-size:10px}.hero{display:flex;flex-direction:column;align-items:stretch;justify-content:center;min-height:100svh;padding:130px 22px 80px;gap:12px}.hero::before{background-image:linear-gradient(180deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 87%,transparent) 35%,transparent 100%),url('/images/hero/barbershop-interior.webp');background-position:center}.hero-copy{order:0}.hero h1{font-size:clamp(43px,10vw,66px)}.hero-art{order:1;height:38svh;min-height:230px}.hero-slide-progress{margin-top:18px}.scroll-mouse{bottom:8px}}
+@media(prefers-reduced-motion:reduce){.floating-header{transition:none}}
