@@ -54,7 +54,9 @@ export async function cancelOwnedBooking(
     recorded AS (
       INSERT INTO booking_events
         (booking_id, action, previous_status, actor_id, actor_role, updated_at, created_at)
-      SELECT id, 'cancelled', previous_status, ${identity.customerId}, 'customer', NOW(), NOW()
+      SELECT id, 'cancelled'::public.enum_booking_events_action,
+              previous_status::text::public.enum_booking_events_previous_status,
+              ${identity.customerId}, 'customer'::public.enum_booking_events_actor_role, NOW(), NOW()
       FROM changed
       RETURNING booking_id
     )
