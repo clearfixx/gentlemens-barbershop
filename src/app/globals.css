@@ -218,3 +218,13 @@
   .hero--photographic .hero-chair{transform:translate3d(calc(var(--chair-progress,0) * -125vw),calc(var(--chair-progress,0) * 4vh),0) scale(calc(1 + var(--chair-progress,0) * .05))}
 }
 @media(prefers-reduced-motion:reduce){.hero--photographic .hero-copy{transform:none!important;opacity:1!important}}
+
+/* Scroll choreography is driven by the same rAF progress for chair and copy.
+   Disable conflicting keyframes and CSS variable transforms. */
+.hero--photographic .hero-chair{animation:none!important}
+.hero--photographic .hero-copy{animation:none!important;color:#f5e9d8}
+.hero--photographic .hero-copy h1,.hero--photographic .hero-copy h1 span,.hero--photographic .hero-copy h1 em,.hero--photographic .hero-copy .eyebrow,.hero--photographic .hero-copy>p,.hero--photographic .hero-copy .hero-actions,.hero--photographic .hero-copy .hero-actions a:not(.cta){color:#f5e9d8}
+.hero--photographic .hero-copy .cta{color:#201711}
+@media(min-width:1024px) and (min-height:650px) and (prefers-reduced-motion:no-preference){
+  .hero--photographic .hero-chair,.hero--photographic .hero-copy{transform:none;opacity:1}
+}
