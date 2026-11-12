@@ -33,6 +33,19 @@ async function main() {
   assert.equal(created.startsAt, request.startsAt)
   assert.equal(created.endsAt, '2037-01-02T10:00:00.000Z')
   assert.equal(created.status, 'pending')
+  // Status validation runs inside Payload hooks even with overrideAccess.
+  // A rejected transition must not modify the persisted booking.
+  await assert.rejects(
+    payload.update({
+      collection: 'bookings', id: created.id, overrideAccess: true,
+      data: { status: 'completed' },
+    }),
+    /Invalid booking status transition/,
+  )
+  const afterRejectedTransition = await payload.findByID({
+    collection: 'bookings', id: created.id, overrideAccess: true,
+  })
+  assert.equal(afterRejectedTransition.status, 'pending')
   await assert.rejects(createPayloadBooking(payload, request), {
     name: 'RangeError', message: 'Selected booking slot is unavailable',
   })
@@ -171,6 +184,13 @@ async function main() {
   const afterNoShow = await createPayloadBooking(payload, request)
   assert.notEqual(afterNoShow.id, replacement.id)
   assert.equal(afterNoShow.status, 'pending')
+  await assert.rejects(
+    payload.update({
+      collection: 'bookings', id: replacement.id, overrideAccess: true,
+      data: { status: 'confirmed' },
+    }),
+    /Invalid booking status transition/,
+  )
   console.info('Trusted booking service: catalog, schedule, persistence and retry isolation, overlap rejection and status-based slot release verified')
 }
 
