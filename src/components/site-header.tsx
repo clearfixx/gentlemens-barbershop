@@ -34,7 +34,7 @@ export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messa
         <UserMenu locale={locale} />
         <ThemeToggle locale={locale} />
         <LocaleSwitcher locale={locale} messages={t} />
-        <Link className="header-booking" href={`${prefix}/booking`}>{locale === 'uk' ? 'Записатися онлайн' : 'Book online'} →</Link>
+        <Link className="header-booking" href={`${prefix}/booking`}>{locale === 'uk' ? 'Записатися онлайн' : 'Book online'} →</Link>\n        <details className="header-mobile-nav"><summary aria-label={locale === 'uk' ? 'Відкрити навігацію' : 'Open navigation'}><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary><nav aria-label={t.nav.primary}>{links.map(link => <Link key={link.href} href={link.href}>{link.label}</Link>)}</nav></details>
       </div>
     </FloatingHeaderShell>
   )
