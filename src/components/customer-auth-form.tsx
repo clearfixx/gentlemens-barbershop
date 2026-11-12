@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
 import type { Locale } from '@/i18n/config'
 
@@ -9,7 +8,6 @@ type Mode = 'login' | 'register'
 
 export function CustomerAuthForm({ locale }: { locale: Locale }) {
   const uk = locale === 'uk'
-  const router = useRouter()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -53,8 +51,8 @@ export function CustomerAuthForm({ locale }: { locale: Locale }) {
         )
       }
 
-      router.replace(`/${locale}`)
-      router.refresh()
+      // A full navigation guarantees the navbar re-checks the new HTTP-only session.
+      window.location.assign(`/${locale}`)
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : (uk ? 'Сталася помилка. Спробуй ще раз.' : 'An error occurred. Please try again.'))
     } finally {
