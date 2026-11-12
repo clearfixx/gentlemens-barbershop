@@ -168,7 +168,14 @@ jobs:
       - name: Verify read-only booking deployment preflight
         shell: bash
         run: |
-          bash scripts/preflight-booking-deployment.sh
+          set -euo pipefail
+          # The regular integration DB is initialized by Payload's schema push
+          # and has no recorded migrations. Use the separate production-mode
+          # migration rehearsal DB to verify the deployment migration ledger.
+          migration_database_url="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci"
+          DATABASE_URL="$migration_database_url" CONFIRM_BOOKING_MIGRATION=apply \
+            bash scripts/apply-booking-integrity.sh
+          DATABASE_URL="$migration_database_url" bash scripts/preflight-booking-deployment.sh
           # A preflight must reject a missing connection string without writes.
           if env -u DATABASE_URL bash scripts/preflight-booking-deployment.sh; then
             echo "Booking deployment preflight accepted a missing database URL"
