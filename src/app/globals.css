@@ -228,3 +228,44 @@
 @media(min-width:1024px) and (min-height:650px) and (prefers-reduced-motion:no-preference){
   .hero--photographic .hero-chair,.hero--photographic .hero-copy{transform:none;opacity:1}
 }
+
+/* Landing header overlay: never allocate document height above the Hero.
+   Earlier negative-margin offsets depended on the header's actual height and
+   exposed the light page background when switching themes. */
+.landing>.site-header--landing{
+  position:fixed;
+  inset:0 0 auto;
+  width:100%;
+  margin:0;
+  box-sizing:border-box;
+  z-index:60;
+  color:#f5e9d8;
+  border-bottom-color:transparent;
+}
+.landing>.site-header--landing:not(.is-scrolled){
+  background:transparent;
+  border-color:transparent;
+}
+.landing>.site-header--landing.is-scrolled{
+  background:color-mix(in srgb,var(--surface) 94%,transparent);
+  color:var(--ink);
+  border-bottom-color:var(--border);
+}
+.landing>.site-header--landing:not(.is-scrolled) .site-nav a,
+.landing>.site-header--landing:not(.is-scrolled) .site-brand,
+.landing>.site-header--landing:not(.is-scrolled) .theme-toggle{
+  color:#f5e9d8;
+}
+.landing>.site-header--landing.is-scrolled .site-nav a,
+.landing>.site-header--landing.is-scrolled .site-brand{
+  color:var(--ink);
+}
+.landing>.site-header--landing:not(.is-scrolled) .header-booking{
+  background:#d6ad69;
+  color:#201711;
+  border-color:#d6ad69;
+}
+.landing>.hero-scene{margin-top:0}
+@media(max-width:600px){
+  .landing>.site-header--landing{margin:0}
+}
