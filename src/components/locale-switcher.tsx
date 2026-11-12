@@ -25,10 +25,6 @@ export function LocaleSwitcher({
   const root = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setOpen(false)
-  }, [pathname])
-
-  useEffect(() => {
     if (!open) return
     const onOutside = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as Node)) setOpen(false)
