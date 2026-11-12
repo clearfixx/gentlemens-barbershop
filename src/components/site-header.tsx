@@ -16,7 +16,7 @@ export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messa
   const [activeSection, setActiveSection] = useState<string | null>(null)
 
   useEffect(() => {
-    const update = () => setScrolled(window.scrollY > 24)
+    const update = () => setScrolled(previous => window.scrollY > (previous ? 24 : 40))
     update()
     window.addEventListener('scroll', update, { passive: true })
     return () => window.removeEventListener('scroll', update)

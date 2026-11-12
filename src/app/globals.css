@@ -150,3 +150,19 @@
 .hero-slider__progress>span.is-playing{animation:hero-slide-progress 7s linear forwards}
 @keyframes hero-slide-progress{to{transform:scaleX(1)}}
 @media(prefers-reduced-motion:reduce){.hero-slider__progress{display:none}}
+
+/* Hero/Navbar v1.0: staged reveal, precise progress and quiet frosted glass. */
+.site-header--landing{transition:background-color .35s ease,border-color .35s ease,padding .35s ease;backdrop-filter:none}
+.site-header--landing.is-scrolled{background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-color:var(--border)}
+@supports not (backdrop-filter:blur(14px)){.site-header--landing.is-scrolled{background:var(--surface)}}
+.hero--slider .hero-copy--reveal{animation:none}
+.hero--slider .hero-enter{animation:hero-staged-enter .6s ease-out both}
+.hero--slider .hero-enter--eyebrow{animation-delay:.15s}
+.hero--slider .hero-enter--title{animation-delay:.45s}
+.hero--slider .hero-enter--description{animation-delay:.75s}
+.hero--slider .hero-enter--actions{animation-delay:.9s}
+.hero--slider .hero-enter--controls{animation-delay:1.1s}
+.hero--slider .hero-enter--scroll{animation-delay:1.25s}
+@keyframes hero-staged-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.hero-slider__progress>span,.hero-slider__progress>span.is-playing{animation:none;transition:none}
+@media(prefers-reduced-motion:reduce){.hero--slider .hero-enter{animation:none}}
