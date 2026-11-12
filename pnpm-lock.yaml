@@ -17,6 +17,9 @@ importers:
       '@payloadcms/richtext-lexical':
         specifier: ^3.0.0
         version: 3.93.0(@faceless-ui/modal@3.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@faceless-ui/scroll-info@2.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@payloadcms/next@3.93.0(@types/react@19.3.0)(graphql@16.15.0)(monaco-editor@0.57.0)(next@16.4.5(@babel/core@7.29.13)(@types/node@22.20.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.77.4))(payload@3.93.0(graphql@16.15.0)(typescript@5.9.3))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3))(@types/react@19.3.0)(monaco-editor@0.57.0)(next@16.4.5(@babel/core@7.29.13)(@types/node@22.20.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.77.4))(payload@3.93.0(graphql@16.15.0)(typescript@5.9.3))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3)(yjs@13.6.33)
+      lucide-react:
+        specifier: 1.72.0
+        version: 1.72.0(react@19.3.1)
       next:
         specifier: ^16.3.3
         version: 16.4.5(@babel/core@7.29.13)(@types/node@22.20.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(sass@1.77.4)
@@ -53,6 +56,11 @@ importers:
         version: 5.9.3
 
 packages:
+
+  lucide-react@1.72.0:
+    resolution: {tarball: https://registry.npmjs.org/lucide-react/-/lucide-react-1.72.0.tgz}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   '@apidevtools/json-schema-ref-parser@11.9.3':
     resolution: {integrity: sha512-60vepv88RwcJtSHrD6MjIL6Ta3SOYbgfnkHb+ppAVK+o9mXprRtulx7VlRl3lN3bbvysAfCS7WMVfhUYemB0IQ==}
@@ -3594,6 +3602,10 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  lucide-react@1.72.0(react@19.3.1):
+    dependencies:
+      react: 19.3.1
 
   '@apidevtools/json-schema-ref-parser@11.9.3':
     dependencies:
