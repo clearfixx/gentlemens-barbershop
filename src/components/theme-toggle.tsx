@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { Moon, Sun } from 'lucide-react'
 import { getFallbackMessages } from '@/i18n/messages'
 import { type Locale } from '@/i18n/config'
 
@@ -26,8 +27,8 @@ export function ThemeToggle({ locale }: { locale: Locale }) {
     <button type="button" className="theme-toggle" onClick={toggle}
       aria-label={t.actions.switchTheme}
       title={t.actions.switchTheme}>
-      <span className="theme-toggle__moon" aria-hidden="true">☾</span>
-      <span className="theme-toggle__sun" aria-hidden="true">☀</span>
+      <Moon className="theme-toggle__moon" size={21} strokeWidth={1.75} aria-hidden="true" />
+      <Sun className="theme-toggle__sun" size={21} strokeWidth={1.75} aria-hidden="true" />
     </button>
   )
 }
