@@ -1,9 +1,15 @@
 name: Validate scaffold
 
 on:
-  # Temporarily manual-only while GitHub Actions billing is blocked.
-  # Restore PR checks once billing is resolved.
+  push:
+    branches:
+      - '**'
   workflow_dispatch:
+
+# A newer push supersedes unfinished checks for the same branch.
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
