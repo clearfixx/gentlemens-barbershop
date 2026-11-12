@@ -48,12 +48,31 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (length && /^\d+$/.test(length) && Number(length) > 128) {
       return NextResponse.json({ error: 'Request too large' }, { status: 413, headers: noStore })
     }
-    const text = await request.text()
-    if (new TextEncoder().encode(text).length > 128) {
-      return NextResponse.json({ error: 'Request too large' }, { status: 413, headers: noStore })
+    if (!request.body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers: noStore })
+    const reader = request.body.getReader()
+    const decoder = new TextDecoder('utf-8', { fatal: true })
+    let raw = ''
+    let bytes = 0
+    let completed = false
+    try {
+      while (true) {
+        const chunk = await reader.read()
+        if (chunk.done) { completed = true; break }
+        bytes += chunk.value.byteLength
+        if (bytes > 128) {
+          return NextResponse.json({ error: 'Request too large' }, { status: 413, headers: noStore })
+        }
+        raw += decoder.decode(chunk.value, { stream: true })
+      }
+      raw += decoder.decode()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers: noStore })
+    } finally {
+      if (!completed) await reader.cancel().catch(() => undefined)
+      reader.releaseLock()
     }
     let data: unknown
-    try { data = JSON.parse(text) } catch {
+    try { data = JSON.parse(raw) } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers: noStore })
     }
     if (!data || typeof data !== 'object' || Array.isArray(data) ||
