@@ -117,9 +117,9 @@ export function HeroSlider({ locale }: { locale: Locale }) {
         </div>
         <div className="barber-hero__controls" aria-label={locale === 'uk' ? 'Керування слайдами' : 'Slide controls'}>
           <span className="barber-hero__number">{String(active + 1).padStart(2, '0')}</span>
-          <div className="barber-hero__track" aria-hidden="true">
+          <button type="button" className="barber-hero__track" aria-label={locale === 'uk' ? 'Наступний слайд' : 'Next slide'} onClick={() => goTo((active + 1) % slides[locale].length)}>
             <span key={resetKey} className={`barber-hero__fill${running ? ' barber-hero__fill--running' : ''}`} />
-          </div>
+          </button>
           <span className="barber-hero__number">03</span>
           <button
             type="button"
@@ -130,17 +130,6 @@ export function HeroSlider({ locale }: { locale: Locale }) {
             {playing ? 'Ⅱ' : '▶'}
           </button>
         </div>
-      </div>
-      <div className="barber-hero__dots" aria-label={locale === 'uk' ? 'Обрати слайд' : 'Choose slide'}>
-        {slides[locale].map((_, index) => (
-          <button
-            key={index}
-            type="button"
-            aria-label={`${locale === 'uk' ? 'Слайд' : 'Slide'} ${index + 1}`}
-            aria-current={active === index ? 'true' : undefined}
-            onClick={() => goTo(index)}
-          />
-        ))}
       </div>
       <a className="barber-hero__down" href="#about" aria-label={locale === 'uk' ? 'До наступної секції' : 'Next section'}>
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
