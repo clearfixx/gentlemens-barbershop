@@ -50,7 +50,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     social: 'МИ В СОЦМЕРЕЖАХ',
     intro: 'Ми поєднуємо традиції барбер-культури з сучасним сервісом, щоб ти завжди виглядав бездоганно.',
     benefitNames: ['Досвідчені майстри', 'Преміальний сервіс', 'Якісна косметика', 'Атмосфера', 'Індивідуальний підхід'],
-    benefitDetails: ['Увага до кожної деталі', 'Комфорт у кожному візиті', 'Професійний догляд', 'Класика та сучасність', 'Стиль, створений для тебе'],
+    benefitDetails: ['Команда професіоналів', 'Комфорт, увага та турбота про кожного', 'Професійні бренди для догляду вдома', 'Класичний стиль і сучасний комфорт', 'Рішення, що підкреслюють твій стиль'],
     moreTeam: 'Переглянути всю команду',
     moreServices: 'Переглянути послуги',
     moreProducts: 'Усі товари',
@@ -203,6 +203,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     </section>
 
     <section id="social" className="home-section home-section--social">
+      <span id="news" className="home-anchor" aria-hidden="true" />
       <div className="home-container">
         <h2 className="home-section__heading">{labels.social}</h2>
         <p className="home-section__intro">{labels.socialCopy}</p>
@@ -211,12 +212,28 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
     <footer className="home-footer">
       <div className="home-container home-footer__layout">
-        <p>GENTLEMEN’S BARBERSHOP</p>
-        <nav aria-label={t.nav.primary}>
+        <div className="home-footer__brand">
+          <strong>GENTLEMEN’S <small>BARBERSHOP</small></strong>
+          <p>{uk ? 'Місце, де стиль стає традицією. Сучасний догляд для чоловіків із характером.' : 'Where style becomes tradition. Modern grooming for men with character.'}</p>
+        </div>
+        <nav aria-label={t.nav.primary} className="home-footer__nav">
+          <h3>{uk ? 'Навігація' : 'Navigation'}</h3>
           <Link href={`/${locale}/#about`}>{labels.benefits}</Link>
           <Link href={`/${locale}/#team`}>{labels.team}</Link>
+          <Link href={`/${locale}/#services`}>{labels.services}</Link>
+          <Link href={`/${locale}/#products`}>{labels.products}</Link>
           <Link href={`/${locale}/#locations`}>{labels.findUs}</Link>
         </nav>
+        <nav className="home-footer__nav" aria-label={uk ? 'Клієнтам' : 'For clients'}>
+          <h3>{uk ? 'Клієнтам' : 'For clients'}</h3>
+          <Link href={`/${locale}/booking`}>{labels.booking}</Link>
+          <Link href={`/${locale}/catalog`}>{labels.moreServices}</Link>
+          <Link href={`/${locale}/#questions`}>{labels.questions}</Link>
+        </nav>
+        <div className="home-footer__newsletter">
+          <h3>{uk ? 'Підписка на розсилку' : 'Newsletter'}</h3>
+          <p>{uk ? 'Новини та спеціальні пропозиції — незабаром.' : 'News and special offers — coming soon.'}</p>
+        </div>
       </div>
       <div className="home-container home-footer__bottom">© 2026 GENTLEMEN’S BARBERSHOP</div>
     </footer>
