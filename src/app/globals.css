@@ -185,3 +185,11 @@
 @media(max-width:1023px),(max-height:649px),(pointer:coarse){.hero-scene{height:auto}.hero--photographic{min-height:100svh}.hero--photographic .hero-chair{transform:none;width:min(56vw,580px);height:65%;right:-6%}.hero--photographic .hero-copy{width:min(65%,560px);opacity:1}}
 @media(max-width:720px){.hero--photographic{display:flex;align-items:flex-start;min-height:100svh;padding:150px 24px 110px}.hero--photographic .hero-photo{background-position:62% center}.hero--photographic .hero-copy{width:100%;max-width:500px;opacity:1}.hero--photographic .hero-chair{right:-15%;bottom:3%;height:42%;width:80vw;opacity:.65}.hero--photographic .hero-copy h1{font-size:clamp(38px,10vw,62px)}.hero--photographic .hero-slider__controls{max-width:400px}}
 @media(prefers-reduced-motion:reduce){.hero-scene{height:auto!important}.hero--photographic{position:relative!important}.hero--photographic .hero-chair,.hero--photographic .hero-photo{transform:none!important;will-change:auto}.hero--photographic .hero-copy{opacity:1}}
+
+/* Performance correction: scroll/progress are written to CSS variables via refs,
+   without a React render per animation frame. Restrict large-layer work. */
+.hero--photographic .hero-photo{transform:none}
+.hero--photographic .hero-chair{will-change:auto}
+@media(min-width:1024px) and (min-height:650px) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  .hero--photographic .hero-chair{will-change:transform}
+}

@@ -15,9 +15,9 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
   const [focused, setFocused] = useState(false)
   const [visible, setVisible] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(true)
-  const [progress, setProgress] = useState(0)
+  const progressRef = useRef<HTMLSpanElement>(null)
   const sceneRef = useRef<HTMLDivElement>(null)
-  const [sceneProgress, setSceneProgress] = useState(0)
+
   const elapsedRef = useRef(0)
   const lastTickRef = useRef<number | null>(null)
   const slides = [
@@ -56,7 +56,7 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
         elapsedRef.current %= INTERVAL
         setActive(current => (current + 1) % slides.length)
       }
-      setProgress(elapsedRef.current / INTERVAL)
+      progressRef.current?.style.setProperty('transform', `scaleX(${elapsedRef.current / INTERVAL})`)
       frame = window.requestAnimationFrame(tick)
     }
     frame = window.requestAnimationFrame(tick)
@@ -68,11 +68,14 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
 
   const chooseSlide = (index: number) => {
     elapsedRef.current = 0
-    setProgress(0)
+    progressRef.current?.style.setProperty('transform', 'scaleX(0)')
     setActive(index)
   }
 
   useEffect(() => {
+    const element = sceneRef.current
+    if (!element) return
+    element.style.setProperty('--chair-progress', '0')
     if (reducedMotion) return
     const desktop = window.matchMedia('(min-width: 1024px) and (min-height: 650px) and (pointer: fine)')
     if (!desktop.matches) return
@@ -84,22 +87,25 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
         const element = sceneRef.current
         if (!element) return
         const distance = Math.max(element.offsetHeight - window.innerHeight, 1)
-        setSceneProgress(Math.max(0, Math.min(1, -element.getBoundingClientRect().top / distance)))
+        const value = Math.max(0, Math.min(1, -element.getBoundingClientRect().top / distance))
+        element.style.setProperty('--chair-progress', String(value))
       })
     }
     update()
     window.addEventListener('scroll', update, { passive: true })
     window.addEventListener('resize', update)
+    desktop.addEventListener('change', update)
     return () => {
       window.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
+      desktop.removeEventListener('change', update)
       window.cancelAnimationFrame(frame)
     }
   }, [reducedMotion])
 
   const slide = slides[active]
   return (
-    <div ref={sceneRef} className="hero-scene" style={{ ['--chair-progress' as string]: reducedMotion ? 0 : sceneProgress }}>
+    <div ref={sceneRef} className="hero-scene">
     <section className="hero hero--editorial hero--slider hero--photographic" aria-labelledby="hero-title" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>
       <div className="hero-photo" aria-hidden="true" />
       <div className="hero-copy hero-copy--reveal">
@@ -109,7 +115,7 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
         <div className="hero-actions hero-enter hero-enter--actions"><Link className="cta" href={`/${locale}/booking`}>{messages.actions.planVisit}</Link><a href="#about">{messages.home.learnMore} ↗</a></div>
         <div className="hero-slider__controls hero-enter hero-enter--controls" aria-label={locale === 'uk' ? 'Керування слайдером' : 'Slider controls'}>
           {slides.map((_, index) => <button key={index} type="button" className={index === active ? 'is-active' : ''} aria-label={locale === 'uk' ? `Слайд ${index + 1}` : `Slide ${index + 1}`} aria-current={index === active ? 'true' : undefined} onClick={() => chooseSlide(index)}><span>{String(index + 1).padStart(2, '0')}</span></button>)}
-          <span className="hero-slider__progress" aria-hidden="true"><span style={{ transform: `scaleX(${progress})` }} /></span>
+          <span className="hero-slider__progress" aria-hidden="true"><span ref={progressRef} /></span>
           <button type="button" className="hero-slider__pause" aria-label={paused ? (locale === 'uk' ? 'Відновити слайдер' : 'Resume slider') : (locale === 'uk' ? 'Призупинити слайдер' : 'Pause slider')} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? '▶' : 'Ⅱ'}</button>
         </div>
       </div>
