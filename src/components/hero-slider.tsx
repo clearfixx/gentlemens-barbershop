@@ -8,7 +8,7 @@ import type { Locale } from '@/i18n/config'
 const slides = {
   uk: [
     { eyebrow: 'ПРЕМІАЛЬНИЙ БАРБЕРШОП', lines: ['СТИЛЬ.', 'ХАРАКТЕР.', 'ТИ.'], description: 'Сучасний сервіс догляду для чоловіків, який поєднує майстерність, атмосферу й увагу до деталей.' },
-    { eyebrow: 'ТРАДИЦІЇ ТА МАЙСТЕРНІСТЬ', lines: ['МАЙСТЕРНІСТЬ.', 'ТРАДИЦІЇ.', 'СТИЛЬ.'], description: 'Досвідчені майстри, які приділяють увагу кожній деталі вашого образу.' },
+    { eyebrow: 'ТРАДИЦІЇ ТА МАЙСТЕРНІСТЬ', lines: ['ТОЧНІСТЬ.', 'МАЙСТЕРНІСТЬ.', 'СТИЛЬ.'], description: 'Досвідчені майстри, які приділяють увагу кожній деталі вашого образу.' },
     { eyebrow: 'ВАШ ЧАС — ВАШ СТИЛЬ', lines: ['АТМОСФЕРА.', 'КОМФОРТ.', 'ТИ.'], description: 'Місце, де можна відпочити, довіритися майстру та залишитися собою.' },
   ],
   en: [
@@ -61,6 +61,6 @@ export function HeroSlider({ locale }: { locale: Locale }) {
     </div>
     <div className="hero-art"><Image src="/images/hero/barber-chair.png" alt={locale === 'uk' ? 'Класичне барберське крісло' : 'Classic barber chair'} width={1024} height={1400} className="hero-chair" priority sizes="(max-width: 720px) 90vw, 42vw" /></div>
     <div className="hero-slide-dots" aria-label={locale === 'uk' ? 'Обрати слайд' : 'Choose slide'}>{items.map((_, i) => <button key={i} type="button" aria-label={`${locale === 'uk' ? 'Слайд' : 'Slide'} ${i + 1}`} aria-current={index === i ? 'true' : undefined} onClick={() => select(i)} />)}</div>
-    <a className="scroll-hint scroll-mouse" href="#about" aria-label={locale === 'uk' ? 'До наступної секції' : 'Next section'}><svg viewBox="0 0 32 48" width="32" height="48" fill="none" aria-hidden="true"><rect x="5" y="2" width="22" height="42" rx="11" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></a>
+    <a className="scroll-hint hero-scroll-arrow" href="#about" aria-label={locale === 'uk' ? 'До наступної секції' : 'Next section'}><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v17m-6-6 6 6 6-6"/></svg></a>
   </section>
 }
