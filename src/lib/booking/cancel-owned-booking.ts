@@ -33,13 +33,33 @@ export async function cancelOwnedBooking(
 ): Promise<{ id: number; status: 'cancelled' }> {
   const identity = parseCancellationIdentity(bookingId, actor)
   const result = await payload.db.drizzle.execute(sql`
-    UPDATE bookings
-    SET status = 'cancelled', updated_at = NOW()
-    WHERE id = ${identity.bookingId}
-      AND customer_id = ${identity.customerId}
-      AND status IN ('pending', 'confirmed')
-      AND starts_at > NOW()
-    RETURNING id
+    WITH eligible AS MATERIALIZED (
+      SELECT booking.id, booking.status
+      FROM bookings AS booking
+      JOIN locations AS location ON location.id = booking.location_id
+      WHERE booking.id = ${identity.bookingId}
+        AND booking.customer_id = ${identity.customerId}
+        AND booking.status IN ('pending', 'confirmed')
+        AND booking.starts_at > NOW() +
+          (location.cancellation_deadline_minutes * INTERVAL '1 minute')
+      FOR UPDATE OF booking
+    ),
+    changed AS (
+      UPDATE bookings AS booking
+      SET status = 'cancelled', updated_at = NOW()
+      FROM eligible
+      WHERE booking.id = eligible.id AND booking.status = eligible.status
+      RETURNING booking.id, eligible.status AS previous_status
+    ),
+    recorded AS (
+      INSERT INTO booking_events
+        (booking_id, action, previous_status, actor_id, actor_role, updated_at, created_at)
+      SELECT id, 'cancelled', previous_status, ${identity.customerId}, 'customer', NOW(), NOW()
+      FROM changed
+      RETURNING booking_id
+    )
+    SELECT changed.id
+    FROM changed JOIN recorded ON recorded.booking_id = changed.id
   `)
   if (!Array.isArray(result.rows) || result.rows.length > 1) {
     throw new Error('Unexpected booking cancellation response')
