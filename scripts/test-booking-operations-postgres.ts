@@ -155,6 +155,33 @@ async function main() {
   assert.equal(barberEvents.docs[0]?.previousStatus, 'pending')
   assert.equal(barberEvents.docs[0]?.actor, barberUser.id)
   assert.equal(barberEvents.docs[0]?.actorRole, 'assigned_barber')
+
+  // A customer cancellation racing a barber confirmation must converge on
+  // one status and exactly one event. A loser must report a conflict, never
+  // append a second audit entry or silently overwrite the winner.
+  const raceBooking = pending.find(booking => booking.startsAt === day + 'T13:00:00.000Z')
+  assert.ok(raceBooking, 'Missing pending 13:00 race fixture')
+  await payload.update({
+    collection: 'bookings', id: raceBooking.id, overrideAccess: true,
+    data: { customer: customerUser.id },
+  })
+  const contenders = await Promise.allSettled([
+    cancelOwnedBooking(payload, String(raceBooking.id), customerActor),
+    changeOwnBarberBookingStatus(payload, String(raceBooking.id), 'confirmed', barberActor),
+  ])
+  assert.equal(contenders.filter(result => result.status === 'fulfilled').length, 1)
+  assert.equal(contenders.filter(result => result.status === 'rejected').length, 1)
+  const raceRecord = await payload.findByID({
+    collection: 'bookings', id: raceBooking.id, overrideAccess: true, depth: 0,
+  })
+  assert.ok(['cancelled', 'confirmed'].includes(raceRecord.status))
+  const raceEvents = await payload.find({
+    collection: 'booking-events', overrideAccess: true, depth: 0,
+    where: { booking: { equals: raceBooking.id } },
+  })
+  assert.equal(raceEvents.totalDocs, 1, 'Concurrent operations must create one audit event')
+  assert.equal(raceEvents.docs[0]?.action, raceRecord.status)
+  assert.equal(raceEvents.docs[0]?.previousStatus, 'pending')
   console.info('Booking operations PostgreSQL integration passed: staff scope, history isolation, ownership, atomic cancellation and status CAS')
 }
 
