@@ -17,3 +17,7 @@ Retention is **not automatically scheduled**: a deployment operator must configu
 ## HTTP integration
 
 Both booking POST and status PATCH now consume a global, PostgreSQL-backed budget after the existing local defense-in-depth budget. The SQL call uses Payload's database adapter and never reads untrusted forwarded identity headers. A missing migration or database error fails closed before authentication/business mutation. The existing production write gate remains closed; shared limiter use is currently exercised only by explicitly enabled non-production HTTP writes. Global budget: 20 requests per fixed minute across all application instances, shared between both endpoints. This is deliberately conservative and should be revisited before production activation.
+
+## Scheduled retention cleanup
+
+Run `CONFIRM_BOOKING_RATE_LIMIT_CLEANUP=prune bash scripts/prune-booking-rate-limit.sh` with a trusted `DATABASE_URL` after the managed migration is installed. This **mutates the database**, so the explicit approval variable is required. The script uses PostgreSQL's clock and preserves the last 24 hours of fixed-minute windows; it applies a 30-second statement timeout and stops on SQL errors. Schedule it with the deployment's trusted cron/scheduler (for example, hourly), monitor failures and table growth. The script does **not** register a scheduler by itself. Never run against an unreviewed database.
