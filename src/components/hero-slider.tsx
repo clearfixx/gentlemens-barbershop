@@ -73,10 +73,7 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
   }
 
   useEffect(() => {
-    if (reducedMotion) {
-      setSceneProgress(0)
-      return
-    }
+    if (reducedMotion) return
     const desktop = window.matchMedia('(min-width: 1024px) and (min-height: 650px) and (pointer: fine)')
     if (!desktop.matches) return
     let frame = 0
@@ -102,7 +99,7 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
 
   const slide = slides[active]
   return (
-    <div ref={sceneRef} className="hero-scene" style={{ ['--chair-progress' as string]: sceneProgress }}>
+    <div ref={sceneRef} className="hero-scene" style={{ ['--chair-progress' as string]: reducedMotion ? 0 : sceneProgress }}>
     <section className="hero hero--editorial hero--slider hero--photographic" aria-labelledby="hero-title" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>
       <div className="hero-photo" aria-hidden="true" />
       <div className="hero-copy hero-copy--reveal">
