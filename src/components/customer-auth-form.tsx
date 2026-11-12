@@ -67,8 +67,8 @@ export function CustomerAuthForm({ locale }: { locale: Locale }) {
         <h1 id="customer-auth-title">{mode === 'login' ? (uk ? 'З поверненням.' : 'Welcome back.') : (uk ? 'Створити профіль.' : 'Create an account.')}</h1>
         <p className="customer-auth__intro">
           {mode === 'login'
-            ? (uk ? 'Увійди, щоб керувати своїми записами.' : 'Sign in to manage your bookings.')
-            : (uk ? 'Зареєструйся, щоб користуватися персональним кабінетом.' : 'Sign up to use your personal account.')}
+            ? (uk ? 'Увійди до свого облікового запису.' : 'Sign in to your account.')
+            : (uk ? 'Створи обліковий запис для майбутніх візитів.' : 'Create an account for future visits.')}
         </p>
         <div className="customer-auth__tabs" role="group" aria-label={uk ? 'Тип форми' : 'Form type'}>
           <button type="button" className={mode === 'login' ? 'is-active' : ''} aria-pressed={mode === 'login'} onClick={() => { setMode('login'); setError('') }}>
