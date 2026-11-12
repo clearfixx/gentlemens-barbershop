@@ -6,6 +6,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return generatePublicPageMetadata(params, 'home')
 }
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
@@ -35,7 +36,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <p>{t.home.heroIntro}</p>
         <div className="hero-actions"><Link className="cta" href={`/${locale}/booking`}>{t.actions.planVisit}</Link><a href="#about">{t.home.learnMore} ↗</a></div>
       </div>
-      <div className="hero-art" role="img" aria-label={t.home.heroArtLabel}><span>✦<small>GENTLEMEN’S BARBERSHOP</small></span></div>
+      <div className="hero-art"><Image src="/images/hero/barber-chair.png" alt={t.home.heroArtLabel} width={1024} height={1400} className="hero-chair" priority sizes="(max-width: 720px) 90vw, 46vw" /></div>
       <a className="scroll-hint scroll-mouse" href="#about" aria-label={t.home.scrollLabel}><svg viewBox="0 0 32 48" width="32" height="48" fill="none" aria-hidden="true"><rect x="5" y="2" width="22" height="42" rx="11" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></a>
     </section>
     <section id="about" className="content-section"><p className="eyebrow">{t.home.whyEyebrow}</p><h2>{t.home.whyTitle}</h2><p>{t.home.whyIntro}</p></section>
