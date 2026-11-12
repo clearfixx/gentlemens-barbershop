@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { Bell } from 'lucide-react'
 
 import { AuthNavControl } from './auth-nav-control'
 import { FloatingHeaderShell } from './floating-header-shell'
@@ -56,10 +57,7 @@ export function SiteHeader({
           role="img"
           aria-label={locale === 'uk' ? 'Сповіщення поки недоступні' : 'Notifications are not yet available'}
         >
-          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9" />
-            <path d="M10 21h4" />
-          </svg>
+          <Bell size={21} strokeWidth={1.75} aria-hidden="true" />
         </span>
         <AuthNavControl locale={locale} />
         <div className="header-preferences" role="group" aria-label={locale === 'uk' ? 'Вигляд і мова' : 'Appearance and language'}>
