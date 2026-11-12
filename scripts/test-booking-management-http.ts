@@ -138,6 +138,48 @@ async function run() {
     assert.equal(await state(bookingId), 'cancelled')
     assert.deepEqual(await audit(bookingId), ['confirmed', 'cancelled'])
     console.info('PASS: authenticated HTTP status changes, role scopes, validation and audit isolation')
+    // Force the shared budget to its limit and verify that neither HTTP write
+    // route can mutate a booking. Use the database clock to match SQL windows.
+    // Retry if the wall clock crosses a minute while the fixture is prepared.
+    let throttlingVerified = false
+    for (let attempt = 0; attempt < 3 && !throttlingVerified; attempt++) {
+      const now = Date.now()
+      const windowStart = Math.floor(now / 60_000) * 60_000
+      if (now - windowStart > 55_000) {
+        await new Promise(resolve => setTimeout(resolve, 5_500))
+        continue
+      }
+      await db.execute(sql`
+        INSERT INTO booking_rate_limit_buckets(identity, window_start, hits)
+        VALUES ('booking:write:global', ${windowStart}, 20)
+        ON CONFLICT (identity, window_start) DO UPDATE SET hits = 20
+      `)
+      const before = await state(bookingId)
+      const eventsBefore = await audit(bookingId)
+      const deniedPatch = await patch(bookingId, adminCookie, '{"status":"confirmed"}')
+      const deniedPost = await fetch(new URL('/api/bookings', origin), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: customerCookie },
+        body: '{}',
+      })
+      if (Math.floor(Date.now() / 60_000) !== Math.floor(now / 60_000)) {
+        // A minute rollover invalidates this fixture; retry next window.
+        continue
+      }
+      assert.equal(deniedPatch.status, 429, await deniedPatch.text())
+      assert.equal(deniedPost.status, 429, await deniedPost.text())
+      assert.ok(Number(deniedPatch.headers.get('retry-after')) >= 1)
+      assert.ok(Number(deniedPost.headers.get('retry-after')) >= 1)
+      assert.equal(await state(bookingId), before)
+      assert.deepEqual(await audit(bookingId), eventsBefore)
+      throttlingVerified = true
+    }
+    assert.ok(throttlingVerified, 'Unable to test shared HTTP budget without a minute rollover')
+    await db.execute(sql`
+      DELETE FROM booking_rate_limit_buckets WHERE identity = 'booking:write:global'
+    `)
+    console.info('PASS: shared HTTP limiter rejects POST and PATCH without booking mutation')
+
   } finally {
     for (const id of bookingIds) {
       await db.execute(sql`DELETE FROM booking_events WHERE booking_id = ${id}`)

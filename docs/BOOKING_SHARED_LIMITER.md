@@ -25,3 +25,7 @@ Run `CONFIRM_BOOKING_RATE_LIMIT_CLEANUP=prune bash scripts/prune-booking-rate-li
 ## Failure-path tests
 
 `booking-write-guard.test.ts` exercises the application-level SQL adapter using a fake Payload database connection: successful allowance, rejection and retry interval, database exception propagation, invalid response shapes and invalid clock values. This does not replace full HTTP integration testing; production writes remain disabled.
+
+## Local HTTP throttle regression
+
+The isolated `scripts/test-booking-management-http.ts` test now fills the shared global budget and checks both POST and PATCH return 429 with Retry-After, while existing booking status and audit events remain unchanged. It runs only against the explicit loopback test server and isolated integration database; it is **not** currently a CI step. Database-outage behavior is covered at the shared adapter level, not yet end-to-end HTTP.
