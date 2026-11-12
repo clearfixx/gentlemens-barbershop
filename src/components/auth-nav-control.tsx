@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import type { Locale } from '@/i18n/config'
@@ -106,14 +107,14 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
       aria-expanded={open}
       onClick={() => setOpen(value => !value)}
     >
-      {avatar ? (
-        <img src={avatar} alt="" className="auth-nav__avatar-image" />
-      ) : (
-        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-          <circle cx="12" cy="8" r="3.4" />
-          <path d="M5 20c0-4 2.5-6 7-6s7 2 7 6" />
-        </svg>
-      )}
+      <Image
+        src={avatar || '/images/brand/no-avatar.svg'}
+        alt=""
+        width={44}
+        height={44}
+        unoptimized
+        className="auth-nav__avatar-image"
+      />
     </button>
     {open && <div className="auth-nav__panel" role="menu" aria-label={uk ? 'Меню профілю' : 'Account menu'}>
       <p className="auth-nav__identity">{name}</p>
