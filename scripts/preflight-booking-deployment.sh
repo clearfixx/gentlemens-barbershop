@@ -18,7 +18,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
   -c 'SET TRANSACTION READ ONLY' \
   -f "$root/db/constraints/verify-booking-integrity.sql" \
-  -c "DO \\\$\\\$ BEGIN
+  -c "DO \$\$ BEGIN
     IF to_regclass('public.payload_migrations') IS NULL THEN
       RAISE EXCEPTION 'Missing Payload migration ledger';
     END IF;
@@ -28,6 +28,6 @@ psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
     ) THEN
       RAISE EXCEPTION 'Booking FK integrity migration is not recorded';
     END IF;
-  END \\\$\\\$;"
+  END \$\$;"
 
 echo "Read-only booking database preflight passed; production writes remain disabled"
