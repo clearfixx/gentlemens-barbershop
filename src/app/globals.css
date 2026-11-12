@@ -166,3 +166,22 @@
 @keyframes hero-staged-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .hero-slider__progress>span,.hero-slider__progress>span.is-playing{animation:none;transition:none}
 @media(prefers-reduced-motion:reduce){.hero--slider .hero-enter{animation:none}}
+
+/* Approved photographic Hero, with two independently composited local assets.
+   No global scroll hijack: only a short native sticky scene on large desktops. */
+.hero-scene{position:relative;min-height:100svh;background:#1b120d}
+.hero--photographic{position:relative;min-height:100svh;color:#f5e9d8;display:flex;align-items:center;padding:clamp(120px,12vh,170px) clamp(24px,7vw,125px) 95px;background:#1b120d;overflow:hidden}
+.hero--photographic .hero-photo{position:absolute;inset:-3%;background-image:linear-gradient(90deg,rgba(17,11,8,.89) 0%,rgba(17,11,8,.67) 36%,rgba(17,11,8,.1) 72%),url('/images/hero/barbershop-interior.webp');background-size:cover;background-position:center;transform:translate3d(calc(var(--chair-progress,0) * 1.8%),0,0) scale(1.04);pointer-events:none}
+.hero--photographic .hero-copy{width:min(47%,600px);max-width:600px;position:relative;z-index:3;opacity:calc(1 - var(--chair-progress,0) * .75)}
+.hero--photographic .hero-copy h1{color:#f5e9d8;font-family:Georgia,serif;line-height:1.02}
+.hero--photographic .hero-copy p,.hero--photographic .eyebrow{color:#f5e9d8}
+.hero--photographic .hero-actions a:not(.cta){color:#f5e9d8}
+.hero--photographic .hero-slider__controls button{color:#f5e9d8}
+.hero--photographic .hero-slider__controls button.is-active{color:#d6ad69}
+.hero--photographic .hero-chair{position:absolute;z-index:2;right:2%;bottom:3%;width:min(52vw,800px);height:83%;background:url('/images/hero/barber-chair.webp') center bottom/contain no-repeat;transform:translate3d(calc(var(--chair-progress,0) * -128vw),0,0) scale(calc(1 + var(--chair-progress,0) * .05));transform-origin:center bottom;pointer-events:none;will-change:transform}
+.hero--photographic .scroll-mouse{position:absolute;z-index:5;color:#f5e9d8}
+.hero--photographic .hero-slider__pause{color:#f5e9d8;border-color:rgba(245,233,216,.5)}
+@media(min-width:1024px) and (min-height:650px) and (pointer:fine){.hero-scene{height:155svh}.hero--photographic{position:sticky;top:0;height:100svh}}
+@media(max-width:1023px),(max-height:649px),(pointer:coarse){.hero-scene{height:auto}.hero--photographic{min-height:100svh}.hero--photographic .hero-chair{transform:none;width:min(56vw,580px);height:65%;right:-6%}.hero--photographic .hero-copy{width:min(65%,560px);opacity:1}}
+@media(max-width:720px){.hero--photographic{display:flex;align-items:flex-start;min-height:100svh;padding:150px 24px 110px}.hero--photographic .hero-photo{background-position:62% center}.hero--photographic .hero-copy{width:100%;max-width:500px;opacity:1}.hero--photographic .hero-chair{right:-15%;bottom:3%;height:42%;width:80vw;opacity:.65}.hero--photographic .hero-copy h1{font-size:clamp(38px,10vw,62px)}.hero--photographic .hero-slider__controls{max-width:400px}}
+@media(prefers-reduced-motion:reduce){.hero-scene{height:auto!important}.hero--photographic{position:relative!important}.hero--photographic .hero-chair,.hero--photographic .hero-photo{transform:none!important;will-change:auto}.hero--photographic .hero-copy{opacity:1}}

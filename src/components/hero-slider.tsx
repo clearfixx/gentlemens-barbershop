@@ -16,6 +16,8 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
   const [visible, setVisible] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(true)
   const [progress, setProgress] = useState(0)
+  const sceneRef = useRef<HTMLDivElement>(null)
+  const [sceneProgress, setSceneProgress] = useState(0)
   const elapsedRef = useRef(0)
   const lastTickRef = useRef<number | null>(null)
   const slides = [
@@ -70,9 +72,39 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
     setActive(index)
   }
 
+  useEffect(() => {
+    if (reducedMotion) {
+      setSceneProgress(0)
+      return
+    }
+    const desktop = window.matchMedia('(min-width: 1024px) and (min-height: 650px) and (pointer: fine)')
+    if (!desktop.matches) return
+    let frame = 0
+    const update = () => {
+      if (frame) return
+      frame = window.requestAnimationFrame(() => {
+        frame = 0
+        const element = sceneRef.current
+        if (!element) return
+        const distance = Math.max(element.offsetHeight - window.innerHeight, 1)
+        setSceneProgress(Math.max(0, Math.min(1, -element.getBoundingClientRect().top / distance)))
+      })
+    }
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+      window.cancelAnimationFrame(frame)
+    }
+  }, [reducedMotion])
+
   const slide = slides[active]
   return (
-    <section className="hero hero--editorial hero--slider" aria-labelledby="hero-title" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>
+    <div ref={sceneRef} className="hero-scene" style={{ ['--chair-progress' as string]: sceneProgress }}>
+    <section className="hero hero--editorial hero--slider hero--photographic" aria-labelledby="hero-title" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>
+      <div className="hero-photo" aria-hidden="true" />
       <div className="hero-copy hero-copy--reveal">
         <p className="eyebrow hero-enter hero-enter--eyebrow">{slide.eyebrow}</p>
         <h1 id="hero-title" key={active} className="hero-enter hero-enter--title">{slide.title.map((line, index) => <span key={index}>{line}<br /></span>)}{slide.accent && <em>{slide.accent}</em>}</h1>
@@ -84,8 +116,9 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
           <button type="button" className="hero-slider__pause" aria-label={paused ? (locale === 'uk' ? 'Відновити слайдер' : 'Resume slider') : (locale === 'uk' ? 'Призупинити слайдер' : 'Pause slider')} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? '▶' : 'Ⅱ'}</button>
         </div>
       </div>
-      <div className="hero-art hero-art--reveal" role="img" aria-label={messages.home.heroArtLabel}><span>✦<small>GENTLEMEN’S BARBERSHOP</small></span></div>
+      <div className="hero-chair hero-art--reveal" role="img" aria-label={messages.home.heroArtLabel} />
       <a className="scroll-hint scroll-mouse hero-enter hero-enter--scroll" href="#about" aria-label={messages.home.scrollLabel}><svg viewBox="0 0 32 48" width="32" height="48" fill="none" aria-hidden="true"><rect x="5" y="2" width="22" height="42" rx="11" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></a>
     </section>
+    </div>
   )
 }
