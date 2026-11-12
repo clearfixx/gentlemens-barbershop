@@ -186,49 +186,6 @@
 @media(max-width:720px){.hero--photographic{display:flex;align-items:flex-start;min-height:100svh;padding:150px 24px 110px}.hero--photographic .hero-photo{background-position:62% center}.hero--photographic .hero-copy{width:100%;max-width:500px;opacity:1}.hero--photographic .hero-chair{right:-15%;bottom:3%;height:42%;width:80vw;opacity:.65}.hero--photographic .hero-copy h1{font-size:clamp(38px,10vw,62px)}.hero--photographic .hero-slider__controls{max-width:400px}}
 @media(prefers-reduced-motion:reduce){.hero-scene{height:auto!important}.hero--photographic{position:relative!important}.hero--photographic .hero-chair,.hero--photographic .hero-photo{transform:none!important;will-change:auto}.hero--photographic .hero-copy{opacity:1}}
 
-/* Performance correction: scroll/progress are written to CSS variables via refs,
-   without a React render per animation frame. Restrict large-layer work. */
-.hero--photographic .hero-photo{transform:none}
-.hero--photographic .hero-chair{will-change:auto}
-@media(min-width:1024px) and (min-height:650px) and (pointer:fine) and (prefers-reduced-motion:no-preference){
-  .hero--photographic .hero-chair{will-change:transform}
-}
-
-/* Hero cinematic scroll v1.1: visible motion on desktop, without rerendering React.
-   Keep copy readable until the chair has begun its exit. */
-@media(min-width:1024px) and (min-height:650px) and (prefers-reduced-motion:no-preference){
-  .hero-scene{height:170svh}
-  .hero--photographic{position:sticky;top:0;height:100svh}
-  .hero--photographic .hero-chair{
-    transform:translate3d(calc(var(--chair-progress,0) * -125vw),calc(var(--chair-progress,0) * 4vh),0) scale(calc(1 + var(--chair-progress,0) * .05));
-    will-change:transform
-  }
-  .hero--photographic .hero-copy{
-    opacity:clamp(0,calc(1 - max(0,(var(--chair-progress,0) - .45)) * 1.82),1);
-    transform:translate3d(0,calc(var(--chair-progress,0) * -13vh),0);
-    will-change:transform,opacity
-  }
-  .hero--photographic .scroll-mouse{
-    opacity:clamp(0,calc(1 - var(--chair-progress,0) * 3),1)
-  }
-}
-@media(min-width:1024px) and (min-height:650px) and (pointer:coarse) and (prefers-reduced-motion:no-preference){
-  .hero-scene{height:170svh}
-  .hero--photographic{position:sticky;top:0;height:100svh}
-  .hero--photographic .hero-chair{transform:translate3d(calc(var(--chair-progress,0) * -125vw),calc(var(--chair-progress,0) * 4vh),0) scale(calc(1 + var(--chair-progress,0) * .05))}
-}
-@media(prefers-reduced-motion:reduce){.hero--photographic .hero-copy{transform:none!important;opacity:1!important}}
-
-/* Scroll choreography is driven by the same rAF progress for chair and copy.
-   Disable conflicting keyframes and CSS variable transforms. */
-.hero--photographic .hero-chair{animation:none!important}
-.hero--photographic .hero-copy{animation:none!important;color:#f5e9d8}
-.hero--photographic .hero-copy h1,.hero--photographic .hero-copy h1 span,.hero--photographic .hero-copy h1 em,.hero--photographic .hero-copy .eyebrow,.hero--photographic .hero-copy>p,.hero--photographic .hero-copy .hero-actions,.hero--photographic .hero-copy .hero-actions a:not(.cta){color:#f5e9d8}
-.hero--photographic .hero-copy .cta{color:#201711}
-@media(min-width:1024px) and (min-height:650px) and (prefers-reduced-motion:no-preference){
-  .hero--photographic .hero-chair,.hero--photographic .hero-copy{transform:none;opacity:1}
-}
-
 /* Landing header overlay: never allocate document height above the Hero.
    Earlier negative-margin offsets depended on the header's actual height and
    exposed the light page background when switching themes. */
@@ -270,9 +227,22 @@
   .landing>.site-header--landing{margin:0}
 }
 
-/* Video-reference choreography: horizontal chair only; text fades in place.
-   Override earlier experimental scale, vertical shift and scroll opacity rules. */
-@media(min-width:1024px) and (min-height:650px) and (prefers-reduced-motion:no-preference){
-  .hero--photographic .hero-chair{animation:none!important;transform:none;transform-origin:center bottom}
-  .hero--photographic .hero-copy{animation:none!important;transform:none;opacity:1}
+
+/* Static cinematic Hero: no sticky scroll scene or scroll-driven transforms.
+   Entrance runs once; navigation and the slide timer remain interactive. */
+.hero-scene,.landing>.hero-scene{height:auto;min-height:100svh;margin-top:0}
+.hero--photographic{position:relative;top:auto;height:auto;min-height:100svh}
+.hero--photographic .hero-chair{animation:hero-chair-arrive 850ms cubic-bezier(.2,.7,.2,1) 180ms both;transform:none;will-change:auto}
+.hero--photographic .hero-photo{animation:hero-photo-arrive 700ms ease-out both;transform:none}
+.hero--photographic .hero-copy{animation:none;transform:none;opacity:1;color:#f5e9d8;will-change:auto}
+.hero--photographic .hero-copy h1,.hero--photographic .hero-copy h1 span,.hero--photographic .hero-copy h1 em,.hero--photographic .hero-copy .eyebrow,.hero--photographic .hero-copy>p,.hero--photographic .hero-copy .hero-actions a:not(.cta){color:#f5e9d8}
+.hero--photographic .hero-copy .cta{color:#201711}
+@keyframes hero-chair-arrive{from{opacity:0;transform:translate3d(28px,0,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@keyframes hero-photo-arrive{from{opacity:0}to{opacity:1}}
+@media(min-width:1024px) and (min-height:650px){
+  .hero-scene{height:auto;min-height:100svh}
+  .hero--photographic{position:relative;top:auto;height:auto;min-height:100svh}
+}
+@media(prefers-reduced-motion:reduce){
+  .hero--photographic .hero-chair,.hero--photographic .hero-photo,.hero--photographic .hero-enter{animation:none!important;transform:none!important;opacity:1!important}
 }

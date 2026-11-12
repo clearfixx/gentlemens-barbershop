@@ -16,10 +16,6 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
   const [visible, setVisible] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(true)
   const progressRef = useRef<HTMLSpanElement>(null)
-  const sceneRef = useRef<HTMLDivElement>(null)
-  const chairRef = useRef<HTMLDivElement>(null)
-  const copyRef = useRef<HTMLDivElement>(null)
-  const scrollHintRef = useRef<HTMLAnchorElement>(null)
 
   const elapsedRef = useRef(0)
   const lastTickRef = useRef<number | null>(null)
@@ -75,58 +71,13 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
     setActive(index)
   }
 
-  useEffect(() => {
-    const scene = sceneRef.current
-    const chair = chairRef.current
-    const copy = copyRef.current
-    const hint = scrollHintRef.current
-    if (!scene || !chair || !copy) return
-
-    const desktop = window.matchMedia('(min-width: 1024px) and (min-height: 650px)')
-    let frame = 0
-    const update = () => {
-      if (frame) return
-      frame = window.requestAnimationFrame(() => {
-        frame = 0
-        const enabled = desktop.matches && !reducedMotion
-        const rect = scene.getBoundingClientRect()
-        const travel = Math.max(rect.height - window.innerHeight, 1)
-        const progress = enabled ? Math.max(0, Math.min(1, -rect.top / travel)) : 0
-
-        // Both layers exit to the left, with the chair travelling faster.
-        // Measure their actual bounds so the exit completes on any desktop width.
-        const chairDistance = chair.offsetLeft + chair.offsetWidth
-        const copyDistance = copy.offsetLeft + copy.offsetWidth
-        const chairX = -progress * (chairDistance + 32)
-        const copyX = -progress * (copyDistance + 32)
-        chair.style.transform = enabled ? `translate3d(${chairX.toFixed(1)}px,0,0)` : ''
-        copy.style.transform = enabled ? `translate3d(${copyX.toFixed(1)}px,0,0)` : ''
-        copy.style.opacity = ''
-        if (hint) hint.style.opacity = enabled ? String(Math.max(0, 1 - progress * 4)) : ''
-      })
-    }
-    update()
-    window.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('resize', update)
-    desktop.addEventListener('change', update)
-    return () => {
-      window.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
-      desktop.removeEventListener('change', update)
-      window.cancelAnimationFrame(frame)
-      chair.style.removeProperty('transform')
-      copy.style.removeProperty('transform')
-      copy.style.removeProperty('opacity')
-      hint?.style.removeProperty('opacity')
-    }
-  }, [reducedMotion])
 
   const slide = slides[active]
   return (
-    <div ref={sceneRef} className="hero-scene">
+    <div className="hero-scene">
     <section className="hero hero--editorial hero--slider hero--photographic" aria-labelledby="hero-title" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>
       <div className="hero-photo" aria-hidden="true" />
-      <div ref={copyRef} className="hero-copy hero-copy--reveal">
+      <div className="hero-copy hero-copy--reveal">
         <p className="eyebrow hero-enter hero-enter--eyebrow">{slide.eyebrow}</p>
         <h1 id="hero-title" key={active} className="hero-enter hero-enter--title">{slide.title.map((line, index) => <span key={index}>{line}<br /></span>)}{slide.accent && <em>{slide.accent}</em>}</h1>
         <p className="hero-enter hero-enter--description">{slide.description}</p>
@@ -137,8 +88,8 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
           <button type="button" className="hero-slider__pause" aria-label={paused ? (locale === 'uk' ? 'Відновити слайдер' : 'Resume slider') : (locale === 'uk' ? 'Призупинити слайдер' : 'Pause slider')} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? '▶' : 'Ⅱ'}</button>
         </div>
       </div>
-      <div ref={chairRef} className="hero-chair" role="img" aria-label={messages.home.heroArtLabel} />
-      <a ref={scrollHintRef} className="scroll-hint scroll-mouse hero-enter hero-enter--scroll" href="#about" aria-label={messages.home.scrollLabel}><svg viewBox="0 0 32 48" width="32" height="48" fill="none" aria-hidden="true"><rect x="5" y="2" width="22" height="42" rx="11" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></a>
+      <div className="hero-chair hero-chair--enter" role="img" aria-label={messages.home.heroArtLabel} />
+      <a className="scroll-hint scroll-mouse hero-enter hero-enter--scroll" href="#about" aria-label={messages.home.scrollLabel}><svg viewBox="0 0 32 48" width="32" height="48" fill="none" aria-hidden="true"><rect x="5" y="2" width="22" height="42" rx="11" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></a>
     </section>
     </div>
   )
