@@ -181,6 +181,13 @@ jobs:
             echo "Booking deployment preflight accepted a missing database URL"
             exit 1
           fi
+      - name: Verify atomic PostgreSQL shared booking limiter
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -f db/booking-rate-limit/disposable-limiter.sql \
+            -f db/booking-rate-limit/test-disposable-limiter.sql
       - name: Capture initialized localization schema for migration review
         shell: bash
         run: |
