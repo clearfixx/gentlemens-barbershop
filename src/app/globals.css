@@ -98,3 +98,16 @@
 @media(max-width:1050px){.mobile-navigation{display:block}.site-header{position:relative;z-index:20}.site-header__actions{margin-left:auto}}
 @media(max-width:600px){.site-header{flex-wrap:wrap}.site-brand{max-width:100%}.site-header__actions{width:100%;justify-content:flex-end;gap:8px}.header-booking{margin-right:auto;min-height:44px}.mobile-navigation__panel{right:0}}
 @media(prefers-reduced-motion:reduce){.mobile-navigation__panel{scroll-behavior:auto}}
+
+
+/* Scroll-aware navigation: translucent only over the landing hero.
+   The global booking action remains clickable in both header states. */
+.site-header{position:sticky;top:0;z-index:40;min-height:58px;padding-block:8px;background:var(--paper);transition:background-color .22s ease,min-height .22s ease,padding .22s ease,border-color .22s ease;isolation:isolate}
+.site-header--landing:not(.is-scrolled){min-height:45px;padding-block:3px;background:transparent;border-bottom-color:transparent}
+.site-header.is-scrolled{min-height:60px;padding-block:8px;background:color-mix(in srgb,var(--paper) 93%,transparent);border-bottom-color:var(--border);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.site-header--landing{margin-bottom:-45px}
+.site-header--landing.is-scrolled{margin-bottom:-60px}
+.site-header--landing:not(.is-scrolled) .site-nav a{color:var(--ink)}
+@media(max-width:1050px){.site-header{position:sticky;top:0;z-index:40}}
+@media(max-width:600px){.site-header--landing{margin-bottom:-88px}.site-header--landing.is-scrolled{margin-bottom:-104px}.site-header--landing:not(.is-scrolled){min-height:88px}.site-header.is-scrolled{min-height:104px}}
+@media(prefers-reduced-motion:reduce){.site-header{transition:none;backdrop-filter:none;-webkit-backdrop-filter:none}}

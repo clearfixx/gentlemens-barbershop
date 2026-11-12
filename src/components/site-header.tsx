@@ -1,3 +1,7 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { ThemeToggle } from './theme-toggle'
 import { LocaleSwitcher } from './locale-switcher'
@@ -6,6 +10,16 @@ import { type Locale } from '@/i18n/config'
 
 export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messages?: ReturnType<typeof getFallbackMessages> }) {
   const t = messages ?? getFallbackMessages(locale)
+  const pathname = usePathname()
+  const onLanding = pathname === `/${locale}` || pathname === `/${locale}/`
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 24)
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    return () => window.removeEventListener('scroll', update)
+  }, [pathname])
   const prefix = `/${locale}`
   const links = [
     { href: `${prefix}/#about`, label: t.nav.about },
@@ -16,7 +30,7 @@ export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messa
   ]
 
   return (
-    <header className="site-header">
+    <header className={`site-header${onLanding ? ' site-header--landing' : ''}${scrolled ? ' is-scrolled' : ''}`}>
       <Link href={prefix} className="site-brand" aria-label={`Gentlemen’s Barbershop — ${t.nav.home}`}>
         <span className="site-brand__symbol" aria-hidden="true">✦</span>
         <span>GENTLEMEN’S <small>BARBERSHOP</small></span>
