@@ -162,8 +162,12 @@
 .hero--slider .hero-slide-dots{display:none}
 .hero-scroll-arrow{position:absolute;left:50%;bottom:0;z-index:5;display:grid;place-items:center;width:48px;height:48px;transform:translate(-50%,50%);border:1px solid var(--gold);border-radius:50%;background:var(--paper);color:var(--gold);text-decoration:none;box-shadow:0 3px 14px rgba(0,0,0,.12)}
 .hero--slider{overflow:visible}
-:root[data-theme=dark] .floating-header .site-brand__logo{filter:brightness(0) invert(1)}
+/* Preserve the original multicolor logo in both themes. */
 @media(min-width:901px){.floating-header{top:0;left:0;right:0;min-height:45px;padding:5px 8.8%;border-radius:0}.floating-header--scrolled{top:12px;left:3%;right:3%;border-radius:14px;padding-left:3%;padding-right:3%}.floating-header .site-brand__logo{width:clamp(150px,11.5vw,195px)}.floating-header .site-nav{gap:clamp(12px,1.45vw,25px)}.floating-header .site-nav a{font-size:clamp(11px,.7vw,13px)}.floating-header .site-header__actions{gap:clamp(4px,.5vw,9px)}.floating-header .header-booking{min-height:40px}}
 @media(max-width:900px){.hero--slider .hero-copy{width:47%;margin-left:6%;padding-top:100px}.hero--slider h1{font-size:clamp(38px,4.8vw,55px)}.hero--slider .hero-art{right:0;width:53%;height:70%}}
 @media(max-width:720px){.hero--slider{min-height:100svh}.hero--slider .hero-copy{width:auto;min-height:0;margin:0;padding:110px 22px 0;max-width:100%}.hero--slider h1{font-size:clamp(39px,8vw,54px)}.hero--slider .hero-art{position:relative;right:auto;bottom:auto;align-self:center;width:100%;height:37svh;min-height:210px;margin:5px 0 25px;transform:none}.hero-scroll-arrow{width:42px;height:42px}}
 @media(prefers-reduced-motion:reduce){.hero-scroll-arrow{transition:none}}
+
+/* Preserve the artwork and avoid accidental horizontal scrolling on small screens. */
+.hero--slider{overflow:clip;overflow-clip-margin:25px}
+@media(max-width:720px){.hero--slider{display:flex;flex-direction:column;justify-content:flex-start;padding-bottom:50px}.hero--slider .hero-copy{flex:0 0 auto}.hero--slider .hero-art{flex:1 0 230px;max-height:42svh}.hero--slider .hero-slider-controls{margin-bottom:8px}.hero-scroll-arrow{bottom:0}}
