@@ -145,3 +145,32 @@
 .hero--slider .scroll-mouse{bottom:22px}
 @media(max-width:720px){.hero--slider{min-height:100svh;gap:0}.hero--slider .hero-copy{max-width:100%}.hero--slider h1{font-size:clamp(40px,9vw,60px)}.hero--slider .hero-art{align-self:center;width:100%;height:34svh;margin:0}.hero-slide-dots{right:14px;top:67%}.hero-slider-controls{margin-top:20px}}
 @media(prefers-reduced-motion:reduce){.hero-slide-progress__fill.is-playing{animation:none;width:40%}}
+
+/* Mockup alignment pass: scope changes to Hero and floating Navbar only. */
+.floating-header{top:clamp(12px,1.7vw,28px);left:clamp(18px,3.2vw,58px);right:clamp(18px,3.2vw,58px);min-height:58px;padding:7px clamp(16px,2.4vw,34px);gap:clamp(12px,1.5vw,28px);border-radius:17px}
+.floating-header .site-brand__logo{width:clamp(140px,12vw,185px);max-height:48px}
+.floating-header .site-nav{gap:clamp(10px,1.6vw,27px)}
+.floating-header .site-nav a{font-size:clamp(11px,.82vw,14px);white-space:nowrap}
+.floating-header .site-header__actions{gap:clamp(4px,.6vw,12px)}
+.floating-header .header-booking{min-height:42px;padding:9px 17px;font-size:12px;white-space:nowrap}
+.floating-header .locale-switcher a{min-width:30px;min-height:36px;padding:5px;font-size:12px}
+.floating-header .theme-toggle{min-width:36px;min-height:36px}
+.floating-header--scrolled{background:color-mix(in srgb,var(--paper) 68%,transparent);border-color:color-mix(in srgb,var(--ink) 9%,transparent);box-shadow:0 7px 24px rgba(0,0,0,.08)}
+.header-notification{display:grid;place-items:center;min-width:28px;min-height:36px;color:var(--ink)}
+.hero--slider{grid-template-columns:minmax(0,44%) minmax(0,56%);padding:clamp(105px,12vh,140px) clamp(38px,7.5vw,145px) 65px}
+.hero--slider .hero-copy{max-width:365px;align-self:center}
+.hero--slider .eyebrow{font-size:11px;letter-spacing:.14em}
+.hero--slider h1{font-size:clamp(41px,3.3vw,59px);line-height:1.03;letter-spacing:0;margin:16px 0}
+.hero--slider .hero-copy>p:not(.eyebrow){max-width:335px;font-size:clamp(13px,.95vw,16px);line-height:1.48}
+.hero--slider .hero-actions{margin-top:20px;gap:12px}
+.hero--slider .hero-actions .cta,.hero--slider .hero-secondary{min-height:43px;padding:10px 16px;font-size:12px}
+.hero--slider .hero-art{height:min(56svh,550px);align-self:center;margin:0;transform:translate(4%,2%)}
+.hero--slider .hero-chair{max-width:510px;filter:drop-shadow(0 15px 18px rgba(0,0,0,.20))}
+.hero--slider .hero-slider-controls{margin-top:26px;gap:15px}
+.hero--slider .hero-slide-dots{right:clamp(25px,4vw,70px)}
+.hero--slider .scroll-mouse{bottom:25px}
+:root[data-theme=dark] .hero--slider::before{background-image:linear-gradient(90deg,#201711 0%,rgba(32,23,17,.97) 20%,rgba(32,23,17,.78) 40%,rgba(32,23,17,.12) 72%),url('/images/hero/barbershop-interior.webp')}
+:root:not([data-theme=dark]) .hero--slider::before{background-image:linear-gradient(90deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 96%,transparent) 19%,color-mix(in srgb,var(--paper) 72%,transparent) 38%,transparent 70%),url('/images/hero/barbershop-interior.webp')}
+@media(max-width:1200px){.floating-header .site-nav{gap:10px}.floating-header .site-nav a{font-size:11px}.floating-header .header-booking{padding:8px 10px}.hero--slider{padding-left:5vw;padding-right:5vw}}
+@media(max-width:900px){.floating-header .site-nav{display:none}.hero--slider{grid-template-columns:48% 52%}.hero--slider h1{font-size:clamp(38px,5vw,52px)}}
+@media(max-width:720px){.floating-header{left:10px;right:10px;top:10px;padding:7px 10px}.floating-header .site-brand__logo{width:120px}.floating-header .site-header__actions{gap:2px}.header-notification{min-width:25px}.hero--slider{display:flex;flex-direction:column;align-items:stretch;justify-content:center;min-height:100svh;padding:110px 22px 85px}.hero--slider .hero-copy{align-self:stretch;max-width:100%}.hero--slider h1{font-size:clamp(40px,9vw,58px)}.hero--slider .hero-art{width:100%;height:34svh;transform:none}.hero--slider .hero-slide-dots{right:15px;top:65%}}
