@@ -54,7 +54,6 @@ export function SiteHeader({
         <UserMenu locale={locale} />
         <ThemeToggle locale={locale} />
         <LocaleSwitcher locale={locale} messages={t} />
-        <Link className="header-booking" href={`${prefix}/booking`}>{locale === 'uk' ? 'Записатися онлайн' : 'Book online'} →</Link>
         <details className="header-mobile-nav">
           <summary aria-label={locale === 'uk' ? 'Відкрити меню' : 'Open menu'}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
