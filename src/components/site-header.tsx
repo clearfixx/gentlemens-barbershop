@@ -3,6 +3,7 @@ import { FloatingHeaderShell } from './floating-header-shell'
 import Link from 'next/link'
 import { ThemeToggle } from './theme-toggle'
 import { LocaleSwitcher } from './locale-switcher'
+import { UserMenu } from './user-menu'
 import { getFallbackMessages } from '@/i18n/messages'
 import { type Locale } from '@/i18n/config'
 
@@ -26,8 +27,9 @@ export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messa
         {links.map(link => <Link key={link.href} href={link.href}>{link.label}</Link>)}
       </nav>
       <div className="site-header__actions">
-        <LocaleSwitcher locale={locale} messages={t} />
+        <UserMenu locale={locale} />
         <ThemeToggle locale={locale} />
+        <LocaleSwitcher locale={locale} messages={t} />
         <Link className="header-booking" href={`${prefix}/booking`}>{t.actions.planVisit}</Link>
       </div>
     </FloatingHeaderShell>
