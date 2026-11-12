@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { FloatingHeaderShell } from './floating-header-shell'
 import Link from 'next/link'
 import { ThemeToggle } from './theme-toggle'
 import { LocaleSwitcher } from './locale-switcher'
@@ -17,7 +18,7 @@ export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messa
   ]
 
   return (
-    <header className="site-header">
+    <FloatingHeaderShell>
       <Link href={prefix} className="site-brand" aria-label={`Gentlemen’s Barbershop — ${t.nav.home}`}>
         <Image src="/images/brand/logo.svg" alt="Gentlemen’s Barbershop" width={210} height={66} className="site-brand__logo" priority />
       </Link>
@@ -29,6 +30,6 @@ export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messa
         <ThemeToggle locale={locale} />
         <Link className="header-booking" href={`${prefix}/booking`}>{t.actions.planVisit}</Link>
       </div>
-    </header>
+    </FloatingHeaderShell>
   )
 }
