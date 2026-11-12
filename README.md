@@ -35,7 +35,11 @@
 
 Warm parchment, deep chocolate, restrained brass, atmospheric photography and modern interaction patterns. The goal is a functional barbershop website with a distinct visual identity — not a scrolling demo.
 
-> **Design showcase:** The two approved concept visuals (technology poster and full light/dark landing mockup) belong in `docs/images/project-poster.webp` and `docs/images/light-dark-concept.webp`. These are design concepts, **not screenshots of the running app**. They will be linked in the README as soon as the image assets are committed to the repository.
+<p align="center">
+  <img src="docs/images/light-dark-concept.webp" alt="Approved Gentlemen's Barbershop landing page design concept: light and dark themes side by side" width="100%">
+</p>
+
+<p align="center"><sub>Approved UI/UX direction · Light and dark concept mockups · Not screenshots of the running application</sub></p>
 
 <table>
 <tr>
@@ -69,7 +73,13 @@ The scope below describes the **planned product experience**, not a claim that e
 
 ## Technology
 
-The project poster illustrates the **approved target stack**. Not all depicted libraries are installed yet.
+<p align="center">
+  <img src="docs/images/project-poster.webp" alt="Gentlemen's Barbershop technology poster with frontend, backend and infrastructure stack" width="100%">
+</p>
+
+<p align="center"><sub>Project identity and approved technology direction · Concept artwork</sub></p>
+
+The poster illustrates the **approved target stack**. Not all depicted libraries are installed yet.
 
 | Layer | Currently implemented | Approved future integrations |
 | --- | --- | --- |
