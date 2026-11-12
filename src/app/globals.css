@@ -135,3 +135,11 @@
 @keyframes hero-art-enter{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:translateX(0)}}
 @media(max-width:720px){.hero--editorial{min-height:100svh;padding-top:130px}.hero--editorial .hero-art{min-height:300px;max-height:48vh}.hero--editorial .scroll-mouse{left:auto;right:26px}}
 @media(prefers-reduced-motion:reduce){.hero-copy--reveal,.hero-art--reveal{animation:none;opacity:1;transform:none}.hero--editorial .scroll-mouse{transition:none}}
+
+/* Accessible editorial hero slider; controls remain usable without autoplay. */
+.hero-slider__controls{display:flex;align-items:center;gap:12px;margin-top:clamp(28px,5vh,56px)}
+.hero-slider__controls button{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border:0;border-bottom:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:12px;font-variant-numeric:tabular-nums}
+.hero-slider__controls button.is-active{border-bottom-color:var(--gold);color:var(--ink);font-weight:700}
+.hero-slider__controls .hero-slider__pause{margin-left:12px;border:1px solid var(--border);border-radius:4px;color:var(--ink);font-size:16px}
+.hero--slider .hero-copy h1{min-height:2.3em}
+@media(max-width:720px){.hero--slider .hero-copy h1{min-height:0}.hero-slider__controls{margin-top:24px}}
