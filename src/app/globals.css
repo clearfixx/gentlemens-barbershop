@@ -102,6 +102,7 @@
   align-items:center;
   gap:clamp(12px,1.5vw,28px);
   --navbar-height:76px;
+  --navbar-half-height:38px;
   --navbar-surface:color-mix(in srgb,var(--paper) 48%,transparent);
   --navbar-border:color-mix(in srgb,var(--gold) 54%,transparent);
   --navbar-blur:blur(10px);
@@ -208,7 +209,7 @@
 /* All dropdown surfaces start 3px below the NAVBAR, not below their triggers.
    Their positioning roots are vertically centered within the fixed-height header. */
 .site-header.floating-header :is(.internal-nav-menu__panel,.auth-nav__panel,.locale-compact__panel){
-  top:calc(50% + var(--navbar-height) / 2 + 3px);
+  top:calc(50% + var(--navbar-half-height) + 3px);
   background:var(--navbar-surface);
   border:1px solid var(--navbar-border);
   color:var(--ink);
@@ -245,7 +246,7 @@
   .site-header.floating-header .site-header__actions{padding-left:10px}
 }
 @media(max-width:720px){
-  .site-header.floating-header{--navbar-height:64px;height:var(--navbar-height);min-height:var(--navbar-height);top:8px;left:8px;right:8px;padding:6px 10px;border-radius:20px;gap:4px}
+  .site-header.floating-header{--navbar-height:64px;--navbar-half-height:32px;height:var(--navbar-height);min-height:var(--navbar-height);top:8px;left:8px;right:8px;padding:6px 10px;border-radius:20px;gap:4px}
   .floating-header .site-brand__art{width:clamp(114px,29vw,170px)}
   .site-header.floating-header .site-nav{gap:2px}
   .internal-nav-menu__trigger{width:35px;height:38px}
