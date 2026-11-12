@@ -27,23 +27,3 @@ export function assertBookingStatusTransition(previous: unknown, next: unknown):
   }
 }
 
-/**
- * Appointments are immutable after creation except for status and notes.
- * Rescheduling / repricing must use a separately validated service and a
- * new availability check, not a generic Payload collection update.
- */
-const mutableFields = new Set(['status', 'notes'])
-
-export function assertBookingUpdateAllowed(
-  originalStatus: unknown,
-  data: Record<string, unknown>,
-): void {
-  for (const key of Object.keys(data)) {
-    if (!mutableFields.has(key)) {
-      throw new RangeError('Booking appointment fields cannot be edited directly')
-    }
-  }
-  if (Object.prototype.hasOwnProperty.call(data, 'status')) {
-    assertBookingStatusTransition(originalStatus, data.status)
-  }
-}
