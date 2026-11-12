@@ -77,18 +77,22 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
     if (!element) return
     element.style.setProperty('--chair-progress', '0')
     if (reducedMotion) return
-    const desktop = window.matchMedia('(min-width: 1024px) and (min-height: 650px) and (pointer: fine)')
-    if (!desktop.matches) return
+    const desktop = window.matchMedia('(min-width: 1024px) and (min-height: 650px) and (prefers-reduced-motion: no-preference)')
     let frame = 0
     const update = () => {
       if (frame) return
       frame = window.requestAnimationFrame(() => {
         frame = 0
-        const element = sceneRef.current
-        if (!element) return
-        const distance = Math.max(element.offsetHeight - window.innerHeight, 1)
-        const value = Math.max(0, Math.min(1, -element.getBoundingClientRect().top / distance))
-        element.style.setProperty('--chair-progress', String(value))
+        const scene = sceneRef.current
+        if (!scene) return
+        if (!desktop.matches) {
+          scene.style.setProperty('--chair-progress', '0')
+          return
+        }
+        const rect = scene.getBoundingClientRect()
+        const distance = Math.max(rect.height - window.innerHeight, 1)
+        const value = Math.max(0, Math.min(1, -rect.top / distance))
+        scene.style.setProperty('--chair-progress', value.toFixed(4))
       })
     }
     update()
