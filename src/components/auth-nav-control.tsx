@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { LogIn, LogOut } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { Locale } from '@/i18n/config'
 
@@ -90,10 +91,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
         aria-label={uk ? 'Увійти або зареєструватися' : 'Log in or sign up'}
         title={uk ? 'Вхід / реєстрація' : 'Log in / Sign up'}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M10 17l4-4-4-4M14 13H4" />
-          <path d="M12 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" />
-        </svg>
+        <LogIn size={20} strokeWidth={1.75} aria-hidden="true" />
       </Link>
     )
   }
@@ -126,7 +124,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
       {user.role === 'admin' && <a role="menuitem" href="/admin">{uk ? 'Адміністрування' : 'Admin'}</a>}
       {signOutError && <p role="alert" className="auth-nav__error">{uk ? 'Не вдалося вийти. Спробуй ще раз.' : 'Could not log out. Please retry.'}</p>}
       <button type="button" role="menuitem" disabled={signingOut} onClick={() => void signOut()}>
-        {uk ? 'Вийти' : 'Log out'}
+        <LogOut size={18} strokeWidth={1.75} aria-hidden="true" /> {uk ? 'Вийти' : 'Log out'}
       </button>
     </div>}
   </div>
