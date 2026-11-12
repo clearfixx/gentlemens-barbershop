@@ -13,3 +13,7 @@ CI also runs `scripts/test-concurrent-booking-rate-limit.sh`, which starts twelv
 Migration `20261112_060000_booking_shared_rate_limit` creates the production-named table `booking_rate_limit_buckets`, an atomic `booking_rate_limit_consume` function, a window-start index and `booking_rate_limit_prune` cleanup function. No production endpoint calls these functions yet.
 
 Retention is **not automatically scheduled**: a deployment operator must configure a recurring cleanup job using a cutoff safely older than all supported rate-limit windows (for example, retaining at least 24 hours). Do not prune active windows. The table and function must be monitored for failures and growth. Production booking writes remain blocked.
+
+## HTTP integration
+
+Both booking POST and status PATCH now consume a global, PostgreSQL-backed budget after the existing local defense-in-depth budget. The SQL call uses Payload's database adapter and never reads untrusted forwarded identity headers. A missing migration or database error fails closed before authentication/business mutation. The existing production write gate remains closed; shared limiter use is currently exercised only by explicitly enabled non-production HTTP writes. Global budget: 20 requests per fixed minute across all application instances, shared between both endpoints. This is deliberately conservative and should be revisited before production activation.

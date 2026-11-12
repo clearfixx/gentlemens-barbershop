@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { bookingWritesEnabled, checkBookingWriteBudget } from '@/lib/booking/booking-write-guard'
+import { bookingWritesEnabled, checkBookingWriteBudget, checkSharedBookingWriteBudget } from '@/lib/booking/booking-write-guard'
 import { BookingManagementError, changeBookingStatus, parseBookingStatus } from '@/lib/booking/manage-booking'
 
 export const dynamic = 'force-dynamic'
@@ -21,6 +21,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
   try {
     const payload = await getPayload({ config })
+    // Database failures must never grant an allowance. The outer catch
+    // returns 500 and prevents any booking mutation.
+    const sharedBudget = await checkSharedBookingWriteBudget(payload)
+    if (!sharedBudget.allowed) {
+      return NextResponse.json({ error: 'Booking requests temporarily limited' }, {
+        status: 429,
+        headers: { ...headers, 'Retry-After': String(sharedBudget.retryAfterSeconds) },
+      })
+    }
     const { user } = await payload.auth({ headers: request.headers })
     if (!user || !('role' in user) || typeof user.role !== 'string') {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401, headers })

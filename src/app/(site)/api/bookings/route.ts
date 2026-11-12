@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { bookingHttpError } from '@/lib/booking/booking-http'
-import { bookingWritesEnabled, checkBookingWriteBudget } from '@/lib/booking/booking-write-guard'
+import { bookingWritesEnabled, checkBookingWriteBudget, checkSharedBookingWriteBudget } from '@/lib/booking/booking-write-guard'
 import { submitAuthenticatedBooking } from '@/lib/booking/submit-authenticated-booking'
 import { createIdempotentPayloadBooking } from '@/lib/booking/payload-booking-service'
 
@@ -28,6 +28,15 @@ export async function POST(request: Request) {
 
   try {
     const payload = await getPayload({ config })
+    // Database failures must never grant an allowance. The outer catch
+    // returns 500 and prevents any booking mutation.
+    const sharedBudget = await checkSharedBookingWriteBudget(payload)
+    if (!sharedBudget.allowed) {
+      return NextResponse.json({ error: 'Booking requests temporarily limited' }, {
+        status: 429,
+        headers: { ...noStore, 'Retry-After': String(sharedBudget.retryAfterSeconds) },
+      })
+    }
     const authentication = await payload.auth({ headers: request.headers })
     const user = authentication.user
     const actor = user && 'role' in user && 'email' in user &&
