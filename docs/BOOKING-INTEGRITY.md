@@ -59,3 +59,15 @@ CI covers SQL constraints, repeatable installation, concurrent SQL inserts,
 Payload REST access restrictions, and Payload Local API idempotent create/replay.
 The public booking API, production migration integration, authentication and
 rate limiting are still required before launch.
+
+## Booking start-time invariant
+
+The trusted booking orchestration rejects appointments that have already started,
+independently of the public availability feed. It checks both before catalog
+I/O and again immediately before persistence, because a selected slot may
+expire during asynchronous availability checks. This is an application-level
+validation; PostgreSQL still provides the authoritative overlap guarantee.
+
+The clock-boundary regression test uses an injected clock rather than sleeps
+or a busy-wait. This keeps the race reproducible without slowing CI or relying
+on scheduler timing; production calls continue to use the system clock.

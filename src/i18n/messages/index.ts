@@ -1,6 +1,6 @@
-import { uk } from './uk'
-import { en } from './en'
-import { defaultLocale, type Locale } from '../config'
+import { uk } from './uk.ts'
+import { en } from './en.ts'
+import { defaultLocale, type Locale } from '../config.ts'
 
 export const messages = { uk, en } as const
 

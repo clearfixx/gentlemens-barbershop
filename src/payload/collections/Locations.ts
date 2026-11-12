@@ -29,6 +29,8 @@ export const Locations: CollectionConfig = {
       },
     },
     { name: 'description', type: 'textarea' },
+    // Optional locale-specific copy; legacy content remains untouched.
+    { name: 'localizedDescription', type: 'textarea', localized: true },
     { name: 'isActive', type: 'checkbox', defaultValue: false, required: true },
   ],
 }

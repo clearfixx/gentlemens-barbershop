@@ -41,5 +41,6 @@ export const availabilityLimiter = new FixedWindowLimiter(120, 60_000, 1)
 
 /** Worker-wide budget: cannot be bypassed with spoofed client headers. */
 export function requestRateLimitKey(_request: Request): string {
+  void _request
   return 'availability-worker'
 }

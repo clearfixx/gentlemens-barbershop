@@ -13,6 +13,8 @@ export const Barbers: CollectionConfig = {
     { name: 'name', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
     { name: 'bio', type: 'textarea' },
+    // Do not convert the existing bio column in place before data migration.
+    { name: 'localizedBio', type: 'textarea', localized: true },
     { name: 'portrait', type: 'upload', relationTo: 'media' },
     { name: 'location', type: 'relationship', relationTo: 'locations', required: true },
     {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { prepareBookingRequest } from './booking-request.ts'
+import { assertBookingQuoteIntegrity, prepareBookingRequest } from './booking-request.ts'
 
 const fixture = () => ({
   request: {
@@ -70,4 +70,59 @@ test('accepts valid UTC timestamps with or without zero milliseconds', () => {
   const input = fixture()
   input.request.startsAt = '2030-01-02T09:00:00Z'
   assert.equal(prepareBookingRequest(input).startsAt, '2030-01-02T09:00:00.000Z')
+})
+
+test('rejects invalid runtime request shapes before dereferencing fields', () => {
+  for (const value of [null, [], {}, { ...fixture().request, startsAt: null },
+    { ...fixture().request, customerName: 42 },
+    { ...fixture().request, customerPhone: {} },
+    { ...fixture().request, customerEmail: [] },
+    { ...fixture().request, serviceIds: [7, '8'] },
+    { ...fixture().request, serviceIds: new Array(100).fill(7) },
+  ]) {
+    assert.throws(() => prepareBookingRequest({ ...fixture(), request: value as never }), RangeError)
+  }
+})
+
+
+test('rejects duplicate catalog records instead of using an arbitrary service price', () => {
+  const input = fixture()
+  input.services.push({ id: 7, isActive: true, price: 999, durationMinutes: 30 })
+  assert.throws(() => prepareBookingRequest(input), /ambiguous service/)
+})
+
+test('rejects duplicate barber offerings with conflicting overrides', () => {
+  const input = fixture()
+  input.barber.offerings.push({ service: 7, priceOverride: 999, durationOverrideMinutes: 30 })
+  assert.throws(() => prepareBookingRequest(input), /ambiguous barber offering/)
+})
+
+test('normalized server quote satisfies persistence invariants', () => {
+  const input = fixture()
+  input.request.startsAt = '2030-01-02T09:00:00Z'
+  assert.doesNotThrow(() => assertBookingQuoteIntegrity(prepareBookingRequest(input)))
+})
+
+test('quote validation rejects impossible totals and intervals', () => {
+  const quote = prepareBookingRequest(fixture())
+  for (const malformed of [
+    { ...quote, endsAt: quote.startsAt },
+    { ...quote, endsAt: '2030-01-02T10:29:00.000Z' },
+    { ...quote, endsAt: '2030-01-02T10:30:00Z' },
+    { ...quote, durationMinutes: Number.NaN },
+    { ...quote, totalPrice: Number.POSITIVE_INFINITY },
+    { ...quote, totalPrice: -1 },
+  ]) {
+    assert.throws(() => assertBookingQuoteIntegrity(malformed), RangeError)
+  }
+})
+
+test('quote derivation preserves trimmed optional email and validates its shape', () => {
+  const input = fixture()
+  const withEmail = { ...input, request: { ...input.request, customerEmail: '  test@example.com  ' } }
+  assert.equal(prepareBookingRequest(withEmail).customerEmail, 'test@example.com')
+  assert.throws(() => prepareBookingRequest({
+    ...input,
+    request: { ...input.request, customerEmail: 'invalid@' },
+  }), RangeError)
 })

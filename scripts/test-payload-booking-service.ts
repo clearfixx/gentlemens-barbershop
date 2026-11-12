@@ -55,6 +55,37 @@ async function main() {
     createIdempotentPayloadBooking(payload, { ...retryRequest, customerName: 'Different customer' }, 'ci:customer:retry', 'stable-key'),
     { name: 'BookingIdempotencyConflictError' },
   )
+  // A cancelled booking remains the outcome of its original retry token.
+  // The slot can be sold again, but the old key must never create a second row.
+  await payload.update({
+    collection: 'bookings', id: firstRetry.booking.id, overrideAccess: true,
+    data: { status: 'cancelled' },
+  })
+  const afterCancellation = await createIdempotentPayloadBooking(
+    payload, retryRequest, 'ci:customer:retry', 'stable-key',
+  )
+  assert.equal(afterCancellation.replayed, true)
+  assert.equal(afterCancellation.booking.id, firstRetry.booking.id)
+  const resold = await createIdempotentPayloadBooking(
+    payload, retryRequest, 'ci:customer:replacement', 'new-key',
+  )
+  assert.equal(resold.replayed, false)
+  assert.notEqual(resold.booking.id, firstRetry.booking.id)
+  const oldKeyAfterResale = await createIdempotentPayloadBooking(
+    payload, retryRequest, 'ci:customer:retry', 'stable-key',
+  )
+  assert.equal(oldKeyAfterResale.replayed, true)
+  assert.equal(oldKeyAfterResale.booking.id, firstRetry.booking.id)
+  const resaleRows = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: { and: [
+      { barber: { equals: barberId } },
+      { startsAt: { equals: retryRequest.startsAt } },
+    ] },
+  })
+  assert.equal(resaleRows.totalDocs, 2)
+  assert.deepEqual(resaleRows.docs.map(row => row.status).sort(), ['cancelled', 'pending'])
+
   // Race two complete booking requests, not just direct persistence calls.
   // The PostgreSQL uniqueness/exclusion constraints must converge them on
   // exactly one booking, with the other response marked as a replay.
@@ -93,7 +124,50 @@ async function main() {
     ] },
   })
   assert.equal(mismatchedStored.totalDocs, 1)
-  console.info('Trusted booking service: catalog, schedule, persistence and duplicate-slot rejection verified')
+  // A different retry key must not bypass the existing appointment's slot.
+  const overlappingRequest = { ...request, startsAt: '2037-01-02T09:30:00.000Z' }
+  await assert.rejects(
+    createIdempotentPayloadBooking(payload, overlappingRequest, 'ci:customer:overlap', 'different-key'),
+    { name: 'RangeError', message: 'Selected booking slot is unavailable' },
+  )
+  const overlappingStored = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: { and: [
+      { idempotencyScope: { equals: 'ci:customer:overlap' } },
+      { idempotencyKey: { equals: 'different-key' } },
+    ] },
+  })
+  assert.equal(overlappingStored.totalDocs, 0)
+
+  // Cancelling an appointment releases the slot. An idempotent retry of the
+  // cancelled request still returns its original record, not the new booking.
+  await payload.update({
+    collection: 'bookings', id: created.id, overrideAccess: true,
+    data: { status: 'cancelled' },
+  })
+  const replacement = await createPayloadBooking(payload, request)
+  assert.notEqual(replacement.id, created.id)
+  assert.equal(replacement.status, 'pending')
+  const cancelledRows = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: { and: [
+      { barber: { equals: barberId } },
+      { startsAt: { equals: request.startsAt } },
+    ] },
+  })
+  assert.equal(cancelledRows.totalDocs, 2)
+  assert.deepEqual(cancelledRows.docs.map(row => row.status).sort(), ['cancelled', 'pending'])
+
+  // No-show/completed appointments should not occupy a future slot either;
+  // database exclusion and application availability must agree on status.
+  await payload.update({
+    collection: 'bookings', id: replacement.id, overrideAccess: true,
+    data: { status: 'no_show' },
+  })
+  const afterNoShow = await createPayloadBooking(payload, request)
+  assert.notEqual(afterNoShow.id, replacement.id)
+  assert.equal(afterNoShow.status, 'pending')
+  console.info('Trusted booking service: catalog, schedule, persistence and retry isolation, overlap rejection and status-based slot release verified')
 }
 
 main().then(

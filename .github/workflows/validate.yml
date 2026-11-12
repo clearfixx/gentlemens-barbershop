@@ -1,10 +1,9 @@
 name: Validate scaffold
 
 on:
-  pull_request:
-  push:
-    branches:
-      - feat/app-scaffold
+  # Temporarily manual-only while GitHub Actions billing is blocked.
+  # Restore PR checks once billing is resolved.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -43,7 +42,57 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Booking availability unit tests
-        run: node --experimental-strip-types --test src/lib/booking/availability.test.ts src/lib/booking/local-time.test.ts src/lib/booking/zoned-availability.test.ts src/lib/booking/barber-day.test.ts src/lib/booking/interval-conflicts.test.ts src/lib/booking/booking-errors.test.ts src/lib/booking/resolve-offering.test.ts src/lib/booking/booking-request.test.ts src/lib/booking/booking-slot.test.ts src/lib/booking/create-booking.test.ts src/lib/booking/persist-payload-booking.test.ts src/lib/booking/idempotency.test.ts src/lib/booking/idempotent-replay.test.ts src/lib/booking/payload-idempotency.test.ts src/lib/booking/load-booking-catalog.test.ts src/lib/booking/payload-booking-service.test.ts src/lib/catalog/public-catalog.test.ts src/lib/catalog/public-availability.test.ts src/lib/catalog/availability-limiter.test.ts
+        run: node --experimental-strip-types --test src/lib/booking/availability.test.ts src/lib/booking/local-time.test.ts src/lib/booking/zoned-availability.test.ts src/lib/booking/barber-day.test.ts src/lib/booking/interval-conflicts.test.ts src/lib/booking/validate-weekly-shifts.test.ts src/lib/booking/booking-errors.test.ts src/lib/booking/booking-http.test.ts src/lib/booking/booking-identity.test.ts src/lib/booking/submit-authenticated-booking.test.ts src/lib/booking/booking-write-guard.test.ts src/lib/booking/resolve-offering.test.ts src/lib/booking/booking-request.test.ts src/lib/booking/booking-slot.test.ts src/lib/booking/get-barber-availability.test.ts src/lib/booking/create-booking.test.ts src/lib/booking/persist-payload-booking.test.ts src/lib/booking/idempotency.test.ts src/lib/booking/idempotent-replay.test.ts src/lib/booking/persist-idempotently.test.ts src/lib/booking/payload-idempotency.test.ts src/lib/booking/load-booking-catalog.test.ts src/lib/booking/payload-booking-service.test.ts src/lib/catalog/public-catalog.test.ts src/lib/catalog/public-availability.test.ts src/lib/catalog/availability-limiter.test.ts
+      - name: Loyalty history keyset pagination tests
+        run: node --experimental-strip-types --test src/lib/loyalty/history-page.test.ts
+      - name: Loyalty SQL read adapter tests
+        run: node --experimental-strip-types --test src/lib/loyalty/sql-read-repository.test.ts
+      - name: Customer loyalty access boundary tests
+        run: node --experimental-strip-types --test src/lib/loyalty/read-own-loyalty.test.ts
+      - name: Loyalty accounting domain tests
+        run: node --experimental-strip-types --test src/lib/loyalty/ledger.test.ts
+      - name: Translation override validation tests
+        run: node --experimental-strip-types --test src/i18n/override-validation.test.ts src/i18n/resolve-overrides.test.ts src/i18n/messages/fallback.test.ts
+      - name: Verify installed Payload CLI declares migration commands
+        run: |
+          node --input-type=module -e "
+            import { readFileSync } from 'node:fs';
+            const pkg = JSON.parse(readFileSync('node_modules/payload/package.json', 'utf8'));
+            if (!pkg.bin?.payload) throw new Error('Payload CLI executable is missing');
+            console.log('Payload CLI declared:', pkg.bin.payload);
+          "
+      - name: Verify Payload native migration CLI
+        run: |
+          set -euo pipefail
+          pnpm exec payload migrate:create --disable-transpile --help
+          pnpm exec payload migrate:status --disable-transpile --help
+      - name: Verify committed migrations and rehearse on fresh production-mode database
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/test-classify-payload-migration.py
+          python3 scripts/test-normalize-generated-payload-migration.py
+          python3 scripts/check-localization-incremental.py src/migrations
+          test "$(find src/migrations -maxdepth 1 -name '*.json' | wc -l)" -eq 2
+          test "$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l)" -eq 2
+          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_migration_bootstrap_ci
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
+            NODE_ENV=production CI=1 timeout 120s pnpm db:migrate
+          PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_migration_bootstrap_ci -c "
+              DO \$\$ BEGIN
+                IF (SELECT count(*) FROM payload_migrations) <> 2
+                  OR to_regclass('public.users') IS NULL
+                  OR to_regclass('public.bookings') IS NULL
+                  OR to_regclass('public.translations') IS NULL
+                THEN RAISE EXCEPTION 'Committed production migrations did not initialize expected schema';
+                END IF;
+              END \$\$;"
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
+            NODE_ENV=production CI=1 timeout 120s pnpm db:migrate
+          PGPASSWORD=postgres psql -XAt -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_migration_bootstrap_ci \
+            -c "SELECT count(*) FROM payload_migrations" | grep -qx '2'
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint
@@ -76,6 +125,16 @@ jobs:
             cat /tmp/barbershop-second-bootstrap.log
             exit 1
           fi
+      - name: Payload translation publication integration test
+        run: node --experimental-strip-types scripts/test-payload-translations.ts
+      - name: Loyalty PostgreSQL transaction rehearsal
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The CI database has been initialized by the existing Payload tests.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/loyalty/disposable-schema.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/loyalty/test-disposable-ledger.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/loyalty/test-disposable-role.sql
       - name: Install database booking integrity constraints
         env:
           PGPASSWORD: postgres
@@ -99,6 +158,113 @@ jobs:
         shell: bash
         run: |
           CONFIRM_BOOKING_MIGRATION=apply bash scripts/apply-booking-integrity.sh
+      - name: Capture initialized localization schema for migration review
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p migration-review
+          docker run --rm --network host -e DATABASE_URL="$DATABASE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges' > migration-review/initialized-schema.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT version()" > migration-review/postgres-version.txt
+          node -e "const p=require('./node_modules/payload/package.json');const d=require('./node_modules/@payloadcms/db-postgres/package.json');require('node:fs').writeFileSync('migration-review/payload-versions.txt', 'payload='+p.version+'\\n@payloadcms/db-postgres='+d.version+'\\n')"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -P pager=off -F ',' -A -c "
+            SELECT table_name, column_name, data_type, is_nullable
+            FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND (table_name IN ('services','locations','barbers','translations')
+                   OR table_name LIKE '%_locales')
+            ORDER BY table_name, ordinal_position
+          " > migration-review/localization-columns.csv
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -P pager=off -F ',' -A -c "
+            SELECT tc.table_name, tc.constraint_name, tc.constraint_type
+            FROM information_schema.table_constraints tc
+            WHERE tc.table_schema = current_schema()
+              AND (tc.table_name IN ('services','locations','barbers','translations')
+                   OR tc.table_name LIKE '%_locales')
+            ORDER BY tc.table_name, tc.constraint_name
+          " > migration-review/localization-constraints.csv
+          test -s migration-review/initialized-schema.sql
+      - name: Upload initialized schema for migration comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: localization-initialized-schema
+          path: migration-review/
+          retention-days: 7
+      - name: Verify read-only legacy data fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/legacy-before.txt
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/legacy-after.txt
+          diff -u /tmp/legacy-before.txt /tmp/legacy-after.txt
+          for table in services locations barbers bookings; do
+            grep -q "^$table|" /tmp/legacy-before.txt
+          done
+      - name: Reject legacy data mutation in fingerprint regression test
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/fingerprint-before.txt
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            INSERT INTO services (name, slug, description, duration_minutes, price, is_active, updated_at, created_at)
+            VALUES ('Fingerprint test', 'fingerprint-ci-test', 'Original copy', 30, 500, true, now(), now())
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/fingerprint-insert.txt
+          if diff -q /tmp/fingerprint-before.txt /tmp/fingerprint-insert.txt; then
+            echo "Fingerprint did not detect an inserted service"
+            exit 1
+          fi
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE services SET description = 'Modified copy' WHERE slug = 'fingerprint-ci-test'
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/fingerprint-update.txt
+          if diff -q /tmp/fingerprint-insert.txt /tmp/fingerprint-update.txt; then
+            echo "Fingerprint did not detect a changed legacy description"
+            exit 1
+          fi
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            DELETE FROM services WHERE slug = 'fingerprint-ci-test'
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/fingerprint-restored.txt
+          diff -u /tmp/fingerprint-before.txt /tmp/fingerprint-restored.txt
+      - name: Verify read-only localization schema preflight
+        run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-localization-schema.sql
+      - name: Verify legacy catalog schema survives localization
+        run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/verify-localization-legacy-schema.sql
+      - name: Reject missing legacy catalog columns without changing the database
+        shell: bash
+        run: |
+          set -euo pipefail
+          if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
+            -c "ALTER TABLE services DROP COLUMN description" \
+            -f db/constraints/verify-localization-legacy-schema.sql > /tmp/localization-negative.log 2>&1; then
+            echo "Localization schema verifier accepted a missing legacy column"
+            exit 1
+          fi
+          grep -q "Localization schema regression: missing services.description" /tmp/localization-negative.log || {
+            cat /tmp/localization-negative.log
+            exit 1
+          }
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'services' AND column_name = 'description'" | grep -Fx 1
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/verify-localization-legacy-schema.sql
+      - name: Reject missing translation storage without changing the database
+        shell: bash
+        run: |
+          set -euo pipefail
+          if psql -X -v ON_ERROR_STOP=1 --single-transaction "$DATABASE_URL" \
+            -c "DROP TABLE translations CASCADE" \
+            -f db/constraints/verify-localization-legacy-schema.sql > /tmp/translations-negative.log 2>&1; then
+            echo "Localization schema verifier accepted missing translations storage"
+            exit 1
+          fi
+          grep -q "Localization schema regression: translations table missing" /tmp/translations-negative.log || {
+            cat /tmp/translations-negative.log
+            exit 1
+          }
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -Atc "SELECT to_regclass('translations') IS NOT NULL" | grep -Fx t
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/verify-localization-legacy-schema.sql
       - name: Verify read-only booking migration preflight
         run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-integrity.sql
       - name: Verify booking migrations are repeatable
@@ -204,12 +370,22 @@ jobs:
             exit 1
           fi
           curl --fail --silent --show-error --output /dev/null http://localhost:3000/
-          curl --fail --silent --show-error --output /tmp/barbershop-catalog.html 'http://localhost:3000/catalog?location=1&barber=1'
+          curl --location --fail --silent --show-error --output /tmp/barbershop-catalog.html 'http://localhost:3000/catalog?location=1&barber=1'
           grep -q 'ОБЕРІТЬ СВІЙ СТИЛЬ' /tmp/barbershop-catalog.html
-          curl --fail --silent --show-error --output /tmp/barbershop-booking.html http://localhost:3000/booking
+          curl --location --fail --silent --show-error --output /tmp/barbershop-booking.html http://localhost:3000/booking
           grep -q 'СПЛАНУЙТЕ ВІЗИТ' /tmp/barbershop-booking.html
-          curl --fail --silent --show-error --output /tmp/barbershop-availability.html http://localhost:3000/availability
+          curl --location --fail --silent --show-error --output /tmp/barbershop-availability.html http://localhost:3000/availability
           grep -q 'ВІЛЬНИЙ ЧАС' /tmp/barbershop-availability.html
+          # Public locale routes must render their own language, not just switch URLs.
+          curl --fail --silent --show-error --output /tmp/barbershop-english.html http://localhost:3000/en
+          grep -q 'lang="en"' /tmp/barbershop-english.html
+          grep -q 'WHERE' /tmp/barbershop-english.html
+          curl --fail --silent --show-error --output /tmp/barbershop-english-booking.html http://localhost:3000/en/booking
+          grep -q 'PLAN YOUR VISIT' /tmp/barbershop-english-booking.html
+          curl --fail --silent --show-error --output /tmp/barbershop-ukrainian.html http://localhost:3000/uk
+          grep -q 'lang="uk"' /tmp/barbershop-ukrainian.html
+          # Payload administration must remain outside locale-prefixed URLs.
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:3000/admin)" != "404"
           invalid_availability_status=$(curl --silent --output /tmp/barbershop-availability-invalid.json --write-out '%{http_code}' 'http://localhost:3000/api/availability?barber=1&service=2&date=not-a-date')
           test "$invalid_availability_status" = 400
           # Valid-but-unavailable catalog IDs must not disclose private records.
@@ -422,7 +598,7 @@ jobs:
           CI_LOCATION_ID="$location_id" CI_BARBER_ID="$barber_id" CI_SERVICE_ID="$service_id" \
             timeout 90s node --experimental-strip-types scripts/test-payload-booking-service.ts
           # The landing page must render the published CMS records, not static placeholders.
-          curl --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-cms-home.html
+          curl --location --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-cms-home.html
           for expected in 'CI Location true' 'CI Haircut' 'CI Barber'; do
             if ! grep -Fq "$expected" /tmp/barbershop-cms-home.html; then
               echo "Published CMS content missing from landing page: $expected"
@@ -466,7 +642,7 @@ jobs:
               }
             }
           '
-          curl --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-home-after-drafts.html
+          curl --location --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-home-after-drafts.html
           for hidden in 'CI Hidden Service' 'CI Hidden Barber'; do
             if grep -Fq "$hidden" /tmp/barbershop-home-after-drafts.html; then
               echo "Draft leaked onto landing page: $hidden"
@@ -653,3 +829,579 @@ jobs:
               process.exit(1);
             }
           '
+
+  prelocalization-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_barbershop
+      PAYLOAD_SECRET: ci-only-not-a-production-secret-please-replace
+      BOOTSTRAP_ADMIN_EMAIL: baseline-ci@example.invalid
+      BOOTSTRAP_ADMIN_PASSWORD: ci-only-test-password-not-for-production
+      NEXT_TELEMETRY_DISABLED: "1"
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gentlemens_barbershop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gentlemens_barbershop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout exact pre-localization baseline
+        uses: actions/checkout@v4
+        with:
+          ref: 78bcb938bd5265cf19425ad701de6fa608863829
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install frozen baseline dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Initialize baseline Payload schema on isolated PostgreSQL
+        run: timeout 90s pnpm bootstrap:admin
+      - name: Export pre-localization schema only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p baseline-review
+          docker run --rm --network host -e DATABASE_URL="$DATABASE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges' > baseline-review/prelocalization-schema.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT version()" > baseline-review/postgres-version.txt
+          node -e "const p=require('./node_modules/payload/package.json');const d=require('./node_modules/@payloadcms/db-postgres/package.json');require('node:fs').writeFileSync('baseline-review/payload-versions.txt', 'payload='+p.version+'\\n@payloadcms/db-postgres='+d.version+'\\n')"
+          printf '%s\\n' '78bcb938bd5265cf19425ad701de6fa608863829' > baseline-review/source-commit.txt
+          test -s baseline-review/prelocalization-schema.sql
+          if grep -Eq '^CREATE TABLE public\\.(translations|services_locales|locations_locales|barbers_locales)' baseline-review/prelocalization-schema.sql; then
+            echo "Unexpected localization tables in pre-localization baseline"
+            exit 1
+          fi
+      - name: Generate legacy Payload migration snapshot for incremental planning
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This job checks out the exact historical source. Modify its config
+          # only inside this disposable runner to enable migration generation.
+          python3 - <<'PY'
+          from pathlib import Path
+          config = Path("src/payload.config.ts")
+          original = config.read_text()
+          old = "db: postgresAdapter({ pool: { connectionString: process.env.DATABASE_URL || '' } }),"
+          new = "db: postgresAdapter({ pool: { connectionString: process.env.DATABASE_URL || '' }, migrationDir: path.resolve(dirname, 'migrations') }),"
+          if original.count(old) != 1:
+              raise SystemExit("Unexpected historical Payload config; refusing to patch")
+          config.write_text(original.replace(old, new))
+          PY
+          mkdir -p src/migrations
+          CI=1 timeout 90s pnpm exec payload migrate:create --disable-transpile --force-accept-warning ci-prelocalization-baseline
+          test -n "$(find src/migrations -maxdepth 1 -type f -name '*.json' -print -quit)"
+          cp src/migrations/*.json baseline-review/
+          cp src/migrations/*.ts baseline-review/
+          echo "Historical migration snapshot generated for manual review; NOT applied to populated databases"
+      - name: Upload legacy migration snapshot candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: prelocalization-migration-snapshot-candidate
+          path: |
+            baseline-review/*.ts
+            baseline-review/*.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload pre-localization schema baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: prelocalization-baseline-schema
+          path: baseline-review/
+          retention-days: 7
+
+  incremental-migration-candidate:
+    needs: [prelocalization-baseline]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_barbershop
+      PAYLOAD_SECRET: ci-only-not-a-production-secret-please-replace
+      NEXT_TELEMETRY_DISABLED: "1"
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gentlemens_barbershop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gentlemens_barbershop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install current dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Download historical PostgreSQL schema inventory
+        uses: actions/download-artifact@v4
+        with:
+          name: prelocalization-baseline-schema
+          path: baseline-review
+      - name: Verify committed migration set
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find src/migrations -maxdepth 1 -name '*.json' | wc -l)" -eq 2
+          test "$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l)" -eq 2
+          test -s src/migrations/index.ts
+      - name: Test historical schema equivalence gate
+        run: python3 -m unittest discover -s scripts -p 'test_verify_historical_baseline.py'
+      - name: Test migration safety checker against destructive SQL
+        shell: bash
+        run: python3 -m unittest discover -s scripts -p 'test_check_localization_incremental.py'
+      - name: Assert incremental migration is additive and scoped to localization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/check-localization-incremental.py src/migrations
+      - name: Verify migration entry point refuses unversioned populated schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'CREATE TABLE public.services (id integer PRIMARY KEY)'
+          set +e
+          CI=1 timeout 30s pnpm db:migrate > /tmp/migrate-unversioned.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ] || [ "$status" -eq 124 ]; then
+            echo "::error::Migration entry point did not reject unversioned legacy data"
+            exit 1
+          fi
+          grep -q UNVERSIONED_PAYLOAD_SCHEMA /tmp/migrate-unversioned.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT to_regclass('public.payload_migrations') IS NULL" | grep -qx 't'
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'DROP TABLE public.services'
+      - name: Reject legacy schema with missing migration ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Build a real pre-localization schema without the migration ledger,
+          # matching an installation previously managed by Payload push.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f /dev/stdin <<'SQL'
+          CREATE TABLE IF NOT EXISTS public.services (id integer PRIMARY KEY);
+          CREATE TABLE IF NOT EXISTS public.locations (id integer PRIMARY KEY);
+          CREATE TABLE IF NOT EXISTS public.barbers (id integer PRIMARY KEY);
+          CREATE TABLE IF NOT EXISTS public.bookings (id integer PRIMARY KEY);
+          SQL
+          set +e
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-unversioned-payload.sql > /tmp/unversioned-preflight.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "::error::Preflight unexpectedly accepted a legacy schema without migration history"
+            exit 1
+          fi
+          grep -q 'UNVERSIONED_PAYLOAD_SCHEMA' /tmp/unversioned-preflight.log
+          # The negative test must leave all four tables intact.
+          for table in services locations barbers bookings; do
+            psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "SELECT to_regclass('public.$table') IS NOT NULL" | grep -qx 't'
+          done
+          # A ledger table that exists but contains no records is also unsafe.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'CREATE TABLE public.payload_migrations (id serial PRIMARY KEY)'
+          set +e
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-unversioned-payload.sql > /tmp/empty-ledger-preflight.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "::error::Preflight unexpectedly accepted an empty migration ledger"
+            exit 1
+          fi
+          grep -q 'UNVERSIONED_PAYLOAD_SCHEMA' /tmp/empty-ledger-preflight.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'DROP TABLE public.payload_migrations'
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'DROP TABLE public.bookings, public.barbers, public.locations, public.services'
+          # A genuinely empty database must be allowed for bootstrap.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-unversioned-payload.sql
+      - name: Rehearse versioned baseline and incremental upgrade with legacy data
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Rehearse the committed, previously normalized migration files unchanged.
+          mkdir -p /tmp/incremental-migration
+          mv src/migrations/*ci_localization_incremental.* /tmp/incremental-migration/
+          # Apply only the historical bootstrap to a fresh, isolated database.
+          CI=1 timeout 120s pnpm db:migrate
+          docker run --rm --network host -e DATABASE_URL="$DATABASE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --schema-only --no-owner --no-privileges' > /tmp/versioned-baseline-schema.sql
+          python3 scripts/verify-historical-baseline.py baseline-review/prelocalization-schema.sql /tmp/versioned-baseline-schema.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/seed-prelocalization-rehearsal.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/incremental-before.txt
+          grep -q '^bookings|1|' /tmp/incremental-before.txt
+          grep -q '^barbers|1|' /tmp/incremental-before.txt
+          grep -q '^services|1|' /tmp/incremental-before.txt
+          grep -q '^locations|1|' /tmp/incremental-before.txt
+          # Restore the reviewed additive candidate and apply only the delta.
+          mv /tmp/incremental-migration/* src/migrations/
+          CI=1 timeout 120s pnpm db:migrate
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/incremental-after.txt
+          diff -u /tmp/incremental-before.txt /tmp/incremental-after.txt
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            DO \$\$ BEGIN
+              IF (SELECT count(*) FROM payload_migrations) <> 2 THEN
+                RAISE EXCEPTION 'Expected historical baseline plus incremental migration';
+              END IF;
+              IF to_regclass('public.translations') IS NULL OR
+                 to_regclass('public.locations_locales') IS NULL OR
+                 to_regclass('public.services_locales') IS NULL OR
+                 to_regclass('public.barbers_locales') IS NULL THEN
+                RAISE EXCEPTION 'Missing localized schema after incremental migration';
+              END IF;
+            END \$\$;"
+          CI=1 timeout 120s pnpm db:migrate
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            DO \$\$ BEGIN
+              IF (SELECT count(*) FROM payload_migrations) <> 2 THEN
+                RAISE EXCEPTION 'Repeat migration unexpectedly changed migration history';
+              END IF;
+            END \$\$;"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/incremental-repeat.txt
+          diff -u /tmp/incremental-before.txt /tmp/incremental-repeat.txt
+          echo "Versioned incremental migration preserved legacy data and is repeatable"
+      - name: Verify read-only historical schema adoption review
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The reference contains the baseline and localization migration.
+          # A valid review reference must contain ONLY the baseline.
+          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_baseline_reference_ci
+          # Rebuild the reference from the historical baseline alone.
+          mkdir -p /tmp/localization-delta-review
+          mv src/migrations/*ci_localization_incremental.* /tmp/localization-delta-review/
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_baseline_reference_ci" \
+            CI=1 timeout 120s pnpm db:migrate
+          mv /tmp/localization-delta-review/* src/migrations/
+          export BASELINE_REFERENCE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_baseline_reference_ci"
+          # A localized target must be refused: schema is not historical.
+          set +e
+          bash scripts/review-historical-baseline.sh > /tmp/baseline-review-negative.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          # Create an unversioned legacy target from baseline reference.
+          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_legacy_adoption_ci
+          docker run --rm --network host -e DATABASE_URL="$BASELINE_REFERENCE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --no-owner --no-privileges --exclude-table=public.payload_migrations' \
+            | psql -X -v ON_ERROR_STOP=1 "postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci" >/dev/null
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci"
+          bash scripts/review-historical-baseline.sh
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT to_regclass('public.payload_migrations') IS NULL" | grep -qx t
+          # A seemingly harmless extra index must fail the complete DDL gate.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'CREATE INDEX adoption_test_extra_idx ON services (id)'
+          set +e
+          bash scripts/review-historical-baseline.sh > /tmp/baseline-review-drift.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          grep -q 'REFUSED:' /tmp/baseline-review-drift.log
+      - name: Rehearse explicit baseline adoption and incremental migration on isolated legacy copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          export BASELINE_REFERENCE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_baseline_reference_ci"
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci"
+          # Remove deliberate drift from the previous negative test.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'DROP INDEX adoption_test_extra_idx'
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/seed-prelocalization-rehearsal.sql
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/adoption-before.txt
+          # Registration must never occur without the explicit disposable-only approval.
+          set +e
+          bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-unapproved.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT to_regclass('public.payload_migrations') IS NULL" | grep -qx t
+          CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT name FROM payload_migrations" | grep -qx '20261110_050350'
+          CI=1 timeout 120s pnpm db:migrate
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/adoption-after.txt
+          diff -u /tmp/adoption-before.txt /tmp/adoption-after.txt
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT count(*) FROM payload_migrations" | grep -qx '2'
+          CI=1 timeout 120s pnpm db:migrate
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT count(*) FROM payload_migrations" | grep -qx '2'
+          # Refuse replay of baseline adoption after the migration ledger exists.
+          set +e
+          CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-replay.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+      - name: Verify baseline adoption rejects schema drift and wrong target without writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          export BASELINE_REFERENCE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_baseline_reference_ci"
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci"
+          # The previous step has registered both migrations. Re-registration
+          # must refuse and leave the existing ledger unchanged.
+          set +e
+          CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-duplicate.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT string_agg(name, ',' ORDER BY id) FROM payload_migrations" \
+            | grep -qx '20261110_050350,20261110_050437_ci_localization_incremental'
+          # An unrelated database name must not be writable even with approval.
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_barbershop"
+          set +e
+          CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-wrong-target.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          grep -q 'may write ONLY' /tmp/adoption-wrong-target.log
+          # A schema-drifted unversioned copy must not receive a ledger.
+          PGPASSWORD=postgres dropdb -h localhost -U postgres gentlemens_legacy_adoption_ci
+          PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_legacy_adoption_ci
+          docker run --rm --network host -e DATABASE_URL="$BASELINE_REFERENCE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --no-owner --no-privileges --exclude-table=public.payload_migrations' \
+            | psql -X -v ON_ERROR_STOP=1 "postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci" >/dev/null
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_legacy_adoption_ci"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'ALTER TABLE services ADD COLUMN unexpected_ci text'
+          set +e
+          CONFIRM_DISPOSABLE_BASELINE_ADOPTION=apply bash scripts/adopt-disposable-historical-baseline.sh > /tmp/adoption-drift.log 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          psql -XAt -v ON_ERROR_STOP=1 "$DATABASE_URL" -c \
+            "SELECT to_regclass('public.payload_migrations') IS NULL" | grep -qx t
+      - name: Reject unregistered baseline on an existing database
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The old schema already exists, but its migration record is absent.
+          # A naive migrate would replay the baseline and fail on CREATE TABLE.
+          # Fail closed instead of silently marking it applied.
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            DO \$\$ BEGIN
+              IF (SELECT count(*) FROM payload_migrations) <> 2 THEN
+                RAISE EXCEPTION 'Unexpected migration history after rehearsal';
+              END IF;
+            END \$\$;"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/incremental-final.txt
+          diff -u /tmp/incremental-before.txt /tmp/incremental-final.txt
+      - name: Upload committed migration rehearsal artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: payload-incremental-migration-candidate
+          path: src/migrations/
+          if-no-files-found: error
+          retention-days: 7
+
+  compare-localization-schemas:
+    needs: [checks, prelocalization-baseline]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pre-localization schema
+        uses: actions/download-artifact@v4
+        with:
+          name: prelocalization-baseline-schema
+          path: baseline-review
+      - name: Download current initialized schema
+        uses: actions/download-artifact@v4
+        with:
+          name: localization-initialized-schema
+          path: migration-review
+      - name: Verify schema comparator rejects destructive changes
+        run: python3 -m unittest discover -s scripts -p 'test_compare_localization_schemas.py'
+      - name: Compare actual PostgreSQL table and column inventories
+        run: python3 scripts/compare-localization-schemas.py baseline-review/prelocalization-schema.sql migration-review/initialized-schema.sql
+
+  populated-localization-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_barbershop
+      PAYLOAD_SECRET: ci-only-not-a-production-secret-please-replace
+      BOOTSTRAP_ADMIN_EMAIL: migration-ci@example.invalid
+      BOOTSTRAP_ADMIN_PASSWORD: ci-only-test-password-not-for-production
+      NEXT_TELEMETRY_DISABLED: "1"
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gentlemens_barbershop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gentlemens_barbershop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout exact pre-localization source separately
+        uses: actions/checkout@v4
+        with:
+          ref: 78bcb938bd5265cf19425ad701de6fa608863829
+          path: baseline-source
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install baseline dependencies
+        working-directory: baseline-source
+        run: pnpm install --frozen-lockfile
+      - name: Initialize old Payload schema
+        working-directory: baseline-source
+        run: timeout 90s pnpm bootstrap:admin
+      - name: Insert representative legacy records and fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/seed-prelocalization-rehearsal.sql
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/legacy-before.txt
+          grep -q '^bookings|1|' /tmp/legacy-before.txt
+          grep -q '^barbers|1|' /tmp/legacy-before.txt
+          grep -q '^services|1|' /tmp/legacy-before.txt
+          grep -q '^locations|1|' /tmp/legacy-before.txt
+      - name: Preflight existing bookings against new integrity constraints
+        run: psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
+      - name: Prove migration preflight rejects overlapping active bookings
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            INSERT INTO bookings (id, location_id, barber_id, customer_name, customer_phone, starts_at, ends_at, total_price, status)
+            VALUES (900002, 900001, 900001, 'CI Overlap', '+380000000001',
+                    '2027-01-01 10:15:00+00', '2027-01-01 10:30:00+00', 600, 'pending')
+          "
+          if psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql > /tmp/overlap-preflight.log 2>&1; then
+            echo "ERROR: overlapping active bookings passed the preflight"
+            exit 1
+          fi
+          grep -q 'Existing booking records violate target database constraints' /tmp/overlap-preflight.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "DELETE FROM bookings WHERE id = 900002"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
+      - name: Prove migration preflight rejects invalid booking intervals
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET ends_at = starts_at WHERE id = 900001
+          "
+          if psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql > /tmp/invalid-time-preflight.log 2>&1; then
+            echo "ERROR: invalid booking time interval passed the preflight"
+            exit 1
+          fi
+          grep -q 'Existing booking records violate target database constraints' /tmp/invalid-time-preflight.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET ends_at = '2027-01-01 10:45:00+00' WHERE id = 900001
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
+      - name: Prove migration preflight rejects malformed idempotency data
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET idempotency_scope = 'ci-scope', idempotency_key = NULL,
+              idempotency_request_hash = NULL WHERE id = 900001
+          "
+          if psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql > /tmp/invalid-idempotency-preflight.log 2>&1; then
+            echo "ERROR: malformed idempotency fields passed the preflight"
+            exit 1
+          fi
+          grep -q 'Existing booking records violate target database constraints' /tmp/invalid-idempotency-preflight.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET idempotency_scope = NULL, idempotency_key = NULL,
+              idempotency_request_hash = NULL WHERE id = 900001
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
+      - name: Prove migration preflight rejects duplicate idempotency keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET idempotency_scope = 'ci-scope', idempotency_key = 'ci-key',
+              idempotency_request_hash = repeat('a', 64) WHERE id = 900001
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            INSERT INTO bookings (id, location_id, barber_id, customer_name, customer_phone,
+              starts_at, ends_at, total_price, status, idempotency_scope, idempotency_key,
+              idempotency_request_hash)
+            VALUES (900002, 900001, 900001, 'CI Duplicate', '+380000000002',
+              '2027-01-02 10:00:00+00', '2027-01-02 10:45:00+00', 600, 'cancelled',
+              'ci-scope', 'ci-key', repeat('b', 64))
+          "
+          if psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql > /tmp/duplicate-idempotency-preflight.log 2>&1; then
+            echo "ERROR: duplicate idempotency keys passed the preflight"
+            exit 1
+          fi
+          grep -q 'Existing booking records violate target database constraints' /tmp/duplicate-idempotency-preflight.log
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "DELETE FROM bookings WHERE id = 900002"
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            UPDATE bookings SET idempotency_scope = NULL, idempotency_key = NULL,
+              idempotency_request_hash = NULL WHERE id = 900001
+          "
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -f db/constraints/preflight-booking-migration.sql
+      - name: Export populated pre-upgrade database snapshot for restore test
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network host -e DATABASE_URL="$DATABASE_URL" postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges' > /tmp/pre-upgrade.dump
+          test -s /tmp/pre-upgrade.dump
+      - name: Install current dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Initialize current localized Payload against populated old database
+        run: timeout 90s node --experimental-strip-types scripts/rehearse-localization-upgrade.ts
+      - name: Prove pre-upgrade snapshot can restore into a fresh database
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "CREATE DATABASE gentlemens_restore_ci"
+          docker run --rm --network host -e PGPASSWORD=postgres -v /tmp:/backup:ro postgres:17-alpine \
+            pg_restore --exit-on-error --no-owner --no-privileges \
+              --host localhost --username postgres --dbname gentlemens_restore_ci \
+              /backup/pre-upgrade.dump
+          RESTORED_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_restore_ci"
+          psql -X -v ON_ERROR_STOP=1 "$RESTORED_URL" -At -F '|' \
+            -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/legacy-restored.txt
+          diff -u /tmp/legacy-before.txt /tmp/legacy-restored.txt
+      - name: Assert legacy business data preserved exactly
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -At -F '|' -f db/constraints/fingerprint-localization-legacy-data.sql > /tmp/legacy-after.txt
+          diff -u /tmp/legacy-before.txt /tmp/legacy-after.txt
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -Atc "
+            SELECT count(*) FROM information_schema.tables
+            WHERE table_schema = 'public'
+            AND table_name IN ('services_locales', 'locations_locales', 'barbers_locales', 'translations')
+          " | grep -qx '4'

@@ -20,10 +20,10 @@ export async function getBarberAvailability(input: {
   const from = new Date(day.getTime() - 48 * 3600000).toISOString()
   const to = new Date(day.getTime() + 72 * 3600000).toISOString()
 
-  const barber = await payload.findByID({ collection: 'barbers', id: barberId, depth: 0 })
+  const barber = await payload.findByID({ collection: 'barbers', id: barberId, depth: 0, overrideAccess: true })
   if (!barber.isActive) return []
   const locationId = typeof barber.location === 'number' ? barber.location : barber.location.id
-  const location = await payload.findByID({ collection: 'locations', id: locationId, depth: 0 })
+  const location = await payload.findByID({ collection: 'locations', id: locationId, depth: 0, overrideAccess: true })
   if (!location.isActive) return []
   const timeZone = location.timeZone
   if (!timeZone) throw new Error('Location timezone is required')
