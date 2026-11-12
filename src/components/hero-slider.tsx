@@ -11,6 +11,9 @@ const INTERVAL = 7000
 export function HeroSlider({ locale, messages }: { locale: Locale; messages: Messages }) {
   const [active, setActive] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const [visible, setVisible] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(true)
   const slides = [
     { eyebrow: messages.home.eyebrow, title: [messages.home.heroLine1, messages.home.heroLine2], accent: messages.home.heroAccent, description: messages.home.heroIntro },
@@ -27,14 +30,23 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
   }, [])
 
   useEffect(() => {
-    if (paused || reducedMotion) return
+    const onVisibility = () => setVisible(!document.hidden)
+    onVisibility()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
+  const playing = !paused && !hovered && !focused && !reducedMotion && visible
+
+  useEffect(() => {
+    if (!playing) return
     const timer = window.setInterval(() => setActive(current => (current + 1) % slides.length), INTERVAL)
     return () => window.clearInterval(timer)
-  }, [paused, reducedMotion, slides.length])
+  }, [playing, slides.length, active])
 
   const slide = slides[active]
   return (
-    <section className="hero hero--editorial hero--slider" aria-labelledby="hero-title" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocusCapture={() => setPaused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false) }}>
+    <section className="hero hero--editorial hero--slider" aria-labelledby="hero-title" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>
       <div className="hero-copy hero-copy--reveal">
         <p className="eyebrow">{slide.eyebrow}</p>
         <h1 id="hero-title" key={active}>{slide.title.map((line, index) => <span key={index}>{line}<br /></span>)}{slide.accent && <em>{slide.accent}</em>}</h1>
@@ -42,6 +54,7 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
         <div className="hero-actions"><Link className="cta" href={`/${locale}/booking`}>{messages.actions.planVisit}</Link><a href="#about">{messages.home.learnMore} ↗</a></div>
         <div className="hero-slider__controls" aria-label={locale === 'uk' ? 'Керування слайдером' : 'Slider controls'}>
           {slides.map((_, index) => <button key={index} type="button" className={index === active ? 'is-active' : ''} aria-label={locale === 'uk' ? `Слайд ${index + 1}` : `Slide ${index + 1}`} aria-current={index === active ? 'true' : undefined} onClick={() => setActive(index)}><span>{String(index + 1).padStart(2, '0')}</span></button>)}
+          <span className="hero-slider__progress" aria-hidden="true"><span key={active} className={playing ? 'is-playing' : ''} /></span>
           <button type="button" className="hero-slider__pause" aria-label={paused ? (locale === 'uk' ? 'Відновити слайдер' : 'Resume slider') : (locale === 'uk' ? 'Призупинити слайдер' : 'Pause slider')} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? '▶' : 'Ⅱ'}</button>
         </div>
       </div>
