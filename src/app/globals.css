@@ -118,3 +118,20 @@
 .site-nav a.is-active{color:var(--ink);font-weight:650}
 .site-nav a.is-active::after{content:'';position:absolute;left:0;right:0;bottom:-9px;height:2px;background:var(--gold)}
 .mobile-navigation__panel a.is-active{font-weight:700;border-inline-start:3px solid var(--gold);padding-inline-start:11px;background:var(--paper)}
+
+
+/* Hero foundation: editorial split and one-shot entrance without scroll hijacking.
+   The art is deliberately still a placeholder until approved imagery is available. */
+.hero--editorial{min-height:100svh;overflow:hidden;isolation:isolate;padding-top:clamp(88px,12vh,150px)}
+.hero--editorial .hero-copy{position:relative;z-index:1}
+.hero--editorial .hero-art{position:relative;min-height:min(66vh,680px);box-shadow:none;border:1px solid color-mix(in srgb,var(--gold) 28%,transparent)}
+.hero--editorial .hero-art::before{content:'';position:absolute;inset:18px;border:1px solid rgb(200 168 107 / .25);pointer-events:none}
+.hero--editorial .hero-art>span{position:relative;z-index:1}
+.hero-copy--reveal{animation:hero-copy-enter .85s cubic-bezier(.22,1,.36,1) both}
+.hero-art--reveal{animation:hero-art-enter 1.1s cubic-bezier(.22,1,.36,1) both}
+.hero--editorial .scroll-mouse{transition:transform .2s ease}
+.hero--editorial .scroll-mouse:hover{transform:translateY(5px)}
+@keyframes hero-copy-enter{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes hero-art-enter{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:translateX(0)}}
+@media(max-width:720px){.hero--editorial{min-height:100svh;padding-top:130px}.hero--editorial .hero-art{min-height:300px;max-height:48vh}.hero--editorial .scroll-mouse{left:auto;right:26px}}
+@media(prefers-reduced-motion:reduce){.hero-copy--reveal,.hero-art--reveal{animation:none;opacity:1;transform:none}.hero--editorial .scroll-mouse{transition:none}}

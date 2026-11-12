@@ -28,14 +28,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   ])
   return <main id="top" className="landing">
     <SiteHeader locale={locale} messages={t} />
-    <section className="hero" aria-labelledby="hero-title">
-      <div className="hero-copy">
+    <section className="hero hero--editorial" aria-labelledby="hero-title">
+      <div className="hero-copy hero-copy--reveal">
         <p className="eyebrow">{t.home.eyebrow}</p>
         <h1 id="hero-title">{t.home.heroLine1}<br/>{t.home.heroLine2}<br/><em>{t.home.heroAccent}</em></h1>
         <p>{t.home.heroIntro}</p>
         <div className="hero-actions"><Link className="cta" href={`/${locale}/booking`}>{t.actions.planVisit}</Link><a href="#about">{t.home.learnMore} ↗</a></div>
       </div>
-      <div className="hero-art" role="img" aria-label={t.home.heroArtLabel}><span>✦<small>GENTLEMEN’S BARBERSHOP</small></span></div>
+      <div className="hero-art hero-art--reveal" role="img" aria-label={t.home.heroArtLabel}><span>✦<small>GENTLEMEN’S BARBERSHOP</small></span></div>
       <a className="scroll-hint scroll-mouse" href="#about" aria-label={t.home.scrollLabel}><svg viewBox="0 0 32 48" width="32" height="48" fill="none" aria-hidden="true"><rect x="5" y="2" width="22" height="42" rx="11" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></a>
     </section>
     <section id="about" className="content-section"><p className="eyebrow">{t.home.whyEyebrow}</p><h2>{t.home.whyTitle}</h2><p>{t.home.whyIntro}</p></section>
