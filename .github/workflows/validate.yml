@@ -181,6 +181,12 @@ jobs:
             echo "Booking deployment preflight accepted a missing database URL"
             exit 1
           fi
+      - name: Verify managed shared limiter migration and retention
+        shell: bash
+        run: |
+          set -euo pipefail
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
+            bash scripts/test-managed-booking-rate-limit.sh
       - name: Verify atomic PostgreSQL shared booking limiter
         shell: bash
         run: |
