@@ -53,7 +53,7 @@ export async function changeOwnBarberBookingStatus(
       FROM bookings AS booking
       JOIN barbers AS barber ON barber.id = booking.barber_id
       WHERE booking.id = ${id}
-        AND booking.status = ${from}
+        AND booking.status = ${from}::public.enum_bookings_status
         AND barber.user_id = ${userId}
         AND barber.is_active = TRUE
         AND (
@@ -65,7 +65,7 @@ export async function changeOwnBarberBookingStatus(
     ),
     changed AS (
       UPDATE bookings AS booking
-      SET status = ${status}, updated_at = NOW()
+      SET status = ${status}::public.enum_bookings_status, updated_at = NOW()
       FROM eligible
       WHERE booking.id = eligible.id AND booking.status = eligible.previous_status
       RETURNING booking.id, booking.status, eligible.previous_status
@@ -73,7 +73,9 @@ export async function changeOwnBarberBookingStatus(
     recorded AS (
       INSERT INTO booking_events
         (booking_id, action, previous_status, actor_id, actor_role, updated_at, created_at)
-      SELECT id, ${status}, previous_status, ${userId}, 'assigned_barber', NOW(), NOW()
+      SELECT id, ${status}::public.enum_booking_events_action,
+        previous_status::text::public.enum_booking_events_previous_status,
+        ${userId}, 'assigned_barber'::public.enum_booking_events_actor_role, NOW(), NOW()
       FROM changed
       RETURNING booking_id
     )
