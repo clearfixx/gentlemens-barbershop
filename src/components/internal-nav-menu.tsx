@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Menu, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { Locale } from '@/i18n/config'
 
@@ -48,9 +49,9 @@ export function InternalNavMenu({
         aria-controls="internal-nav-panel"
         onClick={() => setOpen(value => !value)}
       >
-        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
-          {open ? <path d="M5 5l14 14M19 5 5 19" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-        </svg>
+        {open
+          ? <X size={23} strokeWidth={1.75} aria-hidden="true" />
+          : <Menu size={23} strokeWidth={1.75} aria-hidden="true" />}
       </button>
       {open && <div id="internal-nav-panel" className="internal-nav-menu__panel">
         <p className="internal-nav-menu__caption">{uk ? 'Розділи сайту' : 'Pages'}</p>
