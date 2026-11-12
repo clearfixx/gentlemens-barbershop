@@ -1,214 +1,35 @@
-/* Self-contained Hero rebuilt from the approved reference.
-   No scroll-tied effects or layout dependencies on the old .hero rules. */
-.barber-hero {
-  --hero-gold: #c39a57;
-  position: relative;
-  isolation: isolate;
-  width: 100%;
-  min-height: 100svh;
-  background: var(--paper);
-  color: var(--ink);
-  border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
-}
-.barber-hero__interior,
-.barber-hero__wash {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.barber-hero__interior {
-  z-index: -2;
-  background: url('/images/hero/barbershop-interior.webp') center center / cover no-repeat;
-}
-.barber-hero__wash {
-  z-index: -1;
-  background: linear-gradient(90deg,
-    var(--paper) 0%,
-    color-mix(in srgb, var(--paper) 97%, transparent) 18%,
-    color-mix(in srgb, var(--paper) 84%, transparent) 30%,
-    color-mix(in srgb, var(--paper) 40%, transparent) 48%,
-    transparent 68%);
-}
-:root[data-theme='dark'] .barber-hero__wash {
-  background: linear-gradient(90deg,
-    rgba(27, 19, 14, .98) 0%,
-    rgba(27, 19, 14, .94) 23%,
-    rgba(27, 19, 14, .68) 40%,
-    rgba(27, 19, 14, .16) 65%,
-    rgba(27, 19, 14, .07) 100%);
-}
-.barber-hero__content {
-  position: relative;
-  z-index: 2;
-  width: min(36vw, 490px);
-  min-height: 100svh;
-  margin-left: 9%;
-  padding: clamp(130px, 22.8svh, 240px) 0 82px;
-}
-.barber-hero__eyebrow {
-  margin: 0 0 17px;
-  font-size: clamp(11px, .82vw, 14px);
-  font-weight: 500;
-  letter-spacing: .13em;
-}
-.barber-hero__headline {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin: 0 0 22px;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: clamp(52px, 4.35vw, 82px);
-  font-weight: 400;
-  line-height: .98;
-  letter-spacing: -.025em;
-}
-.barber-hero__headline span { display: block; white-space: nowrap; }
-.barber-hero__headline--long { font-size: clamp(44px, 3.4vw, 64px); }
-.barber-hero__description {
-  max-width: 420px;
-  margin: 0;
-  font-size: clamp(14px, 1.05vw, 18px);
-  line-height: 1.45;
-}
-.barber-hero__actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-top: 24px;
-}
-.barber-hero__primary,
-.barber-hero__secondary {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  min-height: 47px;
-  padding: 11px 23px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.2;
-}
-.barber-hero__primary {
-  background: var(--hero-gold);
-  color: #201711;
-  font-weight: 700;
-}
-.barber-hero__secondary {
-  border-color: color-mix(in srgb, var(--ink) 48%, transparent);
-  background: color-mix(in srgb, var(--paper) 10%, transparent);
-  color: var(--ink);
-}
-.barber-hero__controls {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 30px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.barber-hero__track {
-  position: relative;
-  width: clamp(90px, 7.5vw, 140px);
-  height: 2px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--ink) 24%, transparent);
-}
-.barber-hero__fill {
-  display: block;
-  width: 0;
-  height: 100%;
-  background: var(--hero-gold);
-}
-.barber-hero__fill--running { animation: barber-hero-progress 7s linear forwards; }
-@keyframes barber-hero-progress { to { width: 100%; } }
-.barber-hero__pause {
-  display: grid;
-  place-items: center;
-  width: 33px;
-  height: 33px;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--ink) 38%, transparent);
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--paper) 24%, transparent);
-  color: var(--ink);
-  cursor: pointer;
-  font-size: 14px;
-}
-.barber-hero__scene {
-  position: absolute;
-  z-index: 1;
-  right: 5%;
-  bottom: 7%;
-  width: 46%;
-  height: 68%;
-  pointer-events: none;
-}
-.barber-hero__chair {
-  object-fit: contain;
-  object-position: center bottom;
-  filter: drop-shadow(0 20px 20px rgba(0, 0, 0, .19));
-}
-.barber-hero__dots {
-  position: absolute;
-  z-index: 3;
-  right: 2.7%;
-  top: 48%;
-  display: flex;
-  flex-direction: column;
-  gap: 13px;
-}
-.barber-hero__dots button {
-  width: 13px;
-  height: 13px;
-  padding: 0;
-  background: transparent;
-  border: 1px solid var(--ink);
-  border-radius: 50%;
-  cursor: pointer;
-}
-.barber-hero__dots button[aria-current='true'] { background: var(--ink); }
-.barber-hero__down {
-  position: absolute;
-  z-index: 4;
-  bottom: 0;
-  left: 50%;
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  transform: translate(-50%, 50%);
-  border: 1px solid var(--hero-gold);
-  border-radius: 50%;
-  background: var(--paper);
-  color: var(--hero-gold);
-  text-decoration: none;
-}
-@media (max-width: 1100px) {
-  .barber-hero__content { width: 44%; margin-left: 6%; }
-  .barber-hero__headline { font-size: clamp(44px, 5vw, 65px); }
-  .barber-hero__headline--long { font-size: clamp(36px, 4vw, 55px); }
-  .barber-hero__scene { right: 1%; width: 49%; height: 65%; }
-}
-@media (max-width: 767px) {
-  .barber-hero { min-height: 100svh; overflow: clip; }
-  .barber-hero__interior { background-position: 65% center; }
-  .barber-hero__wash { background: linear-gradient(180deg, var(--paper), color-mix(in srgb, var(--paper) 87%, transparent) 43%, transparent 100%); }
-  :root[data-theme='dark'] .barber-hero__wash { background: linear-gradient(180deg, rgba(27, 19, 14, .96), rgba(27, 19, 14, .78) 48%, rgba(27, 19, 14, .10) 100%); }
-  .barber-hero__content { width: auto; min-height: 0; margin: 0; padding: 110px 24px 0; }
-  .barber-hero__headline { font-size: clamp(42px, 10vw, 62px); }
-  .barber-hero__headline--long { font-size: clamp(32px, 7.5vw, 48px); }
-  .barber-hero__description { max-width: 340px; font-size: 14px; }
-  .barber-hero__actions { gap: 10px; margin-top: 17px; }
-  .barber-hero__primary, .barber-hero__secondary { min-height: 44px; padding: 10px 14px; font-size: 12px; }
-  .barber-hero__controls { margin-top: 17px; }
-  .barber-hero__scene { position: relative; right: auto; bottom: auto; width: 100%; height: min(42svh, 380px); margin: 10px auto 36px; }
-  .barber-hero__dots { right: 16px; top: auto; bottom: 21%; }
-  .barber-hero__down { width: 44px; height: 44px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .barber-hero__fill--running { animation: none; width: 40%; }
-}
+/* Gentlemen's Hero — geometry follows the approved 600 × 302 reference.
+   Independent photo, chair and copy; zero inheritance from old .hero layout. */
+.barber-hero{--hero-gold:#c8a46a;position:relative;isolation:isolate;min-height:100svh;width:100%;overflow:hidden;color:var(--ink);background:var(--paper);border-bottom:1px solid color-mix(in srgb,var(--ink) 15%,transparent)}
+.barber-hero__interior,.barber-hero__wash{position:absolute;inset:0;pointer-events:none}
+.barber-hero__interior{z-index:-2;background:url('/images/hero/barbershop-interior.webp') center center/cover no-repeat}
+.barber-hero__wash{z-index:-1;background:linear-gradient(90deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 98%,transparent) 16%,color-mix(in srgb,var(--paper) 85%,transparent) 31%,color-mix(in srgb,var(--paper) 44%,transparent) 48%,transparent 69%)}
+:root[data-theme=dark] .barber-hero__wash{background:linear-gradient(90deg,#1c140f 0%,rgba(28,20,15,.97) 18%,rgba(28,20,15,.88) 34%,rgba(28,20,15,.48) 49%,rgba(28,20,15,.12) 68%,rgba(28,20,15,.06) 100%)}
+.barber-hero__content{position:relative;z-index:2;width:min(36vw,540px);margin-left:9%;min-height:100svh;padding:clamp(165px,22.5svh,245px) 0 95px}
+.barber-hero__eyebrow{margin:0 0 15px;color:var(--hero-gold);font-size:clamp(11px,.76vw,14px);font-weight:500;letter-spacing:.18em}
+.barber-hero__headline{display:flex;flex-direction:column;gap:0;margin:0 0 17px;color:var(--ink);font-family:Georgia,'Times New Roman',serif;font-size:clamp(52px,4.1vw,78px);font-weight:400;letter-spacing:-.024em;line-height:.99}
+:root[data-theme=dark] .barber-hero__headline{color:#dfc49a}
+.barber-hero__headline span{display:block;white-space:nowrap}
+.barber-hero__headline--long{font-size:clamp(41px,3.2vw,62px)}
+.barber-hero__description{max-width:415px;margin:0;color:var(--ink);font-size:clamp(14px,.93vw,17px);font-weight:400;line-height:1.44}
+.barber-hero__actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:22px}
+.barber-hero__primary,.barber-hero__secondary{display:inline-flex;align-items:center;justify-content:center;gap:13px;min-height:47px;padding:12px 20px;border:1px solid transparent;border-radius:5px;text-decoration:none;font-size:13px;font-weight:500;line-height:1.1;white-space:nowrap}
+.barber-hero__primary{background:var(--hero-gold);color:#21170f;font-weight:700}
+.barber-hero__secondary{border-color:color-mix(in srgb,var(--ink) 46%,transparent);background:rgba(20,12,8,.12);color:var(--ink)}
+.barber-hero__controls{display:flex;align-items:center;gap:13px;margin-top:25px;color:var(--ink);font-size:12px;font-weight:600}
+.barber-hero__track{display:block;position:relative;width:clamp(100px,7.5vw,137px);height:2px;overflow:hidden;background:color-mix(in srgb,var(--ink) 28%,transparent)}
+.barber-hero__fill{display:block;width:0;height:100%;background:var(--hero-gold)}
+.barber-hero__fill--running{animation:barber-hero-progress 7s linear forwards}
+@keyframes barber-hero-progress{to{width:100%}}
+.barber-hero__pause{display:grid;place-items:center;width:34px;height:34px;border:1px solid color-mix(in srgb,var(--ink) 36%,transparent);border-radius:50%;padding:0;background:rgba(20,12,8,.22);color:var(--hero-gold);cursor:pointer;font-size:14px}
+.barber-hero__scene{position:absolute;z-index:1;right:2%;bottom:5.2%;width:53%;height:74%;pointer-events:none}
+.barber-hero__chair{object-fit:contain;object-position:center bottom;filter:drop-shadow(0 12px 18px rgba(0,0,0,.18))}
+.barber-hero__dots{position:absolute;z-index:3;right:2.4%;top:51%;display:flex;flex-direction:column;gap:14px;transform:translateY(-50%)}
+.barber-hero__dots button{width:13px;height:13px;border:1px solid var(--ink);border-radius:50%;padding:0;background:transparent;cursor:pointer}
+.barber-hero__dots button[aria-current=true]{background:var(--ink)}
+.barber-hero__down{position:absolute;z-index:4;left:50%;bottom:13px;display:grid;place-items:center;width:49px;height:49px;transform:translateX(-50%);border:1px solid var(--hero-gold);border-radius:50%;background:rgba(28,19,12,.68);color:var(--hero-gold);text-decoration:none}
+.barber-hero__down svg{animation:barber-hero-down 2.3s ease-in-out infinite}
+@keyframes barber-hero-down{0%,100%{transform:translateY(-3px)}55%{transform:translateY(4px)}}
+@media(max-width:1279px){.barber-hero__content{width:41%;margin-left:6%;padding-top:clamp(140px,19svh,210px)}.barber-hero__headline{font-size:clamp(42px,5vw,64px)}.barber-hero__headline--long{font-size:clamp(33px,3.7vw,54px)}.barber-hero__scene{right:1%;width:52%;height:70%}}
+@media(max-width:767px){.barber-hero{display:flex;flex-direction:column;min-height:100svh;padding-bottom:70px}.barber-hero__interior{background-position:62% center}.barber-hero__wash{background:linear-gradient(180deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 89%,transparent) 49%,transparent 100%)}:root[data-theme=dark] .barber-hero__wash{background:linear-gradient(180deg,rgba(28,20,15,.97),rgba(28,20,15,.9) 50%,rgba(28,20,15,.18) 100%)}.barber-hero__content{width:100%;min-height:0;margin:0;padding:106px 23px 0}.barber-hero__eyebrow{margin-bottom:13px}.barber-hero__headline{font-size:clamp(41px,9.5vw,59px);margin-bottom:13px}.barber-hero__headline--long{font-size:clamp(30px,7.5vw,47px)}.barber-hero__description{max-width:340px;font-size:14px}.barber-hero__actions{margin-top:17px;gap:10px}.barber-hero__primary,.barber-hero__secondary{min-height:43px;padding:10px 13px;font-size:12px}.barber-hero__controls{margin-top:18px}.barber-hero__scene{position:relative;right:auto;bottom:auto;width:100%;height:min(40svh,380px);min-height:200px;margin:10px auto 0}.barber-hero__dots{right:13px;top:auto;bottom:23%}.barber-hero__down{bottom:14px;width:44px;height:44px}}
+@media(prefers-reduced-motion:reduce){.barber-hero__fill--running,.barber-hero__down svg{animation:none}.barber-hero__fill--running{width:40%}}
