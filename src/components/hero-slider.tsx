@@ -24,6 +24,7 @@ export function HeroSlider({ locale }: { locale: Locale }) {
   const [index, setIndex] = useState(0)
   const [playing, setPlaying] = useState(true)
   const [cycle, setCycle] = useState(0)
+  const [remaining, setRemaining] = useState(DURATION)
   const items = slides[locale]
   const current = items[index]
 
@@ -32,12 +33,14 @@ export function HeroSlider({ locale }: { locale: Locale }) {
     const timer = window.setTimeout(() => {
       setIndex(value => (value + 1) % items.length)
       setCycle(value => value + 1)
-    }, DURATION)
+      setRemaining(DURATION)
+    }, remaining)
     return () => window.clearTimeout(timer)
-  }, [playing, index, cycle, items.length])
+  }, [playing, index, cycle, items.length, remaining])
 
   function select(next: number) {
     setIndex(next)
+    setRemaining(DURATION)
     setCycle(value => value + 1)
   }
 
@@ -56,7 +59,7 @@ export function HeroSlider({ locale }: { locale: Locale }) {
           <span key={cycle} className={`hero-slide-progress__fill${playing ? ' is-playing' : ''}`} />
         </div>
         <span className="hero-slide-number">03</span>
-        <button type="button" className="hero-slider-pause" aria-label={playing ? (locale === 'uk' ? 'Зупинити слайдер' : 'Pause slideshow') : (locale === 'uk' ? 'Відновити слайдер' : 'Resume slideshow')} onClick={() => { setPlaying(value => !value); setCycle(value => value + 1) }}>{playing ? 'Ⅱ' : '▶'}</button>
+        <button type="button" className="hero-slider-pause" aria-label={playing ? (locale === 'uk' ? 'Зупинити слайдер' : 'Pause slideshow') : (locale === 'uk' ? 'Відновити слайдер' : 'Resume slideshow')} onClick={() => { setPlaying(value => !value); setCycle(value => value + 1); setRemaining(DURATION) }}>{playing ? 'Ⅱ' : '▶'}</button>
       </div>
     </div>
     <div className="hero-art"><Image src="/images/hero/barber-chair.png" alt={locale === 'uk' ? 'Класичне барберське крісло' : 'Classic barber chair'} width={1024} height={1400} className="hero-chair" priority sizes="(max-width: 720px) 90vw, 42vw" /></div>
