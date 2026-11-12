@@ -82,3 +82,22 @@
 .locale-switcher a{display:inline-grid;place-items:center;min-width:44px;min-height:44px;padding:8px;color:var(--ink);text-decoration:none;border:1px solid transparent;border-radius:var(--radius-control,5px)}
 .locale-switcher a[aria-current="page"]{border-color:currentColor;font-weight:700}
 .locale-switcher a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+
+/* Hero / navbar: official brand assets and flat layered composition. */
+.site-header{position:sticky;top:0;z-index:50;min-height:56px;padding:5px clamp(20px,4vw,72px);background:transparent;border:0;transition:background-color .3s ease,border-color .3s ease,backdrop-filter .3s ease}
+.site-header--scrolled{background:color-mix(in srgb,var(--paper) 92%,transparent);border-bottom:1px solid var(--border);backdrop-filter:blur(14px)}
+.site-brand{font-family:Inter,Arial,sans-serif;letter-spacing:normal}
+.site-brand__logo{display:block;width:clamp(140px,15vw,210px);height:auto;max-height:54px;object-fit:contain}
+.site-nav a{font-family:Inter,Arial,sans-serif}
+.hero{min-height:calc(100svh - 56px);padding-top:clamp(40px,7vh,100px);padding-bottom:90px}
+.hero h1{font-family:Inter,Arial,Helvetica,sans-serif;font-weight:750;font-style:normal;letter-spacing:-.045em}
+.hero h1 em{font-style:normal}
+.hero-art{position:relative;display:flex;align-items:flex-end;justify-content:center;min-height:480px;background:none;box-shadow:none;border-radius:0;overflow:visible}
+.hero-chair{display:block;width:min(100%,650px);height:auto;max-height:min(78svh,780px);object-fit:contain;filter:drop-shadow(0 24px 22px rgba(35,23,14,.17))}
+.scroll-mouse{display:flex;justify-content:center;align-items:center;transform:translateX(-50%);animation:hero-mouse-bob 2.2s ease-in-out infinite}
+.scroll-mouse svg path{animation:hero-mouse-wheel 1.8s ease-in-out infinite}
+@keyframes hero-mouse-bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
+@keyframes hero-mouse-wheel{0%{transform:translateY(0);opacity:1}70%{transform:translateY(9px);opacity:.15}100%{transform:translateY(0);opacity:1}}
+@media(max-width:720px){.site-header{padding:6px 14px}.site-brand__logo{width:140px}.hero{min-height:calc(100svh - 56px);padding-top:20px}.hero-art{min-height:260px}.hero-chair{max-height:45svh}.scroll-hint{bottom:14px}}
+@media(prefers-reduced-motion:reduce){.scroll-mouse,.scroll-mouse svg path{animation:none}}
