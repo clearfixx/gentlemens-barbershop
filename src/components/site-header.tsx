@@ -28,7 +28,6 @@ export function SiteHeader({
   return (
     <FloatingHeaderShell>
       <div className="floating-header__brand-area">
-        <ThemeToggle locale={locale} />
         <Link href={prefix} className="site-brand" aria-label={`Gentlemen’s Barbershop — ${t.nav.home}`}>
           <span className="site-brand__art">
             <Image
@@ -53,6 +52,8 @@ export function SiteHeader({
           </svg>
         </span>
         <UserMenu locale={locale} />
+        <ThemeToggle locale={locale} />
+        <LocaleSwitcher locale={locale} messages={t} />
         <Link className="header-booking" href={`${prefix}/booking`}>{locale === 'uk' ? 'Записатися онлайн' : 'Book online'} →</Link>
         <details className="header-mobile-nav">
           <summary aria-label={locale === 'uk' ? 'Відкрити меню' : 'Open menu'}>
@@ -67,7 +68,6 @@ export function SiteHeader({
             <Link className="header-mobile-nav__booking" href={`${prefix}/booking`}>
               {locale === 'uk' ? 'Записатися онлайн' : 'Book online'} →
             </Link>
-            <LocaleSwitcher locale={locale} messages={t} />
           </div>
         </details>
       </div>
