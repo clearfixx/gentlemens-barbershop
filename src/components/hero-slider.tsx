@@ -84,8 +84,7 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
         <div className="hero-actions hero-enter hero-enter--actions"><Link className="cta" href={`/${locale}/booking`}>{messages.actions.planVisit}</Link><a href="#about">{messages.home.learnMore} ↗</a></div>
         <div className="hero-slider__controls hero-enter hero-enter--controls" aria-label={locale === 'uk' ? 'Керування слайдером' : 'Slider controls'}>
           {slides.map((_, index) => <button key={index} type="button" className={index === active ? 'is-active' : ''} aria-label={locale === 'uk' ? `Слайд ${index + 1}` : `Slide ${index + 1}`} aria-current={index === active ? 'true' : undefined} onClick={() => chooseSlide(index)}><span>{String(index + 1).padStart(2, '0')}</span></button>)}
-          <span className="hero-slider__progress" aria-hidden="true"><span ref={progressRef} /></span>
-          <button type="button" className="hero-slider__pause" aria-label={paused ? (locale === 'uk' ? 'Відновити слайдер' : 'Resume slider') : (locale === 'uk' ? 'Призупинити слайдер' : 'Pause slider')} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? '▶' : 'Ⅱ'}</button>
+          <button type="button" className="hero-slider__progress hero-slider__progress-toggle" aria-label={paused ? (locale === 'uk' ? 'Відновити автоматичне перемикання' : 'Resume automatic slides') : (locale === 'uk' ? 'Зупинити автоматичне перемикання' : 'Pause automatic slides')} aria-pressed={paused} onClick={() => setPaused(value => !value)}><span ref={progressRef} /></button>
         </div>
       </div>
       <div className="hero-chair hero-chair--enter" role="img" aria-label={messages.home.heroArtLabel} />

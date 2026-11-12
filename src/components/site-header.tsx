@@ -60,14 +60,14 @@ export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messa
     <header className={`site-header${onLanding ? ' site-header--landing' : ''}${scrolled ? ' is-scrolled' : ''}`}>
       <Link href={prefix} className="site-brand" aria-label={`Gentlemen’s Barbershop — ${t.nav.home}`}>
         <span className="site-brand__symbol" aria-hidden="true">✦</span>
-        <span>GENTLEMEN’S <small>BARBERSHOP</small></span>
+        <span className="site-brand__wordmark">GENTLEMEN’S <small>BARBERSHOP</small></span>
       </Link>
       <nav aria-label={t.nav.primary} className="site-nav">
         {links.map(link => <Link key={link.href} href={link.href} aria-current={isActive(link.href) ? 'page' : undefined} className={isActive(link.href) ? 'is-active' : undefined}>{link.label}</Link>)}
       </nav>
       <div className="site-header__actions">
-        <LocaleSwitcher locale={locale} messages={t} />
         <ThemeToggle locale={locale} />
+        <LocaleSwitcher locale={locale} messages={t} />
         <Link className="header-booking" href={`${prefix}/booking`}>{t.actions.planVisit}</Link>
         <details className="mobile-navigation">
           <summary aria-label={t.nav.primary}>
