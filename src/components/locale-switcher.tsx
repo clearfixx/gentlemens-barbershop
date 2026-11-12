@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ChevronDown } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { locales, type Locale } from '@/i18n/config'
@@ -79,7 +80,7 @@ export function LocaleSwitcher({
       onClick={() => setOpen(value => !value)}
     >
       {locale.toUpperCase()}
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      <ChevronDown size={13} strokeWidth={1.75} aria-hidden="true" />
     </button>
     {open && <div role="menu" aria-label={t.language.navigation} className="locale-compact__panel">
       {locales.map(option =>
