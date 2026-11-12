@@ -6,6 +6,7 @@ import { AuthNavControl } from './auth-nav-control'
 import { FloatingHeaderShell } from './floating-header-shell'
 import { InternalNavMenu } from './internal-nav-menu'
 import { LocaleSwitcher } from './locale-switcher'
+import { SectionNav } from './section-nav'
 import { ThemeToggle } from './theme-toggle'
 import { getFallbackMessages } from '@/i18n/messages'
 import type { Locale } from '@/i18n/config'
@@ -45,9 +46,7 @@ export function SiteHeader({
       </Link>
 
       <nav aria-label={t.nav.primary} className="site-nav">
-        <div className="site-nav__anchors">
-          {links.map(link => <Link key={link.href} href={link.href}>{link.label}</Link>)}
-        </div>
+        <SectionNav locale={locale} links={links} />
         <InternalNavMenu locale={locale} anchorLinks={links} />
       </nav>
 
