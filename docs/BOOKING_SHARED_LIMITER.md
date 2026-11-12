@@ -21,3 +21,7 @@ Both booking POST and status PATCH now consume a global, PostgreSQL-backed budge
 ## Scheduled retention cleanup
 
 Run `CONFIRM_BOOKING_RATE_LIMIT_CLEANUP=prune bash scripts/prune-booking-rate-limit.sh` with a trusted `DATABASE_URL` after the managed migration is installed. This **mutates the database**, so the explicit approval variable is required. The script uses PostgreSQL's clock and preserves the last 24 hours of fixed-minute windows; it applies a 30-second statement timeout and stops on SQL errors. Schedule it with the deployment's trusted cron/scheduler (for example, hourly), monitor failures and table growth. The script does **not** register a scheduler by itself. Never run against an unreviewed database.
+
+## Failure-path tests
+
+`booking-write-guard.test.ts` exercises the application-level SQL adapter using a fake Payload database connection: successful allowance, rejection and retry interval, database exception propagation, invalid response shapes and invalid clock values. This does not replace full HTTP integration testing; production writes remain disabled.
