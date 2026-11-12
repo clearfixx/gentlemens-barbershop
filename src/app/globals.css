@@ -182,6 +182,7 @@
 .auth-nav__panel a,.auth-nav__panel button{display:block;width:100%;padding:11px;border:0;border-radius:5px;background:none;color:var(--ink);text-decoration:none;text-align:left;cursor:pointer;font-size:14px}
 .auth-nav__panel a:hover,.auth-nav__panel button:hover{background:color-mix(in srgb,var(--gold) 14%,transparent)}
 .auth-nav__panel button:disabled{cursor:wait;opacity:.6}
+.auth-nav__error{margin:6px 9px;padding:8px 9px;color:#d77a65;font-size:12px;line-height:1.4}
 .header-preferences{
   display:flex;align-items:center;gap:0;height:44px;flex:0 0 auto;
   border:1px solid color-mix(in srgb,var(--gold) 57%,transparent);
