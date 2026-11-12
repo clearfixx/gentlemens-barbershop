@@ -177,6 +177,42 @@ async function run() {
     assert.ok(throttlingVerified, 'Unable to test shared HTTP budget without a minute rollover')
     console.info('PASS: shared HTTP limiter rejects POST and PATCH without booking mutation')
 
+    // Simulate a broken limiter dependency without stopping PostgreSQL: the
+    // isolated integration DB temporarily hides only the limiter function.
+    // A finally block restores it even when an HTTP assertion fails.
+    await db.execute(sql`
+      DELETE FROM booking_rate_limit_buckets WHERE identity = 'booking:write:global'
+    `)
+    await db.execute(sql`
+      ALTER FUNCTION booking_rate_limit_consume(text, bigint, bigint, integer)
+      RENAME TO booking_rate_limit_consume_http_test_disabled
+    `)
+    try {
+      const before = await state(bookingId)
+      const eventsBefore = await audit(bookingId)
+      const unavailablePatch = await patch(bookingId, adminCookie, '{"status":"confirmed"}')
+      const unavailablePost = await fetch(new URL('/api/bookings', origin), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: customerCookie },
+        body: '{}',
+      })
+      assert.equal(unavailablePatch.status, 503, await unavailablePatch.text())
+      assert.equal(unavailablePost.status, 503, await unavailablePost.text())
+      assert.equal(unavailablePatch.headers.get('retry-after'), '60')
+      assert.equal(unavailablePost.headers.get('retry-after'), '60')
+      assert.equal(unavailablePatch.headers.get('cache-control'), 'no-store')
+      assert.equal(unavailablePost.headers.get('cache-control'), 'no-store')
+      assert.equal(await state(bookingId), before)
+      assert.deepEqual(await audit(bookingId), eventsBefore)
+      console.info('PASS: shared limiter outage returns HTTP 503 without booking mutation')
+    } finally {
+      await db.execute(sql`
+        ALTER FUNCTION booking_rate_limit_consume_http_test_disabled(text, bigint, bigint, integer)
+        RENAME TO booking_rate_limit_consume
+      `)
+    }
+
+
   } finally {
     // Only the isolated integration database is permitted. Restore the global
     // budget even when assertions fail, so later local runs are not poisoned.

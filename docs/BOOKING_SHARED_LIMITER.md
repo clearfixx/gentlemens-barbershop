@@ -33,3 +33,7 @@ The isolated `scripts/test-booking-management-http.ts` test now fills the shared
 ## Shared limiter outage HTTP contract
 
 Both booking write routes return HTTP 503 with `Cache-Control: no-store` and `Retry-After: 60` if the shared limiter SQL call throws or its response is malformed. The failure is handled before authentication and booking mutations, and no process-local fallback is allowed. The response body does not disclose database details. A database initialization failure before reaching the limiter remains handled by the outer route error handler. This behavior still requires an isolated HTTP failure-injection integration test.
+
+## Isolated HTTP limiter outage regression
+
+The local loopback-only `scripts/test-booking-management-http.ts` temporarily renames the limiter SQL function on the **strictly pinned disposable integration database**, requests both booking write endpoints, asserts HTTP 503, Retry-After, no-store and unchanged booking/audit state, and restores the SQL function in a `finally` block. Do not run the script against a shared or production database. This regression is not yet part of GitHub Actions; the CI suite currently covers the SQL adapter failure path and production-disabled HTTP routes separately.
