@@ -8,12 +8,12 @@ import type { Locale } from '@/i18n/config'
 const slides = {
   uk: [
     { eyebrow: 'ПРЕМІАЛЬНИЙ БАРБЕРШОП', lines: ['СТИЛЬ.', 'ХАРАКТЕР.', 'ТИ.'], description: 'Сучасний сервіс догляду для чоловіків, який поєднує майстерність, атмосферу й увагу до деталей.' },
-    { eyebrow: 'ТРАДИЦІЇ ТА МАЙСТЕРНІСТЬ', lines: ['ТОЧНІСТЬ.', 'МАЙСТЕРНІСТЬ.', 'СТИЛЬ.'], description: 'Досвідчені майстри, які приділяють увагу кожній деталі вашого образу.' },
+    { eyebrow: 'ТРАДИЦІЇ ТА МАЙСТЕРНІСТЬ', lines: ['ТРАДИЦІЇ.', 'МАЙСТЕРНІСТЬ.', 'СТИЛЬ.'], description: 'Досвідчені майстри, які приділяють увагу кожній деталі вашого образу.' },
     { eyebrow: 'ВАШ ЧАС — ВАШ СТИЛЬ', lines: ['АТМОСФЕРА.', 'КОМФОРТ.', 'ТИ.'], description: 'Місце, де можна відпочити, довіритися майстру та залишитися собою.' },
   ],
   en: [
     { eyebrow: 'PREMIUM BARBERSHOP', lines: ['STYLE.', 'CHARACTER.', 'YOU.'], description: 'Modern grooming that brings together craftsmanship, atmosphere and attention to detail.' },
-    { eyebrow: 'TRADITION AND CRAFT', lines: ['PRECISION.', 'CRAFT.', 'STYLE.'], description: 'Experienced barbers who care about every detail of your look.' },
+    { eyebrow: 'TRADITION AND CRAFT', lines: ['TRADITION.', 'CRAFT.', 'STYLE.'], description: 'Experienced barbers who care about every detail of your look.' },
     { eyebrow: 'YOUR TIME, YOUR STYLE', lines: ['ATMOSPHERE.', 'COMFORT.', 'YOU.'], description: 'A place to unwind, trust your barber and feel like yourself.' },
   ],
 } as const
