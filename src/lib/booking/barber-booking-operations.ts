@@ -48,22 +48,37 @@ export async function changeOwnBarberBookingStatus(
 ): Promise<{ id: number; status: BarberTargetStatus }> {
   const { bookingId: id, userId, target: status, from } = parseBarberStatusChange(bookingId, target, actor)
   const result = await payload.db.drizzle.execute(sql`
-    UPDATE bookings AS booking
-    SET status = ${status}, updated_at = NOW()
-    WHERE booking.id = ${id}
-      AND booking.status = ${from}
-      AND EXISTS (
-        SELECT 1 FROM barbers AS barber
-        WHERE barber.id = booking.barber_id
-          AND barber.user_id = ${userId}
-          AND barber.is_active = TRUE
-      )
-      AND (
-        (${status} = 'confirmed' AND booking.starts_at > NOW())
-        OR (${status} = 'completed' AND booking.ends_at <= NOW())
-        OR (${status} = 'no_show' AND booking.starts_at <= NOW())
-      )
-    RETURNING booking.id, booking.status
+    WITH eligible AS MATERIALIZED (
+      SELECT booking.id, booking.status AS previous_status
+      FROM bookings AS booking
+      JOIN barbers AS barber ON barber.id = booking.barber_id
+      WHERE booking.id = ${id}
+        AND booking.status = ${from}
+        AND barber.user_id = ${userId}
+        AND barber.is_active = TRUE
+        AND (
+          (${status} = 'confirmed' AND booking.starts_at > NOW())
+          OR (${status} = 'completed' AND booking.ends_at <= NOW())
+          OR (${status} = 'no_show' AND booking.starts_at <= NOW())
+        )
+      FOR UPDATE OF booking
+    ),
+    changed AS (
+      UPDATE bookings AS booking
+      SET status = ${status}, updated_at = NOW()
+      FROM eligible
+      WHERE booking.id = eligible.id AND booking.status = eligible.previous_status
+      RETURNING booking.id, booking.status, eligible.previous_status
+    ),
+    recorded AS (
+      INSERT INTO booking_events
+        (booking_id, action, previous_status, actor_id, actor_role, updated_at, created_at)
+      SELECT id, ${status}, previous_status, ${userId}, 'assigned_barber', NOW(), NOW()
+      FROM changed
+      RETURNING booking_id
+    )
+    SELECT changed.id, changed.status
+    FROM changed JOIN recorded ON recorded.booking_id = changed.id
   `)
   if (!Array.isArray(result.rows) || result.rows.length > 1) {
     throw new Error('Invalid barber booking update response')
