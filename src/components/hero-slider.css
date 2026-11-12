@@ -1,6 +1,6 @@
 /* Gentlemen's Hero — geometry follows the approved 600 × 302 reference.
    Independent photo, chair and copy; zero inheritance from old .hero layout. */
-.barber-hero{--hero-gold:#c8a46a;position:relative;isolation:isolate;min-height:100svh;width:100%;overflow:visible;color:var(--ink);background:var(--paper);border-bottom:1px solid color-mix(in srgb,var(--ink) 15%,transparent)}
+.barber-hero{--hero-gold:#c8a46a;position:relative;isolation:isolate;z-index:1;min-height:100svh;width:100%;overflow:visible;color:var(--ink);background:var(--paper);border-bottom:1px solid color-mix(in srgb,var(--ink) 15%,transparent)}
 .barber-hero__interior,.barber-hero__wash{position:absolute;inset:0;pointer-events:none}
 .barber-hero__interior{z-index:-2;background:url('/images/hero/barbershop-interior.webp') center center/cover no-repeat}
 .barber-hero__wash{z-index:-1;background:linear-gradient(90deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 98%,transparent) 16%,color-mix(in srgb,var(--paper) 85%,transparent) 31%,color-mix(in srgb,var(--paper) 44%,transparent) 48%,transparent 69%)}
@@ -24,7 +24,7 @@
 .barber-hero__pause{display:grid;place-items:center;width:34px;height:34px;border:1px solid color-mix(in srgb,var(--ink) 36%,transparent);border-radius:50%;padding:0;background:rgba(20,12,8,.22);color:var(--hero-gold);cursor:pointer;font-size:14px}
 .barber-hero__scene{position:absolute;z-index:1;right:2.8%;bottom:0;width:54%;height:74%;pointer-events:none}
 .barber-hero__chair{object-fit:contain;object-position:center bottom;filter:drop-shadow(0 12px 18px rgba(0,0,0,.18))}
-.barber-hero__down{position:absolute;z-index:4;left:50%;bottom:0;display:grid;place-items:center;width:49px;height:49px;transform:translate(-50%,50%);border:1px solid var(--hero-gold);border-radius:50%;background:var(--paper);color:var(--hero-gold);text-decoration:none}
+.barber-hero__down{position:absolute;z-index:10;left:50%;bottom:0;display:grid;place-items:center;width:49px;height:49px;transform:translate(-50%,50%);border:1px solid var(--hero-gold);border-radius:50%;background:var(--paper);color:var(--hero-gold);text-decoration:none}
 .barber-hero__down svg{animation:barber-hero-down 2.3s ease-in-out infinite}
 @keyframes barber-hero-down{0%,100%{transform:translateY(-3px)}55%{transform:translateY(4px)}}
 @media(max-width:1279px){.barber-hero__content{width:41%;margin-left:6%;padding-top:clamp(140px,19svh,210px)}.barber-hero__headline{font-size:clamp(42px,5vw,64px)}.barber-hero__headline--long{font-size:clamp(33px,3.7vw,54px)}.barber-hero__scene{right:1%;width:52%;height:70%}}
@@ -48,3 +48,6 @@
   .barber-hero__scene{bottom:auto;height:min(40svh,380px)}
   .barber-hero__description{max-width:340px}
 }
+
+/* Keep the circular scroll cue above the following section, not beneath its painted background. */
+.barber-hero + .home-section{z-index:0}
