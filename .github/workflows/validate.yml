@@ -618,8 +618,15 @@ jobs:
               booking_status=$(curl --silent --show-error --output /tmp/barbershop-bookings-denied.json --write-out '%{http_code}' \
                 http://localhost:3000/api/bookings)
             fi
-            if [[ "$booking_status" != "401" && "$booking_status" != "403" ]]; then
-              echo "Anonymous $method bookings request was not denied: HTTP $booking_status"
+            # This route intentionally exposes POST only. GET is not a data
+            # endpoint (405), while production POST writes fail closed (503).
+            if [ "$method" = "GET" ]; then
+              expected_booking_status=405
+            else
+              expected_booking_status=503
+            fi
+            if [ "$booking_status" != "$expected_booking_status" ]; then
+              echo "Unexpected $method /api/bookings status: HTTP $booking_status (expected $expected_booking_status)"
               cat /tmp/barbershop-bookings-denied.json
               exit 1
             fi
