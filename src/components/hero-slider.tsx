@@ -93,16 +93,15 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
         const travel = Math.max(rect.height - window.innerHeight, 1)
         const progress = enabled ? Math.max(0, Math.min(1, -rect.top / travel)) : 0
 
-        // Use pixel values, not CSS calc(number * length), to avoid browser
-        // differences and competing keyframe animations on the chair.
-        const chairX = -progress * window.innerWidth * 1.22
-        const chairY = progress * window.innerHeight * 0.04
-        chair.style.transform = enabled
-          ? `translate3d(${chairX.toFixed(1)}px,${chairY.toFixed(1)}px,0) scale(${(1 + progress * 0.05).toFixed(3)})`
-          : ''
-        copy.style.transform = enabled ? `translate3d(0,${(-progress * window.innerHeight * 0.13).toFixed(1)}px,0)` : ''
-        copy.style.opacity = enabled ? String(Math.max(0, 1 - Math.max(0, progress - 0.55) * 2.25)) : ''
-        if (hint) hint.style.opacity = enabled ? String(Math.max(0, 1 - progress * 3)) : ''
+        // Reference video: chair travels horizontally from the right toward
+        // the left, remaining in frame. Copy fades in place early in the scrub.
+        // No vertical drift, zoom, rotation, or full-screen chair exit.
+        const chairX = -progress * window.innerWidth * 0.43
+        const copyOpacity = 1 - Math.min(1, progress / 0.42)
+        chair.style.transform = enabled ? `translate3d(${chairX.toFixed(1)}px,0,0)` : ''
+        copy.style.transform = ''
+        copy.style.opacity = enabled ? String(Math.max(0, copyOpacity)) : ''
+        if (hint) hint.style.opacity = enabled ? String(Math.max(0, 1 - progress * 4)) : ''
       })
     }
     update()

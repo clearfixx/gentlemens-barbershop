@@ -269,3 +269,10 @@
 @media(max-width:600px){
   .landing>.site-header--landing{margin:0}
 }
+
+/* Video-reference choreography: horizontal chair only; text fades in place.
+   Override earlier experimental scale, vertical shift and scroll opacity rules. */
+@media(min-width:1024px) and (min-height:650px) and (prefers-reduced-motion:no-preference){
+  .hero--photographic .hero-chair{animation:none!important;transform:none;transform-origin:center bottom}
+  .hero--photographic .hero-copy{animation:none!important;transform:none;opacity:1}
+}
