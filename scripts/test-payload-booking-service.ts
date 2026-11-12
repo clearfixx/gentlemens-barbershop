@@ -162,6 +162,10 @@ async function main() {
   // database exclusion and application availability must agree on status.
   await payload.update({
     collection: 'bookings', id: replacement.id, overrideAccess: true,
+    data: { status: 'confirmed' },
+  })
+  await payload.update({
+    collection: 'bookings', id: replacement.id, overrideAccess: true,
     data: { status: 'no_show' },
   })
   const afterNoShow = await createPayloadBooking(payload, request)
