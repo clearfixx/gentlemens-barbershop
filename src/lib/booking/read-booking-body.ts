@@ -19,7 +19,7 @@ export async function readBookingBody(
   maxBytes = MAX_BOOKING_BODY_BYTES,
 ): Promise<unknown> {
   const declaredLength = request.headers.get('content-length')
-  if (declaredLength !== null && /^\\d+$/.test(declaredLength) &&
+  if (declaredLength !== null && /^\d+$/.test(declaredLength) &&
       Number(declaredLength) > maxBytes) {
     throw new BookingBodyError(413, 'Booking body too large')
   }
