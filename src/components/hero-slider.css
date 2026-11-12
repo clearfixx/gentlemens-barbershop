@@ -22,7 +22,7 @@
 .barber-hero__fill--running{animation:barber-hero-progress 7s linear forwards}
 @keyframes barber-hero-progress{to{width:100%}}
 .barber-hero__pause{display:grid;place-items:center;width:34px;height:34px;border:1px solid color-mix(in srgb,var(--ink) 36%,transparent);border-radius:50%;padding:0;background:rgba(20,12,8,.22);color:var(--hero-gold);cursor:pointer;font-size:14px}
-.barber-hero__scene{position:absolute;z-index:1;right:2.8%;bottom:-2.5%;width:54%;height:76%;pointer-events:none}
+.barber-hero__scene{position:absolute;z-index:1;right:2.8%;bottom:0;width:54%;height:74%;pointer-events:none}
 .barber-hero__chair{object-fit:contain;object-position:center bottom;filter:drop-shadow(0 12px 18px rgba(0,0,0,.18))}
 .barber-hero__down{position:absolute;z-index:4;left:50%;bottom:0;display:grid;place-items:center;width:49px;height:49px;transform:translate(-50%,50%);border:1px solid var(--hero-gold);border-radius:50%;background:var(--paper);color:var(--hero-gold);text-decoration:none}
 .barber-hero__down svg{animation:barber-hero-down 2.3s ease-in-out infinite}
