@@ -115,3 +115,13 @@
 @media(max-width:1050px){.floating-header{gap:12px}.hero{grid-template-columns:48% 52%}.hero h1{font-size:clamp(43px,6vw,72px)}}
 @media(max-width:720px){.floating-header{top:10px;left:10px;right:10px;min-height:60px;padding:8px 12px;flex-wrap:wrap}.floating-header .site-brand__logo{width:125px}.floating-header .site-header__actions{gap:4px}.floating-header .header-booking{padding:9px;font-size:10px}.hero{display:flex;flex-direction:column;align-items:stretch;justify-content:center;min-height:100svh;padding:130px 22px 80px;gap:12px}.hero::before{background-image:linear-gradient(180deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 87%,transparent) 35%,transparent 100%),url('/images/hero/barbershop-interior.webp');background-position:center}.hero-copy{order:0}.hero h1{font-size:clamp(43px,10vw,66px)}.hero-art{order:1;height:38svh;min-height:230px}.hero-slide-progress{margin-top:18px}.scroll-mouse{bottom:8px}}
 @media(prefers-reduced-motion:reduce){.floating-header{transition:none}}
+
+/* User dropdown: no simulated authentication; staff entry uses existing Payload admin. */
+.user-menu{position:relative;flex-shrink:0}
+.user-menu__trigger{display:flex;align-items:center;gap:5px;justify-content:center;min-width:44px;min-height:44px;padding:6px 9px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--ink);cursor:pointer}
+.user-menu__trigger:hover,.user-menu__trigger[aria-expanded=true]{background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.user-menu__panel{position:absolute;top:calc(100% + 12px);right:0;z-index:120;display:flex;flex-direction:column;min-width:220px;padding:9px;background:var(--surface);color:var(--ink);border:1px solid color-mix(in srgb,var(--ink) 13%,transparent);border-radius:12px;box-shadow:0 14px 35px rgba(0,0,0,.18)}
+.user-menu__panel a{display:block;padding:11px 12px;border-radius:6px;font-size:13px;text-decoration:none}
+.user-menu__panel a:hover,.user-menu__panel a:focus-visible{background:color-mix(in srgb,var(--gold) 14%,transparent)}
+.user-menu__status{margin:0 0 5px;padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)}
+@media(max-width:720px){.user-menu__trigger{min-width:38px;min-height:38px;padding:4px}.user-menu__panel{right:-25px}}
