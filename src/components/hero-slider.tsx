@@ -93,14 +93,15 @@ export function HeroSlider({ locale, messages }: { locale: Locale; messages: Mes
         const travel = Math.max(rect.height - window.innerHeight, 1)
         const progress = enabled ? Math.max(0, Math.min(1, -rect.top / travel)) : 0
 
-        // Reference video: chair travels horizontally from the right toward
-        // the left, remaining in frame. Copy fades in place early in the scrub.
-        // No vertical drift, zoom, rotation, or full-screen chair exit.
-        const chairX = -progress * window.innerWidth * 0.43
-        const copyOpacity = 1 - Math.min(1, progress / 0.42)
+        // Both layers exit to the left, with the chair travelling faster.
+        // Measure their actual bounds so the exit completes on any desktop width.
+        const chairDistance = chair.offsetLeft + chair.offsetWidth
+        const copyDistance = copy.offsetLeft + copy.offsetWidth
+        const chairX = -progress * (chairDistance + 32)
+        const copyX = -progress * (copyDistance + 32)
         chair.style.transform = enabled ? `translate3d(${chairX.toFixed(1)}px,0,0)` : ''
-        copy.style.transform = ''
-        copy.style.opacity = enabled ? String(Math.max(0, copyOpacity)) : ''
+        copy.style.transform = enabled ? `translate3d(${copyX.toFixed(1)}px,0,0)` : ''
+        copy.style.opacity = ''
         if (hint) hint.style.opacity = enabled ? String(Math.max(0, 1 - progress * 4)) : ''
       })
     }
