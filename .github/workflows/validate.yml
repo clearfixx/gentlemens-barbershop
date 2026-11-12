@@ -187,6 +187,12 @@ jobs:
           set -euo pipefail
           DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
             bash scripts/test-managed-booking-rate-limit.sh
+      - name: Verify guarded booking rate-limit cleanup command
+        shell: bash
+        run: |
+          set -euo pipefail
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
+            bash scripts/test-booking-rate-limit-cleanup.sh
       - name: Verify atomic PostgreSQL shared booking limiter
         shell: bash
         run: |
