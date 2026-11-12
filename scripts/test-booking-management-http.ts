@@ -175,12 +175,14 @@ async function run() {
       throttlingVerified = true
     }
     assert.ok(throttlingVerified, 'Unable to test shared HTTP budget without a minute rollover')
-    await db.execute(sql`
-      DELETE FROM booking_rate_limit_buckets WHERE identity = 'booking:write:global'
-    `)
     console.info('PASS: shared HTTP limiter rejects POST and PATCH without booking mutation')
 
   } finally {
+    // Only the isolated integration database is permitted. Restore the global
+    // budget even when assertions fail, so later local runs are not poisoned.
+    await db.execute(sql`
+      DELETE FROM booking_rate_limit_buckets WHERE identity = 'booking:write:global'
+    `)
     for (const id of bookingIds) {
       await db.execute(sql`DELETE FROM booking_events WHERE booking_id = ${id}`)
       await db.execute(sql`DELETE FROM bookings WHERE id = ${id}`)

@@ -413,6 +413,19 @@ jobs:
             exit 1
           fi
           curl --fail --silent --show-error --output /dev/null http://localhost:3000/
+          # Production HTTP writes must remain disabled even if test mode leaks
+          # into the runtime environment. Neither route may reach a mutation.
+          for endpoint in /api/bookings /api/bookings/1/status; do
+            method=POST
+            if [[ "$endpoint" == */status ]]; then method=PATCH; fi
+            code="$(curl --silent --show-error --output /tmp/booking-production-denied.json \
+              --write-out '%{http_code}' -X "$method" \
+              -H 'content-type: application/json' -d '{}' \
+              "http://localhost:3000$endpoint")"
+            test "$code" = 503
+            grep -q 'Booking writes unavailable' /tmp/booking-production-denied.json
+          done
+
           curl --location --fail --silent --show-error --output /tmp/barbershop-catalog.html 'http://localhost:3000/catalog?location=1&barber=1'
           grep -q 'ОБЕРІТЬ СВІЙ СТИЛЬ' /tmp/barbershop-catalog.html
           curl --location --fail --silent --show-error --output /tmp/barbershop-booking.html http://localhost:3000/booking
