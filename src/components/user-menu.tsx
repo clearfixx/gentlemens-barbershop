@@ -35,7 +35,7 @@ export function UserMenu({ locale }: { locale: Locale }) {
       <p className="user-menu__status">{uk ? 'Гостьовий режим' : 'Guest mode'}</p>
       <Link role="menuitem" href={`/${locale}/booking`} onClick={() => setOpen(false)}>{uk ? 'Планування запису' : 'Plan a visit'}</Link>
       <Link role="menuitem" href={`/${locale}/catalog`} onClick={() => setOpen(false)}>{uk ? 'Каталог' : 'Catalog'}</Link>
-      <a role="menuitem" href="/admin" onClick={() => setOpen(false)}>{uk ? 'Вхід для персоналу' : 'Staff sign in'}</a>
+      <Link role="menuitem" href="/admin" onClick={() => setOpen(false)}>{uk ? 'Вхід для персоналу' : 'Staff sign in'}</Link>
     </div>}
   </div>
 }
