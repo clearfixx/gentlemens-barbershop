@@ -147,9 +147,23 @@
 @media(max-width:900px){.header-mobile-nav{display:block}}
 @media(max-width:580px){.floating-header .header-booking{display:none}.floating-header .locale-switcher a{min-width:26px;padding:3px}.floating-header .theme-toggle{width:34px;height:34px;min-width:34px;min-height:34px}}
 
-/* Mockup-specific scroll cue and brand contrast, no scroll-driven Hero motion. */
-.hero-scroll-arrow{position:absolute;left:50%;bottom:0;z-index:5;display:grid;place-items:center;width:48px;height:48px;transform:translate(-50%,50%);border:1px solid color-mix(in srgb,var(--gold) 85%,transparent);border-radius:50%;background:var(--paper);color:var(--gold);text-decoration:none;box-shadow:0 3px 14px rgba(0,0,0,.12)}
+/* Approved reference: desktop 600x290 composition scaled proportionally.
+   The background is full-bleed; copy and chair are independent layers. */
+.hero--slider{display:block;min-height:100svh;padding:0;overflow:hidden;border-bottom:1px solid color-mix(in srgb,var(--ink) 15%,transparent)}
+.hero--slider .hero-copy{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:center;max-width:none;width:34%;min-height:100svh;margin:0 0 0 9%;padding:85px 0 68px;transform:none}
+.hero--slider h1{font-size:clamp(42px,3.4vw,65px);line-height:1.03;letter-spacing:-.018em;margin:12px 0 13px}
+.hero--slider .eyebrow{font-size:clamp(10px,.75vw,13px);letter-spacing:.13em}
+.hero--slider .hero-copy>p:not(.eyebrow){max-width:380px;font-size:clamp(13px,.91vw,16px);line-height:1.43}
+.hero--slider .hero-actions{margin-top:18px;gap:12px}
+.hero--slider .hero-actions .cta,.hero--slider .hero-secondary{min-height:45px;padding:11px 17px}
+.hero--slider .hero-slider-controls{margin-top:23px;gap:14px}
+.hero--slider .hero-art{position:absolute;z-index:1;right:4%;bottom:3%;width:48%;height:81%;min-height:0;margin:0;transform:none;pointer-events:none}
+.hero--slider .hero-chair{width:100%;height:100%;object-fit:contain;object-position:center bottom}
+.hero--slider .hero-slide-dots{display:none}
+.hero-scroll-arrow{position:absolute;left:50%;bottom:0;z-index:5;display:grid;place-items:center;width:48px;height:48px;transform:translate(-50%,50%);border:1px solid var(--gold);border-radius:50%;background:var(--paper);color:var(--gold);text-decoration:none;box-shadow:0 3px 14px rgba(0,0,0,.12)}
 .hero--slider{overflow:visible}
-.hero--slider::before{overflow:hidden}
 :root[data-theme=dark] .floating-header .site-brand__logo{filter:brightness(0) invert(1)}
-@media(max-width:720px){.hero--slider .hero-art{height:36svh;transform:none}.hero--slider h1{font-size:clamp(39px,8vw,56px)}.hero-scroll-arrow{width:42px;height:42px}}
+@media(min-width:901px){.floating-header{top:0;left:0;right:0;min-height:45px;padding:5px 8.8%;border-radius:0}.floating-header--scrolled{top:12px;left:3%;right:3%;border-radius:14px;padding-left:3%;padding-right:3%}.floating-header .site-brand__logo{width:clamp(150px,11.5vw,195px)}.floating-header .site-nav{gap:clamp(12px,1.45vw,25px)}.floating-header .site-nav a{font-size:clamp(11px,.7vw,13px)}.floating-header .site-header__actions{gap:clamp(4px,.5vw,9px)}.floating-header .header-booking{min-height:40px}}
+@media(max-width:900px){.hero--slider .hero-copy{width:47%;margin-left:6%;padding-top:100px}.hero--slider h1{font-size:clamp(38px,4.8vw,55px)}.hero--slider .hero-art{right:0;width:53%;height:70%}}
+@media(max-width:720px){.hero--slider{min-height:100svh}.hero--slider .hero-copy{width:auto;min-height:0;margin:0;padding:110px 22px 0;max-width:100%}.hero--slider h1{font-size:clamp(39px,8vw,54px)}.hero--slider .hero-art{position:relative;right:auto;bottom:auto;align-self:center;width:100%;height:37svh;min-height:210px;margin:5px 0 25px;transform:none}.hero-scroll-arrow{width:42px;height:42px}}
+@media(prefers-reduced-motion:reduce){.hero-scroll-arrow{transition:none}}
