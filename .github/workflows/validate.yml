@@ -188,6 +188,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
             -f db/booking-rate-limit/disposable-limiter.sql \
             -f db/booking-rate-limit/test-disposable-limiter.sql
+          bash scripts/test-concurrent-booking-rate-limit.sh
       - name: Capture initialized localization schema for migration review
         shell: bash
         run: |

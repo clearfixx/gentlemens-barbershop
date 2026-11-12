@@ -5,3 +5,5 @@
 Atomic `INSERT ... ON CONFLICT ... DO UPDATE ... WHERE hits < limit` uses PostgreSQL row locking so separate app instances cannot both consume the last slot. This is a foundation, **not yet a production rate limiter**.
 
 Before use: add an approved production migration, a bounded retention/cleanup policy, an authenticated/trusted identity strategy, explicit fail-closed handling for database outages, tests for parallel database connections, and wire the actual booking POST/PATCH handlers. The existing production write guard must remain enabled until those steps are complete. Do not install the CI schema in production.
+
+CI also runs `scripts/test-concurrent-booking-rate-limit.sh`, which starts twelve independent PostgreSQL sessions against one budget of three and asserts exactly three successes, nine rejections and a persisted count of three. This checks concurrent database connections, not production HTTP wiring or multiple deployed application instances.
