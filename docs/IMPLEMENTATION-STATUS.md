@@ -36,3 +36,8 @@ pnpm dev
 ```
 
 These are local verification commands; the GitHub Actions checks described above have run, but local and end-to-end verification remain outstanding.
+
+
+## 2026-11-12 — public navigation handoff
+
+The earlier scaffold notes above are historical. The booking backend now has an extensive tested domain and guarded write routes; production booking writes are intentionally disabled pending release acceptance. Public-site work has moved to `feat/public-navigation`. The responsive header now includes a keyboard-operable mobile navigation menu, with the booking CTA visible independently of that menu. This is source-level implementation only; visual/browser acceptance across breakpoints and both themes is still outstanding. The approved landing page is not complete: hero imagery, CMS-managed content, reviews, featured products, contact/social/footer and motion need further work. See `docs/BACKEND_V1_GAP_AUDIT.md` and `docs/UI_UX_CANON.md` for scope.

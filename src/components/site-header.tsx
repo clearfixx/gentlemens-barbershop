@@ -28,6 +28,15 @@ export function SiteHeader({ locale = 'uk', messages }: { locale?: Locale; messa
         <LocaleSwitcher locale={locale} messages={t} />
         <ThemeToggle locale={locale} />
         <Link className="header-booking" href={`${prefix}/booking`}>{t.actions.planVisit}</Link>
+        <details className="mobile-navigation">
+          <summary aria-label={t.nav.primary}>
+            <span className="mobile-navigation__bars" aria-hidden="true"><span /><span /><span /></span>
+            <span className="visually-hidden">{t.nav.primary}</span>
+          </summary>
+          <nav aria-label={t.nav.primary} className="mobile-navigation__panel">
+            {links.map(link => <Link key={link.href} href={link.href}>{link.label}</Link>)}
+          </nav>
+        </details>
       </div>
     </header>
   )
