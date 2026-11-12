@@ -32,9 +32,9 @@ export function SectionNav({
     const update = () => {
       frame = 0
       // Highlight the section occupying the upper third of the viewport.
-      const position = window.scrollY + window.innerHeight * 0.35
+      const position = window.innerHeight * 0.35
       const current = [...sections].reverse().find(section =>
-        section.node.offsetTop <= position
+        section.node.getBoundingClientRect().top <= position
       )
       setActive(current?.id ?? null)
     }
