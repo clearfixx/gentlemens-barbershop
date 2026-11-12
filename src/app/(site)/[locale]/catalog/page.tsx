@@ -7,6 +7,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { SiteHeader } from '@/components/site-header'
@@ -67,7 +68,7 @@ export default async function CatalogPage({ searchParams, params: routeParams }:
         <h2 id="catalog-team">{t.catalog.team}</h2>
         {catalog.barbers.length ? <ul className="catalog-grid">{catalog.barbers.map(barber => <li className="catalog-card team-card" key={barber.id}>
           {barber.portrait && typeof barber.portrait === 'object' && barber.portrait.url
-            ? <img className="team-card__portrait" src={barber.portrait.url} alt={barber.portrait.alt || `${t.home.barberPortrait} ${barber.name}`} loading="lazy" />
+            ? <Image className="team-card__portrait" src={barber.portrait.url} alt={barber.portrait.alt || `${t.home.barberPortrait} ${barber.name}`} width={500} height={625} unoptimized />
             : <span className="team-card__monogram" aria-hidden="true">{barber.name.charAt(0)}</span>}
           <h3>{barber.name}</h3>{localizedCopy(barber, 'localizedBio', 'bio') && <p>{localizedCopy(barber, 'localizedBio', 'bio')}</p>}
           <span className="catalog-card__kicker">{catalog.locations.find(location => location.id === (typeof barber.location === 'number' ? barber.location : barber.location.id))?.name}</span>
