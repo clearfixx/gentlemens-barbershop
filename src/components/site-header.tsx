@@ -62,7 +62,7 @@ export function SiteHeader({
           </svg>
         </span>
         <AuthNavControl locale={locale} />
-        <div className="header-preferences" aria-label={locale === 'uk' ? 'Вигляд і мова' : 'Appearance and language'}>
+        <div className="header-preferences" role="group" aria-label={locale === 'uk' ? 'Вигляд і мова' : 'Appearance and language'}>
           <ThemeToggle locale={locale} />
           <LocaleSwitcher locale={locale} messages={t} compact />
         </div>
