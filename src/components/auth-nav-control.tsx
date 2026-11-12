@@ -19,6 +19,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState(false)
   const root = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
 
   async function signOut() {
     setSigningOut(true)
+    setSignOutError(false)
     try {
       const response = await fetch('/api/users/logout', {
         method: 'POST',
@@ -71,6 +73,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
       setUser(null)
       window.location.assign(`/${locale}`)
     } catch {
+      setSigningOutError(true)
       setSigningOut(false)
     }
   }
@@ -118,9 +121,10 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
     </button>
     {open && <div className="auth-nav__panel" role="menu" aria-label={uk ? 'Меню профілю' : 'Account menu'}>
       <p className="auth-nav__identity">{name}</p>
-      <Link role="menuitem" href={`/${locale}/booking`} onClick={() => setOpen(false)}>{uk ? 'Мій запис' : 'Book a visit'}</Link>
+      <Link role="menuitem" href={`/${locale}/booking`} onClick={() => setOpen(false)}>{uk ? 'Новий запис' : 'Book a visit'}</Link>
       <Link role="menuitem" href={`/${locale}/catalog`} onClick={() => setOpen(false)}>{uk ? 'Каталог' : 'Catalog'}</Link>
       {user.role === 'admin' && <a role="menuitem" href="/admin">{uk ? 'Адміністрування' : 'Admin'}</a>}
+      {signOutError && <p role="alert" className="auth-nav__error">{uk ? 'Не вдалося вийти. Спробуй ще раз.' : 'Could not log out. Please retry.'}</p>}
       <button type="button" role="menuitem" disabled={signingOut} onClick={() => void signOut()}>
         {uk ? 'Вийти' : 'Log out'}
       </button>
