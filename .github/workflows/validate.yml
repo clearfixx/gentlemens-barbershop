@@ -618,7 +618,8 @@ jobs:
             timeout 90s node --experimental-strip-types scripts/test-payload-booking-service.ts
           # Exercise staff ownership, customer history and atomic mutations on actual
           # Payload/PostgreSQL CI fixtures (never against a live deployment).
-          CI_BOOKING_DB_TEST=disposable CI_BARBER_ID="$barber_id" \
+          CI_BOOKING_DB_TEST=disposable CI_LOCATION_ID="$location_id" \
+            CI_BARBER_ID="$barber_id" CI_SERVICE_ID="$service_id" \
             timeout 90s node --experimental-strip-types scripts/test-booking-operations-postgres.ts
           # The landing page must render the published CMS records, not static placeholders.
           curl --location --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-cms-home.html
