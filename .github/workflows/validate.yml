@@ -165,6 +165,15 @@ jobs:
         shell: bash
         run: |
           CONFIRM_BOOKING_MIGRATION=apply bash scripts/apply-booking-integrity.sh
+      - name: Verify read-only booking deployment preflight
+        shell: bash
+        run: |
+          bash scripts/preflight-booking-deployment.sh
+          # A preflight must reject a missing connection string without writes.
+          if env -u DATABASE_URL bash scripts/preflight-booking-deployment.sh; then
+            echo "Booking deployment preflight accepted a missing database URL"
+            exit 1
+          fi
       - name: Capture initialized localization schema for migration review
         shell: bash
         run: |
