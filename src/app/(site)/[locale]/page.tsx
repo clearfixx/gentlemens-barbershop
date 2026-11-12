@@ -31,10 +31,11 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     <SiteHeader locale={locale} messages={t} />
     <section className="hero" aria-labelledby="hero-title">
       <div className="hero-copy">
-        <p className="eyebrow">{t.home.eyebrow}</p>
-        <h1 id="hero-title">{t.home.heroLine1}<br/>{t.home.heroLine2}<br/><em>{t.home.heroAccent}</em></h1>
+        <p className="eyebrow">{locale === 'uk' ? 'ПРЕМІАЛЬНИЙ БАРБЕРШОП' : 'PREMIUM BARBERSHOP'}</p>
+        <h1 id="hero-title">{locale === 'uk' ? 'СТИЛЬ.' : 'STYLE.'}<br/>{locale === 'uk' ? 'ХАРАКТЕР.' : 'CHARACTER.'}<br/><em>{locale === 'uk' ? 'ТИ.' : 'YOU.'}</em></h1>
         <p>{t.home.heroIntro}</p>
-        <div className="hero-actions"><Link className="cta" href={`/${locale}/booking`}>{t.actions.planVisit}</Link><a href="#about">{t.home.learnMore} ↗</a></div>
+        <div className="hero-actions"><Link className="cta" href={`/${locale}/booking`}>{t.actions.bookNow} →</Link><a className="hero-secondary" href="#services">{t.actions.services}</a></div>
+      <div className="hero-slide-progress" aria-label={locale === 'uk' ? 'Перший із трьох слайдів' : 'Slide one of three'}><span>01</span><span className="hero-slide-progress__track" /><span>03</span></div>
       </div>
       <div className="hero-art"><Image src="/images/hero/barber-chair.png" alt={t.home.heroArtLabel} width={1024} height={1400} className="hero-chair" priority sizes="(max-width: 720px) 90vw, 46vw" /></div>
       <a className="scroll-hint scroll-mouse" href="#about" aria-label={t.home.scrollLabel}><svg viewBox="0 0 32 48" width="32" height="48" fill="none" aria-hidden="true"><rect x="5" y="2" width="22" height="42" rx="11" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></a>
