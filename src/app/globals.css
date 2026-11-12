@@ -106,6 +106,10 @@
   --navbar-surface:color-mix(in srgb,var(--paper) 48%,transparent);
   --navbar-border:color-mix(in srgb,var(--gold) 54%,transparent);
   --navbar-blur:blur(10px);
+  /* Dropdowns have their own stable surface: readable even at scrollY = 0. */
+  --dropdown-surface:color-mix(in srgb,var(--paper) 96%,transparent);
+  --dropdown-border:color-mix(in srgb,var(--gold) 54%,transparent);
+  --dropdown-blur:blur(18px);
   height:var(--navbar-height);
   min-height:var(--navbar-height);
   padding:8px clamp(17px,2.5vw,43px);
@@ -206,18 +210,18 @@
 }
 .locale-compact__panel a{padding:11px 12px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:14px;white-space:nowrap}
 .locale-compact__panel a[aria-current=page],.locale-compact__panel a:hover{background:color-mix(in srgb,var(--gold) 16%,transparent)}
-/* All dropdown surfaces start 3px below the NAVBAR, not below their triggers.
-   Their positioning roots are vertically centered within the fixed-height header. */
+/* All dropdowns are 3px below the NAVBAR (not their triggers).
+   Their high-opacity appearance stays unchanged as the header scroll state changes. */
 .site-header.floating-header :is(.internal-nav-menu__panel,.auth-nav__panel,.locale-compact__panel){
   top:calc(50% + var(--navbar-half-height) + 3px);
-  background:var(--navbar-surface);
-  border:1px solid var(--navbar-border);
+  background:var(--dropdown-surface);
+  border:1px solid var(--dropdown-border);
   color:var(--ink);
   font-family:inherit;
   font-size:clamp(13px,.86vw,16px);
   font-weight:500;
-  -webkit-backdrop-filter:var(--navbar-blur);
-  backdrop-filter:var(--navbar-blur);
+  -webkit-backdrop-filter:var(--dropdown-blur);
+  backdrop-filter:var(--dropdown-blur);
   box-shadow:none;
 }
 .site-header.floating-header :is(.internal-nav-menu__panel,.auth-nav__panel,.locale-compact__panel) :is(a,button){
