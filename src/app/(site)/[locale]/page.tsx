@@ -131,7 +131,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     <section id="reviews" className="home-section home-section--muted" aria-labelledby="reviews-title">
       <div className="home-container">
         <h2 id="reviews-title" className="home-section__heading">{labels.reviews}</h2>
-        <p className="home-section__empty">{labels.emptyReviews}</p>
+        <div className="home-review-previews" aria-hidden="true">
+          {Array.from({ length: 3 }, (_, index) => <div className="home-review-preview" key={index}>
+            <span className="home-review-preview__avatar" />
+            <div><span className="home-review-preview__line" /><span className="home-review-preview__rating" /></div>
+            <span className="home-review-preview__body" /><span className="home-review-preview__body home-review-preview__body--short" />
+          </div>)}
+        </div>
+        <p className="home-section__note">{labels.emptyReviews}</p>
       </div>
     </section>
 
@@ -141,7 +148,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           <h2 id="products-title" className="home-section__heading">{labels.products}</h2>
           <Link href={`/${locale}/catalog`} className="home-section__more">{labels.moreProducts} →</Link>
         </div>
-        <p className="home-section__empty">{labels.emptyProducts}</p>
+        <div className="home-product-previews" aria-hidden="true">
+          {Array.from({ length: 4 }, (_, index) => <div className="home-product-preview" key={index}>
+            <div className="home-product-preview__image" />
+            <span className="home-product-preview__label" />
+            <span className="home-product-preview__short" />
+          </div>)}
+        </div>
+        <p className="home-section__note">{labels.emptyProducts}</p>
       </div>
     </section>
 
