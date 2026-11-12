@@ -111,3 +111,10 @@
 @media(max-width:1050px){.site-header{position:sticky;top:0;z-index:40}}
 @media(max-width:600px){.site-header--landing{margin-bottom:-88px}.site-header--landing.is-scrolled{margin-bottom:-104px}.site-header--landing:not(.is-scrolled){min-height:88px}.site-header.is-scrolled{min-height:104px}}
 @media(prefers-reduced-motion:reduce){.site-header{transition:none;backdrop-filter:none;-webkit-backdrop-filter:none}}
+
+
+/* Active route and visible-section navigation: theme-aware, not color alone. */
+.site-nav a,.mobile-navigation__panel a{position:relative}
+.site-nav a.is-active{color:var(--ink);font-weight:650}
+.site-nav a.is-active::after{content:'';position:absolute;left:0;right:0;bottom:-9px;height:2px;background:var(--gold)}
+.mobile-navigation__panel a.is-active{font-weight:700;border-inline-start:3px solid var(--gold);padding-inline-start:11px;background:var(--paper)}
