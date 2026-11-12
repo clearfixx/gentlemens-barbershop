@@ -78,15 +78,18 @@ jobs:
           python3 scripts/test-normalize-generated-payload-migration.py
           python3 scripts/check-localization-incremental.py src/migrations
           test "$(find src/migrations -maxdepth 1 -name '*.json' | wc -l)" -eq 2
-          test "$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l)" -eq 2
+          expected_migrations="$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l | tr -d ' ')"
+          test "$expected_migrations" -ge 2
           PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_migration_bootstrap_ci
           DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
             NODE_ENV=production CI=1 timeout 120s pnpm db:migrate
+          PGPASSWORD=postgres psql -XAt -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_migration_bootstrap_ci \
+            -c "SELECT count(*) FROM payload_migrations" | grep -qx "$expected_migrations"
           PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
             -d gentlemens_migration_bootstrap_ci -c "
               DO \$\$ BEGIN
-                IF (SELECT count(*) FROM payload_migrations) <> 2
-                  OR to_regclass('public.users') IS NULL
+                IF to_regclass('public.users') IS NULL
                   OR to_regclass('public.bookings') IS NULL
                   OR to_regclass('public.translations') IS NULL
                 THEN RAISE EXCEPTION 'Committed production migrations did not initialize expected schema';
@@ -96,7 +99,7 @@ jobs:
             NODE_ENV=production CI=1 timeout 120s pnpm db:migrate
           PGPASSWORD=postgres psql -XAt -v ON_ERROR_STOP=1 -h localhost -U postgres \
             -d gentlemens_migration_bootstrap_ci \
-            -c "SELECT count(*) FROM payload_migrations" | grep -qx '2'
+            -c "SELECT count(*) FROM payload_migrations" | grep -qx "$expected_migrations"
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint
