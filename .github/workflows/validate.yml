@@ -969,7 +969,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(find src/migrations -maxdepth 1 -name '*.json' | wc -l)" -eq 2
-          test "$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l)" -eq 2
+          # Additional Booking Management migrations are expected beyond the two localization snapshots.
+          migration_count="$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l | tr -d ' ')"
+          test "$migration_count" -ge 2
           test -s src/migrations/index.ts
       - name: Test historical schema equivalence gate
         run: python3 -m unittest discover -s scripts -p 'test_verify_historical_baseline.py'
