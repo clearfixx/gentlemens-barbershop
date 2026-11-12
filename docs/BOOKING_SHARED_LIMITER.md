@@ -29,3 +29,7 @@ Run `CONFIRM_BOOKING_RATE_LIMIT_CLEANUP=prune bash scripts/prune-booking-rate-li
 ## Local HTTP throttle regression
 
 The isolated `scripts/test-booking-management-http.ts` test now fills the shared global budget and checks both POST and PATCH return 429 with Retry-After, while existing booking status and audit events remain unchanged. It runs only against the explicit loopback test server and isolated integration database; it is **not** currently a CI step. Database-outage behavior is covered at the shared adapter level, not yet end-to-end HTTP.
+
+## Shared limiter outage HTTP contract
+
+Both booking write routes return HTTP 503 with `Cache-Control: no-store` and `Retry-After: 60` if the shared limiter SQL call throws or its response is malformed. The failure is handled before authentication and booking mutations, and no process-local fallback is allowed. The response body does not disclose database details. A database initialization failure before reaching the limiter remains handled by the outer route error handler. This behavior still requires an isolated HTTP failure-injection integration test.

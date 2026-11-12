@@ -28,9 +28,17 @@ export async function POST(request: Request) {
 
   try {
     const payload = await getPayload({ config })
-    // Database failures must never grant an allowance. The outer catch
-    // returns 500 and prevents any booking mutation.
-    const sharedBudget = await checkSharedBookingWriteBudget(payload)
+    // A limiter outage must fail closed as a service outage, not as a
+    // generic booking error. No authentication or mutation runs on failure.
+    let sharedBudget: Awaited<ReturnType<typeof checkSharedBookingWriteBudget>>
+    try {
+      sharedBudget = await checkSharedBookingWriteBudget(payload)
+    } catch (error) {
+      console.error('Booking rate limiter unavailable', error instanceof Error ? error.name : 'UnknownError')
+      return NextResponse.json({ error: 'Booking temporarily unavailable' }, {
+        status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '60' },
+      })
+    }
     if (!sharedBudget.allowed) {
       return NextResponse.json({ error: 'Booking requests temporarily limited' }, {
         status: 429,
