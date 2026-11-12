@@ -535,6 +535,17 @@ jobs:
             cat /tmp/barbershop-booking-blocked-response.json
             exit 1
           fi
+          # Status changes share the same production write boundary. An
+          # authenticated caller must not be able to bypass it via PATCH.
+          blocked_status_update=$(curl --silent --show-error --output /tmp/barbershop-status-blocked-response.json --write-out '%{http_code}' \
+            --request PATCH --header "Authorization: JWT $admin_token" \
+            --header 'Content-Type: application/json' --data '{"status":"confirmed"}' \
+            http://localhost:3000/api/bookings/1/status)
+          if [ "$blocked_status_update" != "503" ]; then
+            echo "Production booking status guard did not fail closed: HTTP $blocked_status_update"
+            cat /tmp/barbershop-status-blocked-response.json
+            exit 1
+          fi
           booking_rows=$(PGPASSWORD=postgres psql -XAt -v ON_ERROR_STOP=1 -h localhost -U postgres \
             -d gentlemens_barbershop -c "SELECT count(*) FROM bookings")
           if [ "$booking_rows" != "0" ]; then
