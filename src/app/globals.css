@@ -355,3 +355,18 @@
 @media(prefers-reduced-motion:reduce){
   .landing>.site-header--landing{transition:none}
 }
+
+/* Refined approved Hero / Navbar */
+.landing>.site-header--landing:not(.is-scrolled){background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.landing>.site-header--landing{transition:background-color .3s ease,border-color .3s ease,backdrop-filter .3s ease,top .3s ease,color .3s ease}
+.landing>.site-header--landing.is-scrolled{background:color-mix(in srgb,var(--surface) 90%,transparent);border-color:var(--border);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.hero--photographic .hero-copy h1{font-family:Arial,Helvetica,sans-serif;font-size:clamp(37px,3.65vw,62px);font-weight:750;line-height:1.09;letter-spacing:-.045em}
+.hero--photographic .hero-copy h1 em{font-style:normal;font-weight:750;color:#d9aa5b!important}
+.hero--photographic .hero-slider__controls{display:flex;align-items:center;gap:14px;margin-top:clamp(24px,4vh,44px)}
+.hero--photographic .hero-slider__progress-toggle{margin-left:22px;flex:0 0 140px;max-width:140px;align-self:center}
+.hero--photographic .scroll-mouse{bottom:clamp(36px,7vh,70px);animation:hero-scroll-cue 2.3s ease-in-out 1.5s infinite}
+.hero--photographic .scroll-mouse svg path{animation:hero-scroll-wheel 2.3s ease-in-out 1.5s infinite}
+@keyframes hero-scroll-cue{0%,100%{transform:translateX(-50%) translateY(0);opacity:.78}50%{transform:translateX(-50%) translateY(9px);opacity:1}}
+@keyframes hero-scroll-wheel{0%,100%{transform:translateY(0);opacity:1}55%{transform:translateY(7px);opacity:.25}}
+@media(max-width:720px){.hero--photographic .hero-copy h1{font-size:clamp(34px,8vw,52px)}.hero--photographic .scroll-mouse{bottom:30px}.hero--photographic .hero-slider__progress-toggle{flex-basis:85px;max-width:85px;margin-left:8px}}
+@media(prefers-reduced-motion:reduce){.hero--photographic .scroll-mouse,.hero--photographic .scroll-mouse svg path{animation:none!important}}
