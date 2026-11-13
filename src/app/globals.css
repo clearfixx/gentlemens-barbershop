@@ -114,3 +114,9 @@
   .booking-wizard .booking-actions button{width:100%}
   .booking-wizard .booking-contact{gap:14px}
 }
+
+/* At narrow phone widths, preserve all header controls without viewport overflow. */
+@media(max-width:420px){
+  .site-header{flex-wrap:wrap;row-gap:4px}
+  .site-header__actions{width:100%;min-width:0;justify-content:flex-end}
+}
