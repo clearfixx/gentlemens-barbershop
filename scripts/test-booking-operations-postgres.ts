@@ -3,6 +3,7 @@ import { getPayload } from 'payload'
 import config from '../src/payload.config.ts'
 import { getOwnBookingHistory } from '../src/lib/booking/get-own-booking-history.ts'
 import { getAdminBookings, changeAdminBookingStatus, AdminBookingConflictError } from '../src/lib/booking/admin-booking-operations.ts'
+import { getAdminBookingAudit, AdminBookingAuditAccessError } from '../src/lib/booking/admin-booking-audit.ts'
 import { cancelOwnedBooking, BookingCancellationConflictError } from '../src/lib/booking/cancel-owned-booking.ts'
 import {
   getOwnBarberBookings, changeOwnBarberBookingStatus, BarberBookingConflictError,
@@ -170,6 +171,27 @@ async function main() {
   assert.equal(adminEvents.docs[0]?.previousStatus, 'pending')
   assert.equal(adminEvents.docs[0]?.actorRole, 'admin')
   assert.equal(adminEvents.docs[0]?.actor, adminUser.id)
+  const auditTimeline = await getAdminBookingAudit(
+    payload, adminActor, String(tooLate.id),
+  )
+  assert.equal(auditTimeline.events.length, 1)
+  assert.deepEqual(auditTimeline.events[0] && {
+    bookingId: auditTimeline.events[0].bookingId,
+    action: auditTimeline.events[0].action,
+    previousStatus: auditTimeline.events[0].previousStatus,
+    actorId: auditTimeline.events[0].actorId,
+    actorRole: auditTimeline.events[0].actorRole,
+  }, {
+    bookingId: tooLate.id, action: 'cancelled', previousStatus: 'pending',
+    actorId: adminUser.id, actorRole: 'admin',
+  })
+  await assert.rejects(
+    getAdminBookingAudit(payload, customerActor, String(tooLate.id)),
+    AdminBookingAuditAccessError,
+  )
+  const otherTimeline = await getAdminBookingAudit(payload, adminActor, String(forCustomer.id))
+  assert.equal(otherTimeline.events.length, 1)
+  assert.equal(otherTimeline.events[0]?.actorRole, 'customer')
 
   const confirmed = await changeOwnBarberBookingStatus(
     payload, String(forBarber.id), 'confirmed', barberActor,
