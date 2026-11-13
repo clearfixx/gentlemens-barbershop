@@ -939,6 +939,10 @@ jobs:
           CI: "true"
         run: |
           set -euo pipefail
+          # The managed shared-limiter migration was rehearsed against a
+          # separate migration DB. Initialize it explicitly on the disposable
+          # push-mode staging fixture DB using that exact committed migration.
+          timeout 60s node --experimental-strip-types scripts/prepare-staging-booking-limiter.ts
           # Never enable writes in the production smoke process. The preceding
           # pnpm start has exited; run an isolated Next dev server on port 3001.
           pnpm exec next dev -p 3001 -H 127.0.0.1 > /tmp/barbershop-staging-server.log 2>&1 &
