@@ -184,6 +184,13 @@ jobs:
             echo "Booking deployment preflight accepted a missing database URL"
             exit 1
           fi
+      - name: Reject weakened booking integrity with transactional rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Exercise the same migration-rehearsal schema used by deployment preflight.
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
+            bash scripts/test-booking-integrity-negative-preflight.sh
       - name: Verify managed shared limiter migration and retention
         shell: bash
         run: |
