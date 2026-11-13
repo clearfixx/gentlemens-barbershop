@@ -68,7 +68,7 @@ async function run() {
       assert.match(min, /^\d{4}-\d{2}-\d{2}$/)
       corrupt = true
       await dateField.fill(min)
-      await page.getByRole('alert').waitFor()
+      await page.locator('.booking-panel [role="alert"]').waitFor()
       assert.equal(await page.locator('.booking-slots button').count(), 0,
         'Malformed availability must not expose bookable slots')
       // A different local date must recover cleanly after the invalid response.

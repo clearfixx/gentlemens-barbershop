@@ -20,8 +20,8 @@ export const BookingEvents: CollectionConfig = {
     { name: 'booking', type: 'relationship', relationTo: 'bookings', required: true, index: true },
     { name: 'action', type: 'select', required: true, options: ['confirmed', 'completed', 'cancelled', 'no_show'] },
     { name: 'previousStatus', type: 'select', required: true, options: ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'] },
-    { name: 'actor', type: 'relationship', relationTo: 'users', required: true },
-    { name: 'actorRole', type: 'select', required: true, options: ['customer', 'assigned_barber', 'admin'] },
+    { name: 'actor', type: 'relationship', relationTo: 'users' },
+    { name: 'actorRole', type: 'select', required: true, options: ['customer', 'assigned_barber', 'admin', 'guest'] },
     { name: 'reason', type: 'textarea' },
   ],
 }

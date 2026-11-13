@@ -146,3 +146,42 @@ The final booking is still subject to PostgreSQL overlap enforcement; an availab
 - When the user changes any service, discard previously loaded slots and reload availability for the new combination.
 - Avoid separate availability calls for each service: independent free slots do not prove that the combined visit fits.
 - The POST endpoint supports guests and signed-in customers through the same trusted booking pipeline. However, **production writes remain disabled** until the separate rollout/preflight decision. No automatic guest-to-account history linking or guest self-cancellation is authorized in v1 without verified ownership.
+
+
+## Verified guest cancellation
+
+Guests are not required to register. To cancel an **accountless** booking,
+they must demonstrate access to the email address saved with that booking.
+Knowledge of the booking number, phone number or original retry token alone is
+not sufficient.
+
+1. `POST /api/bookings/guest-cancellation/request`, JSON:
+   `{ "bookingId": 123, "email": "guest@example.invalid" }`.
+   Returns `202 { "accepted": true }` regardless of whether a matching
+   eligible booking exists; no booking information is disclosed.
+   If configured, the server sends an eight-digit verification code **only**
+   to the address saved on the original booking. A challenge expires after
+   **15 minutes** and new challenges are limited to one per booking every
+   **5 minutes**.
+2. `POST /api/bookings/guest-cancellation/confirm`, JSON:
+   `{ "bookingId": 123, "code": "01234567" }`.
+   Valid code + eligible booking => `200 { "id": 123, "status": "cancelled" }`.
+   Unknown, incorrect, expired, used, over-attempted or ineligible proof
+   => generic `409`. The limit is **five incorrect attempts**.
+3. Cancellation follows the same server-owned per-location deadline and
+   pending/confirmed status policy used for signed-in customers. The change,
+   one-time code consumption and an immutable **guest** audit event are
+   committed atomically in PostgreSQL. A signed-in user's booking cannot be
+   cancelled through these guest endpoints.
+
+**Required delivery environment:** `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
+(a verified sender) and an adequately strong `PAYLOAD_SECRET`.
+When email delivery is not configured, both endpoints return `503`;
+they do not offer an insecure bypass. Guest bookings without an email cannot
+be self-cancelled through email verification and must contact the shop for
+manual verification.
+
+These mutation routes use the same fail-closed production write gate as all
+other booking writes. They are **not enabled for production** in the current
+release configuration. The automated PostgreSQL test injects a fake email
+sender; no customer mail is sent during CI.
