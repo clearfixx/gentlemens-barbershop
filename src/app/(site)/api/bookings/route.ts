@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { bookingHttpError } from '@/lib/booking/booking-http'
+import { BookingBodyError, readBookingBody } from '@/lib/booking/read-booking-body'
 import { bookingWritesEnabled, checkBookingWriteBudget, checkSharedBookingWriteBudget } from '@/lib/booking/booking-write-guard'
 import { submitAuthenticatedBooking } from '@/lib/booking/submit-authenticated-booking'
 import { createIdempotentPayloadBooking } from '@/lib/booking/payload-booking-service'
@@ -56,16 +57,7 @@ export async function POST(request: Request) {
     if (contentType !== 'application/json') {
       return NextResponse.json({ error: 'Expected JSON body' }, { status: 415, headers: noStore })
     }
-    const raw = await request.text()
-    if (raw.length > 8192) {
-      return NextResponse.json({ error: 'Booking body too large' }, { status: 413, headers: noStore })
-    }
-    let body: unknown
-    try {
-      body = JSON.parse(raw)
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers: noStore })
-    }
+    const body = await readBookingBody(request)
 
     const result = await submitAuthenticatedBooking({
       body,
@@ -79,6 +71,9 @@ export async function POST(request: Request) {
       replayed: result.replayed,
     }, { status: result.replayed ? 200 : 201, headers: noStore })
   } catch (error) {
+    if (error instanceof BookingBodyError) {
+      return NextResponse.json({ error: error.message }, { status: error.status, headers: noStore })
+    }
     const known = bookingHttpError(error)
     if (known) return NextResponse.json({ error: known.message }, { status: known.status, headers: noStore })
     console.error('Booking write failed', error instanceof Error ? error.name : 'UnknownError')
