@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { getPayload } from 'payload'
 import config from '../src/payload.config.ts'
 import { getOwnBookingHistory } from '../src/lib/booking/get-own-booking-history.ts'
+import { getAdminBookings, changeAdminBookingStatus, AdminBookingConflictError } from '../src/lib/booking/admin-booking-operations.ts'
 import { cancelOwnedBooking, BookingCancellationConflictError } from '../src/lib/booking/cancel-owned-booking.ts'
 import {
   getOwnBarberBookings, changeOwnBarberBookingStatus, BarberBookingConflictError,
@@ -47,6 +48,14 @@ async function main() {
       role: 'customer',
     },
   })
+  const adminUser = await payload.create({
+    collection: 'users', overrideAccess: true,
+    data: {
+      email: 'ci-booking-admin@example.invalid',
+      password: 'ci-disposable-booking-admin-password',
+      role: 'admin',
+    },
+  })
   await payload.update({
     collection: 'barbers', id: barberId, overrideAccess: true,
     data: { user: barberUser.id },
@@ -54,6 +63,7 @@ async function main() {
   const barberActor = { id: Number(barberUser.id), role: 'barber' }
   const customerActor = { id: Number(customerUser.id), role: 'customer' }
   const otherActor = { id: Number(otherUser.id), role: 'customer' }
+  const adminActor = { id: Number(adminUser.id), role: 'admin' }
 
   const day = '2037-01-02'
   const assigned = await getOwnBarberBookings(payload, barberActor, { date: day, limit: 50 })
@@ -130,6 +140,30 @@ async function main() {
     where: { booking: { equals: tooLate.id } },
   })
   assert.equal(deadlineEvents.totalDocs, 0, 'Rejected cancellation must not append audit')
+
+  // An administrator can cancel an appointment inside the customer deadline,
+  // but only via a separate role-scoped audited transition.
+  const adminListing = await getAdminBookings(payload, adminActor, {
+    locationId, barberId, status: 'pending', date: new Date(soonStart).toISOString().slice(0, 10),
+  })
+  assert.ok(adminListing.bookings.some(booking => booking.id === tooLate.id))
+  const adminCancelled = await changeAdminBookingStatus(
+    payload, String(tooLate.id), 'cancelled', adminActor,
+  )
+  assert.deepEqual(adminCancelled, { id: tooLate.id, status: 'cancelled' })
+  await assert.rejects(
+    changeAdminBookingStatus(payload, String(tooLate.id), 'cancelled', adminActor),
+    AdminBookingConflictError,
+  )
+  const adminEvents = await payload.find({
+    collection: 'booking-events', overrideAccess: true, depth: 0,
+    where: { booking: { equals: tooLate.id } },
+  })
+  assert.equal(adminEvents.totalDocs, 1)
+  assert.equal(adminEvents.docs[0]?.action, 'cancelled')
+  assert.equal(adminEvents.docs[0]?.previousStatus, 'pending')
+  assert.equal(adminEvents.docs[0]?.actorRole, 'admin')
+  assert.equal(adminEvents.docs[0]?.actor, adminUser.id)
 
   const confirmed = await changeOwnBarberBookingStatus(
     payload, String(forBarber.id), 'confirmed', barberActor,
