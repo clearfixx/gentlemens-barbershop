@@ -88,7 +88,8 @@ export async function getAdminBookings(
   }
   const result = await payload.find({
     collection: 'bookings', overrideAccess: true, depth: 0, pagination: true,
-    page, limit, sort: ['-startsAt', '-id'], where: { and },
+    page, limit, sort: ['-startsAt', '-id'],
+    ...(and.length > 0 ? { where: { and } } : {}),
   })
   if (!Array.isArray(result.docs) || result.docs.length > limit ||
       !Number.isSafeInteger(result.totalPages) || result.totalPages < 0 ||
