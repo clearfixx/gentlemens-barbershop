@@ -494,6 +494,32 @@ jobs:
             exit 1
           fi
           admin_token=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-admin-login.json", "utf8")).token')
+          # Exercise the audit HTTP boundary, not just its Local API helper.
+          # An anonymous request must never expose event history.
+          audit_anon_status=$(curl --silent --show-error --output /tmp/barbershop-audit-anon.json --write-out '%{http_code}' \
+            http://localhost:3000/api/admin/bookings/1/events)
+          if [ "$audit_anon_status" != "403" ]; then
+            echo "Unauthenticated booking audit access was not rejected: HTTP $audit_anon_status"
+            cat /tmp/barbershop-audit-anon.json
+            exit 1
+          fi
+          # A real admin may inspect a booking with no audit entries.
+          audit_admin_status=$(curl --silent --show-error --output /tmp/barbershop-audit-admin.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" \
+            'http://localhost:3000/api/admin/bookings/1/events?limit=1')
+          if [ "$audit_admin_status" != "200" ]; then
+            echo "Authenticated admin booking audit failed: HTTP $audit_admin_status"
+            cat /tmp/barbershop-audit-admin.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const response = JSON.parse(fs.readFileSync("/tmp/barbershop-audit-admin.json", "utf8"));
+            if (!Array.isArray(response.events) || response.page !== 1 ||
+                typeof response.totalPages !== "number" || typeof response.hasNextPage !== "boolean") {
+              throw new Error("Unexpected booking audit HTTP response");
+            }
+          '
           for state in false true; do
             location_status=$(curl --silent --show-error --output "/tmp/barbershop-location-${state}.json" --write-out '%{http_code}' \
               --header "Authorization: JWT $admin_token" \
