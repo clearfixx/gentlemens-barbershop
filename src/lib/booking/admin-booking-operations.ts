@@ -100,7 +100,10 @@ export async function getAdminBookings(
     assertBookingStatus(doc.status)
     const customerId = doc.customer == null ? null : safeId(doc.customer)
     const services = doc.services
-    if (!Array.isArray(services) || services.length === 0 ||
+    // Historical/imported or SQL-seeded bookings may have no populated service
+    // relationship. Preserve the record in the admin inventory as [] rather
+    // than making the whole network view fail.
+    if (!Array.isArray(services) ||
         typeof doc.customerName !== 'string' || typeof doc.customerPhone !== 'string' ||
         (doc.customerEmail != null && typeof doc.customerEmail !== 'string') ||
         typeof doc.startsAt !== 'string' || typeof doc.endsAt !== 'string' ||
