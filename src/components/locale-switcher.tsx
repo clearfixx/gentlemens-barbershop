@@ -82,7 +82,7 @@ export function LocaleSwitcher({
       {locale.toUpperCase()}
       <ChevronDown size={13} strokeWidth={1.75} aria-hidden="true" />
     </button>
-    {open && <div role="menu" aria-label={t.language.navigation} className="locale-compact__panel">
+    <div role="menu" aria-label={t.language.navigation} className="locale-compact__panel" data-state={open ? 'open' : 'closed'} aria-hidden={!open} inert={!open}>
       {locales.map(option =>
         <Link
           role="menuitem"
@@ -94,6 +94,6 @@ export function LocaleSwitcher({
           onClick={event => confirmSwitch(event, option)}
         >{option === 'uk' ? t.language.ukrainian : t.language.english}</Link>
       )}
-    </div>}
+    </div>
   </div>
 }
