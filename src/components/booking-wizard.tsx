@@ -3,31 +3,19 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { getFallbackMessages } from '@/i18n/messages'
 import { type Locale } from '@/i18n/config'
+import { bookingLocalDateWindow, isBookingWizardAvailability, isBookingWizardReceipt, type BookingWizardAvailability } from '@/lib/booking/booking-wizard-contract'
 
-type Location = { id: number; name: string; city: string }
+type Location = { id: number; name: string; city: string; timeZone: string }
 type Service = { id: number; name: string }
 type Barber = { id: number; name: string; locationId: number; serviceIds: number[] }
-type Slot = { startsAt: string; endsAt: string }
-type Availability = {
-  barberId: number
-  locationId: number
-  serviceIds: number[]
-  date: string
-  timeZone: string
-  price: number
-  durationMinutes: number
-  slots: Slot[]
-}
-type Receipt = { id: number; replayed: boolean }
-
 export function BookingWizard({
-  locations, barbers, services, today, maxDate, locale, messages, bookingEnabled = false,
+  locations, barbers, services, nowIso, locale, messages, bookingEnabled = false, initialContact,
 }: {
   locations: Location[]
   barbers: Barber[]
   services: Service[]
-  today: string
-  maxDate: string
+  nowIso: string
+  initialContact?: { name: string; email: string }
   locale: Locale
   messages?: ReturnType<typeof getFallbackMessages>
   bookingEnabled?: boolean
@@ -39,17 +27,19 @@ export function BookingWizard({
   const [serviceIds, setServiceIds] = useState<number[]>([])
   const [date, setDate] = useState('')
   const [selectedSlot, setSelectedSlot] = useState('')
-  const [availability, setAvailability] = useState<Availability | null>(null)
+  const [availability, setAvailability] = useState<BookingWizardAvailability | null>(null)
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [receipt, setReceipt] = useState<Receipt | null>(null)
+  const [receipt, setReceipt] = useState<{ id: number; replayed: boolean } | null>(null)
   const [error, setError] = useState('')
-  const [customerName, setCustomerName] = useState('')
+  const [customerName, setCustomerName] = useState(initialContact?.name ?? '')
   const [customerPhone, setCustomerPhone] = useState('')
-  const [customerEmail, setCustomerEmail] = useState('')
+  const [customerEmail, setCustomerEmail] = useState(initialContact?.email ?? '')
   const retryKey = useRef<string | null>(null)
   const eligibleBarbers = useMemo(() => barbers.filter(item => item.locationId === locationId), [barbers, locationId])
   const selectedBarber = barbers.find(item => item.id === barberId)
+  const selectedLocation = locations.find(item => item.id === locationId)
+  const localWindow = selectedLocation ? bookingLocalDateWindow(nowIso, selectedLocation.timeZone) : null
   const eligibleServices = services.filter(item => selectedBarber?.serviceIds.includes(item.id))
   const rateLimitedMessage = t.booking.rateLimited
   const unavailableMessage = t.booking.unavailable
@@ -66,10 +56,8 @@ export function BookingWizard({
           signal: controller.signal, cache: 'no-store',
         })
         if (!response.ok) throw new Error(response.status === 429 ? rateLimitedMessage : unavailableMessage)
-        const data = await response.json() as Availability
-        if (data.barberId !== barberId || data.locationId !== locationId ||
-          data.date !== date || !Array.isArray(data.serviceIds) ||
-          data.serviceIds.join(',') !== serviceIds.join(',') || !Array.isArray(data.slots)) {
+        const data: unknown = await response.json()
+        if (!isBookingWizardAvailability(data, { barberId, locationId, serviceIds, date })) {
           throw new Error(unavailableMessage)
         }
         if (active) setAvailability(data)
@@ -143,8 +131,8 @@ export function BookingWizard({
         }
         return
       }
-      const result = await response.json() as Receipt
-      if (!Number.isSafeInteger(result.id) || result.id <= 0 || typeof result.replayed !== 'boolean') {
+      const result: unknown = await response.json()
+      if (!isBookingWizardReceipt(result)) {
         throw new Error(t.booking.submitFailed)
       }
       setReceipt(result)
@@ -200,7 +188,7 @@ export function BookingWizard({
         </div>}
         {step === 3 && <>
           <label className="booking-date">{t.booking.date}
-            <input type="date" value={date} min={today} max={maxDate}
+            <input type="date" value={date} min={localWindow?.today} max={localWindow?.maxDate}
               onChange={event => {
                 resetAvailability(); setDate(event.target.value)
                 if (event.target.value) setLoading(true)
