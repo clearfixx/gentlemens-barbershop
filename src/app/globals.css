@@ -104,11 +104,11 @@
   --navbar-height:76px;
   --navbar-half-height:38px;
   --navbar-surface:color-mix(in srgb,var(--paper) 48%,transparent);
-  --navbar-border:color-mix(in srgb,var(--gold) 54%,transparent);
+  --navbar-border:color-mix(in srgb,var(--gold) 15%,transparent);
   --navbar-blur:blur(10px);
   /* Dropdowns have their own stable surface: readable even at scrollY = 0. */
   --dropdown-surface:color-mix(in srgb,var(--paper) 96%,transparent);
-  --dropdown-border:color-mix(in srgb,var(--gold) 54%,transparent);
+  --dropdown-border:color-mix(in srgb,var(--gold) 15%,transparent);
   --dropdown-blur:blur(18px);
   height:var(--navbar-height);
   min-height:var(--navbar-height);
@@ -123,7 +123,7 @@
 }
 .site-header.floating-header--scrolled{
   --navbar-surface:color-mix(in srgb,var(--paper) 84%,transparent);
-  --navbar-border:color-mix(in srgb,var(--gold) 42%,transparent);
+  --navbar-border:color-mix(in srgb,var(--gold) 15%,transparent);
   --navbar-blur:blur(18px);
 }
 .floating-header .site-brand{display:flex;align-items:center;min-width:0;text-decoration:none}
