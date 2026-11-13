@@ -219,6 +219,54 @@ async function main() {
   assert.equal(barberEvents.docs[0]?.actor, barberUser.id)
   assert.equal(barberEvents.docs[0]?.actorRole, 'assigned_barber')
 
+  // The same appointment now receives a second legal transition: a staff
+  // confirmation followed by an administrator cancellation. The timeline
+  // must be chronological and pagination must neither skip nor repeat events.
+  const adminAfterBarber = await changeAdminBookingStatus(
+    payload, String(forBarber.id), 'cancelled', adminActor,
+  )
+  assert.deepEqual(adminAfterBarber, { id: forBarber.id, status: 'cancelled' })
+  const fullTimeline = await getAdminBookingAudit(payload, adminActor, String(forBarber.id))
+  assert.equal(fullTimeline.events.length, 2)
+  assert.deepEqual(fullTimeline.events.map(event => ({
+    action: event.action, previousStatus: event.previousStatus,
+    actorId: event.actorId, actorRole: event.actorRole,
+  })), [
+    {
+      action: 'confirmed', previousStatus: 'pending',
+      actorId: barberUser.id, actorRole: 'assigned_barber',
+    },
+    {
+      action: 'cancelled', previousStatus: 'confirmed',
+      actorId: adminUser.id, actorRole: 'admin',
+    },
+  ])
+  assert.ok(fullTimeline.events[0].id < fullTimeline.events[1].id)
+  assert.ok(Date.parse(fullTimeline.events[0].createdAt) <=
+    Date.parse(fullTimeline.events[1].createdAt))
+  const firstAuditPage = await getAdminBookingAudit(
+    payload, adminActor, String(forBarber.id), { page: 1, limit: 1 },
+  )
+  const secondAuditPage = await getAdminBookingAudit(
+    payload, adminActor, String(forBarber.id), { page: 2, limit: 1 },
+  )
+  const emptyAuditPage = await getAdminBookingAudit(
+    payload, adminActor, String(forBarber.id), { page: 3, limit: 1 },
+  )
+  assert.equal(firstAuditPage.totalPages, 2)
+  assert.equal(firstAuditPage.hasNextPage, true)
+  assert.equal(secondAuditPage.totalPages, 2)
+  assert.equal(secondAuditPage.hasNextPage, false)
+  assert.deepEqual(firstAuditPage.events.map(event => event.id), [fullTimeline.events[0].id])
+  assert.deepEqual(secondAuditPage.events.map(event => event.id), [fullTimeline.events[1].id])
+  assert.deepEqual(emptyAuditPage.events, [])
+  assert.equal(emptyAuditPage.hasNextPage, false)
+  assert.equal(emptyAuditPage.totalPages, 2)
+  const finalAuditedBooking = await payload.findByID({
+    collection: 'bookings', id: forBarber.id, overrideAccess: true, depth: 0,
+  })
+  assert.equal(finalAuditedBooking.status, 'cancelled')
+
   // Racing the SAME action must never create two confirmations or audit
   // events. Unlike cancellation-versus-confirmation, these two operations
   // cannot both succeed sequentially under the approved state machine.
