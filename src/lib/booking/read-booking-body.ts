@@ -3,12 +3,12 @@
  * the entire body before length checks, allowing very large allocations.
  */
 export class BookingBodyError extends Error {
-  constructor(
-    public readonly status: 400 | 413,
-    message: string,
-  ) {
+  readonly status: 400 | 413
+
+  constructor(status: 400 | 413, message: string) {
     super(message)
     this.name = 'BookingBodyError'
+    this.status = status
   }
 }
 
