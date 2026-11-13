@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { bookingWritesEnabled, checkBookingWriteBudget, checkSharedBookingWriteBudget } from '@/lib/booking/booking-write-guard'
+import { BookingBodyError } from '@/lib/booking/read-booking-body'
+import { readBookingStatusBody } from '@/lib/booking/read-booking-status-body'
 import {
   BarberAccessError, BarberBookingConflictError, changeOwnBarberBookingStatus,
 } from '@/lib/booking/barber-booking-operations'
@@ -40,49 +42,20 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const user = auth.user
     const actor = user && 'role' in user && typeof user.role === 'string'
       ? { id: Number(user.id), role: user.role } : null
-    const type = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
-    if (type !== 'application/json') {
+    const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
+    if (contentType !== 'application/json') {
       return NextResponse.json({ error: 'Expected JSON body' }, { status: 415, headers: noStore })
     }
-    const length = request.headers.get('content-length')
-    if (length && /^\d+$/.test(length) && Number(length) > 128) {
-      return NextResponse.json({ error: 'Request too large' }, { status: 413, headers: noStore })
-    }
-    if (!request.body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers: noStore })
-    const reader = request.body.getReader()
-    const decoder = new TextDecoder('utf-8', { fatal: true })
-    let raw = ''
-    let bytes = 0
-    let completed = false
-    try {
-      while (true) {
-        const chunk = await reader.read()
-        if (chunk.done) { completed = true; break }
-        bytes += chunk.value.byteLength
-        if (bytes > 128) {
-          return NextResponse.json({ error: 'Request too large' }, { status: 413, headers: noStore })
-        }
-        raw += decoder.decode(chunk.value, { stream: true })
-      }
-      raw += decoder.decode()
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers: noStore })
-    } finally {
-      if (!completed) await reader.cancel().catch(() => undefined)
-      reader.releaseLock()
-    }
-    let data: unknown
-    try { data = JSON.parse(raw) } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers: noStore })
-    }
-    if (!data || typeof data !== 'object' || Array.isArray(data) ||
-        Object.keys(data).length !== 1 || !Object.hasOwn(data, 'status')) {
-      return NextResponse.json({ error: 'Invalid status request' }, { status: 400, headers: noStore })
-    }
+    const body = await readBookingStatusBody(request)
     const { id } = await context.params
-    const outcome = await changeOwnBarberBookingStatus(payload, id, (data as { status: unknown }).status, actor)
+    const outcome = await changeOwnBarberBookingStatus(payload, id, body.status, actor)
     return NextResponse.json(outcome, { status: 200, headers: noStore })
   } catch (error) {
+    if (error instanceof BookingBodyError) {
+      return NextResponse.json({ error: error.message }, {
+        status: error.status, headers: noStore,
+      })
+    }
     if (error instanceof BarberAccessError) return NextResponse.json({
       error: 'Barber authentication required',
     }, { status: 403, headers: noStore })
