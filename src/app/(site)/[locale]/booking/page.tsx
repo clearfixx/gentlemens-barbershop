@@ -13,6 +13,7 @@ import { isLocale } from '@/i18n/config'
 import { notFound } from 'next/navigation'
 import { BookingWizard } from '@/components/booking-wizard'
 import { loadPublicCatalog } from '@/lib/catalog/public-catalog'
+import { bookingWritesEnabled } from '@/lib/booking/booking-write-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +42,7 @@ export default async function BookingPage({ params }: { params: Promise<{ locale
       <p className="eyebrow">Gentlemen’s Barbershop</p>
       <h1>{t.booking.title}</h1>
       <p className="catalog-intro">{t.booking.intro}</p>
-      <BookingWizard locations={locations} barbers={barbers} services={services} today={today} maxDate={maxDate} locale={locale} messages={t} />
+      <BookingWizard locations={locations} barbers={barbers} services={services} today={today} maxDate={maxDate} locale={locale} messages={t} bookingEnabled={bookingWritesEnabled(process.env)} />
     </div>
     <footer className="site-footer">© 2026 GENTLEMEN’S BARBERSHOP</footer>
   </main>

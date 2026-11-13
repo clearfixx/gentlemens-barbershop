@@ -82,3 +82,13 @@
 .locale-switcher a{display:inline-grid;place-items:center;min-width:44px;min-height:44px;padding:8px;color:var(--ink);text-decoration:none;border:1px solid transparent;border-radius:var(--radius-control,5px)}
 .locale-switcher a[aria-current="page"]{border-color:currentColor;font-weight:700}
 .locale-switcher a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+
+/* Booking wizard: flat multi-select, clear focus and confirmation states. */
+.booking-wizard .booking-options button[aria-pressed="true"],
+.booking-wizard .booking-slots button[aria-pressed="true"]{border-color:var(--gold);outline:2px solid var(--gold);outline-offset:-2px}
+.booking-wizard button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.booking-wizard button:disabled{cursor:not-allowed;opacity:.55}
+.booking-wizard .booking-panel[role="status"]{min-height:240px}
+.booking-wizard .booking-panel[role="status"] h2{margin-bottom:14px}
+.booking-wizard .booking-contact input:invalid:not(:placeholder-shown){border-color:var(--gold)}
