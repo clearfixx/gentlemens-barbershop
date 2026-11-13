@@ -92,6 +92,18 @@ export async function changeOwnBarberBookingStatus(
   return { id, status }
 }
 
+/** Payload's document ID type may be string or number; expose validated numeric IDs only. */
+function numericPayloadId(value: string | number): number {
+  if (typeof value === 'string' && !/^[1-9][0-9]*$/.test(value)) {
+    throw new Error('Invalid Payload booking identifier')
+  }
+  const id = Number(value)
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new Error('Invalid Payload booking identifier')
+  }
+  return id
+}
+
 export type BarberBookingSummary = {
   id: number
   locationId: number
@@ -134,16 +146,17 @@ export async function getOwnBarberBookings(
   if (assigned.docs.length !== 1 || assigned.hasNextPage) throw new Error('Ambiguous barber assignment')
   const barber = assigned.docs[0]
   if (typeof barber.user !== 'number' || barber.user !== userId ||
-      !Number.isSafeInteger(barber.id) || barber.id <= 0) {
+      !Number.isSafeInteger(numericPayloadId(barber.id))) {
     throw new Error('Invalid barber account assignment')
   }
+  const assignedBarberId = numericPayloadId(barber.id)
   const start = date + 'T00:00:00.000Z'
   const end = new Date(Date.parse(start) + 86_400_000).toISOString()
   const result = await payload.find({
     collection: 'bookings', overrideAccess: true, depth: 0, limit, page,
     sort: ['startsAt', 'id'],
     where: { and: [
-      { barber: { equals: barber.id } },
+      { barber: { equals: assignedBarberId } },
       { startsAt: { less_than: end } },
       { endsAt: { greater_than: start } },
     ] },
@@ -154,10 +167,12 @@ export async function getOwnBarberBookings(
     throw new Error('Invalid barber booking pagination response')
   }
   const bookings: BarberBookingSummary[] = result.docs.map(doc => {
-    if (doc.barber !== barber.id) throw new Error('Barber booking ownership mismatch')
+    if (typeof doc.barber !== 'number' || doc.barber !== assignedBarberId) {
+      throw new Error('Barber booking ownership mismatch')
+    }
+    const bookingId = numericPayloadId(doc.id)
     assertBookingStatus(doc.status)
-    if (!Number.isSafeInteger(doc.id) || doc.id <= 0 ||
-        typeof doc.customerName !== 'string' ||
+    if (typeof doc.customerName !== 'string' ||
         !Array.isArray(doc.services) || doc.services.length === 0 ||
         typeof doc.location !== 'number' || !Number.isSafeInteger(doc.location) || doc.location <= 0 ||
         typeof doc.startsAt !== 'string' || typeof doc.endsAt !== 'string' ||
@@ -173,7 +188,7 @@ export async function getOwnBarberBookings(
       return service
     })
     return {
-      id: doc.id,
+      id: bookingId,
       locationId: doc.location,
       startsAt: doc.startsAt,
       endsAt: doc.endsAt,
