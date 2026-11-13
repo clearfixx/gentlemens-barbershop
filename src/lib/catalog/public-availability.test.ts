@@ -26,7 +26,7 @@ test('rejects duplicates, unknown fields, invalid dates, and distant dates', () 
     'barber=1&service=3&service=3&date=2026-11-12',
     'barber=1&service=3&service=04&date=2026-11-12',
     'barber=1&service=3&service=0&date=2026-11-12',
-    'barber=1&service=3&service=4&service=5&service=6&service=7&service=8&service=9&service=10&service=11&service=12&date=2026-11-12',
+    'barber=1&service=3&service=4&service=5&service=6&service=7&service=8&service=9&service=10&service=11&service=12&service=13&date=2026-11-12',
     'barber=0&service=3&date=2026-11-12',
     'barber=1&service=03&date=2026-11-12',
     'barber=1&service=3&date=2026-02-30',
