@@ -14,8 +14,8 @@ export type BookingAuditEvent = {
   bookingId: number
   action: Exclude<BookingStatus, 'pending'>
   previousStatus: BookingStatus
-  actorId: number
-  actorRole: 'customer' | 'assigned_barber' | 'admin'
+  actorId: number | null
+  actorRole: 'customer' | 'assigned_barber' | 'admin' | 'guest'
   reason: string | null
   createdAt: string
 }
@@ -44,7 +44,7 @@ function eventOf(value: unknown, bookingId: number): BookingAuditEvent {
   assertBookingStatus(item.action)
   assertBookingStatus(item.previousStatus)
   if (item.action === 'pending' ||
-      (item.actorRole !== 'customer' && item.actorRole !== 'assigned_barber' && item.actorRole !== 'admin') ||
+      (item.actorRole !== 'customer' && item.actorRole !== 'assigned_barber' && item.actorRole !== 'admin' && item.actorRole !== 'guest') ||
       typeof item.createdAt !== 'string' || !Number.isFinite(Date.parse(item.createdAt)) ||
       (item.reason != null && typeof item.reason !== 'string')) {
     throw new Error('Invalid booking audit row')
@@ -54,7 +54,9 @@ function eventOf(value: unknown, bookingId: number): BookingAuditEvent {
     bookingId,
     action: item.action,
     previousStatus: item.previousStatus,
-    actorId: idOf(item.actor),
+    actorId: item.actorRole === 'guest'
+      ? (item.actor == null ? null : (() => { throw new Error('Guest audit cannot carry an account actor') })())
+      : idOf(item.actor),
     actorRole: item.actorRole,
     reason: item.reason ?? null,
     createdAt: new Date(item.createdAt).toISOString(),
