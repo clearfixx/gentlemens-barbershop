@@ -998,6 +998,30 @@ jobs:
           test "$persisted" = "1"
           echo "STAGING POSTGRES OK: exactly one accountless booking persisted"
 
+          # A second, truly authenticated Chrome journey must use Payload's
+          # signed-in cookie, prefill verified profile contact and persist a
+          # distinct account-owned booking. This shares only the disposable DB.
+          timeout 120s node scripts/test-booking-authenticated-staging-browser.cjs
+          account_booking_id=$(cat /tmp/barbershop-staging-authenticated-id.txt)
+          customer_id=$(cat /tmp/barbershop-customer-id)
+          [[ "$account_booking_id" =~ ^[1-9][0-9]*$ ]]
+          [[ "$customer_id" =~ ^[1-9][0-9]*$ ]]
+          authenticated_rows=$(psql -X -At -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            SELECT count(*) FROM bookings
+            WHERE id = $account_booking_id
+              AND customer_id = $customer_id
+              AND status = 'pending'
+              AND idempotency_scope = 'user:$customer_id'
+              AND customer_email = 'customer-ci@example.invalid'
+              AND total_price = 1150
+              AND EXTRACT(EPOCH FROM (ends_at - starts_at)) = 5400")
+          test "$authenticated_rows" = "1"
+          confirmed_guest_owner=$(psql -X -At -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            SELECT count(*) FROM bookings
+            WHERE id = $booking_id AND customer_id IS NULL")
+          test "$confirmed_guest_owner" = "1"
+          echo "AUTH STAGING POSTGRES OK: account-owned appointment recorded; prior guest record still unlinked"
+
       - name: Upload booking browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
