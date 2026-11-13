@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { bookingWritesEnabled, checkBookingWriteBudget, checkSharedBookingWriteBudget } from '@/lib/booking/booking-write-guard'
+import { BookingBodyError } from '@/lib/booking/read-booking-body'
+import { readBookingStatusBody } from '@/lib/booking/read-booking-status-body'
 import {
   AdminBookingAccessError, AdminBookingConflictError, changeAdminBookingStatus,
 } from '@/lib/booking/admin-booking-operations'
@@ -45,47 +47,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
     const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
     if (contentType !== 'application/json') {
-      return NextResponse.json({ error: 'Expected JSON body' }, { status: 415, headers })
+      return NextResponse.json({ error: 'Expected JSON body' }, { status: 415, headers: headers })
     }
-    const length = request.headers.get('content-length')
-    if (length && /^\d+$/.test(length) && Number(length) > 128) {
-      return NextResponse.json({ error: 'Request too large' }, { status: 413, headers })
-    }
-    if (!request.body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers })
-    const reader = request.body.getReader()
-    const decoder = new TextDecoder('utf-8', { fatal: true })
-    let raw = ''
-    let received = 0
-    let completed = false
-    try {
-      while (true) {
-        const chunk = await reader.read()
-        if (chunk.done) { completed = true; break }
-        received += chunk.value.byteLength
-        if (received > 128) {
-          return NextResponse.json({ error: 'Request too large' }, { status: 413, headers })
-        }
-        raw += decoder.decode(chunk.value, { stream: true })
-      }
-      raw += decoder.decode()
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers })
-    } finally {
-      if (!completed) await reader.cancel().catch(() => undefined)
-      reader.releaseLock()
-    }
-    let body: unknown
-    try { body = JSON.parse(raw) } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400, headers })
-    }
-    if (!body || typeof body !== 'object' || Array.isArray(body) ||
-        Object.keys(body).length !== 1 || !Object.hasOwn(body, 'status')) {
-      return NextResponse.json({ error: 'Invalid status request' }, { status: 400, headers })
-    }
+    const body = await readBookingStatusBody(request)
     const { id } = await context.params
-    const updated = await changeAdminBookingStatus(payload, id, (body as { status: unknown }).status, actor)
+    const updated = await changeAdminBookingStatus(payload, id, body.status, actor)
     return NextResponse.json(updated, { status: 200, headers })
   } catch (error) {
+    if (error instanceof BookingBodyError) {
+      return NextResponse.json({ error: error.message }, {
+        status: error.status, headers: headers,
+      })
+    }
     if (error instanceof AdminBookingAccessError) return NextResponse.json({
       error: 'Administrator authentication required',
     }, { status: 403, headers })
