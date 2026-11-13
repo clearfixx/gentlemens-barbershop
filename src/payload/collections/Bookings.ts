@@ -1,9 +1,23 @@
 import type { CollectionConfig } from 'payload'
+import { assertBookingStatusTransition } from '../../lib/booking/booking-lifecycle.ts'
 
 // Booking writes remain admin-only until server-side availability checks,
 // atomic slot reservation and guest identity validation are implemented.
 export const Bookings: CollectionConfig = {
   slug: 'bookings',
+  hooks: {
+    beforeChange: [({ data, operation, originalDoc }) => {
+      if (operation === 'create') {
+        // All new appointments enter the same state, including trusted Local API writes.
+        if (data.status !== undefined && data.status !== 'pending') {
+          throw new RangeError('New booking must start as pending')
+        }
+      } else if (data.status !== undefined) {
+        assertBookingStatusTransition(originalDoc?.status, data.status)
+      }
+      return data
+    }],
+  },
   admin: { useAsTitle: 'customerName', defaultColumns: ['customerName', 'location', 'barber', 'startsAt', 'status'] },
   access: {
     read: ({ req }) => req.user?.role === 'admin',
