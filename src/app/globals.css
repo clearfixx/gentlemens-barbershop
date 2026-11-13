@@ -92,3 +92,25 @@
 .booking-wizard .booking-panel[role="status"]{min-height:240px}
 .booking-wizard .booking-panel[role="status"] h2{margin-bottom:14px}
 .booking-wizard .booking-contact input:invalid:not(:placeholder-shown){border-color:var(--gold)}
+
+
+/* Booking wizard responsive polish: readable flat controls, no squeezed steps. */
+.booking-wizard{min-width:0}
+.booking-wizard .booking-progress{min-width:0}
+.booking-wizard .booking-progress li{min-width:0;overflow-wrap:normal;line-height:1.5}
+.booking-wizard .booking-panel h2{font-family:inherit;font-size:clamp(24px,3vw,34px);font-weight:600;letter-spacing:-.025em}
+.booking-wizard .booking-contact h3{font-family:inherit;font-size:22px;font-weight:600}
+.booking-wizard .booking-panel .catalog-notice[role="alert"]{margin:24px 0 0;padding:14px 0;border-top:1px solid var(--border)}
+.booking-wizard .booking-actions{flex-wrap:wrap}
+.booking-wizard .booking-actions .cta{min-width:190px}
+.booking-wizard .booking-summary{overflow-wrap:anywhere}
+@media(max-width:650px){
+  .booking-wizard{margin-top:28px}
+  .booking-wizard .booking-progress{display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;padding-bottom:8px}
+  .booking-wizard .booking-progress li{flex:0 0 118px;font-size:12px;overflow-wrap:normal}
+  .booking-wizard .booking-panel{padding:22px 18px;min-height:280px}
+  .booking-wizard .booking-options button{min-height:54px}
+  .booking-wizard .booking-actions{display:grid;grid-template-columns:1fr;gap:10px}
+  .booking-wizard .booking-actions button{width:100%}
+  .booking-wizard .booking-contact{gap:14px}
+}
