@@ -153,17 +153,25 @@ export async function getOwnBarberBookings(
       typeof result.hasNextPage !== 'boolean') {
     throw new Error('Invalid barber booking pagination response')
   }
-  const bookings = result.docs.map(doc => {
+  const bookings: BarberBookingSummary[] = result.docs.map(doc => {
     if (doc.barber !== barber.id) throw new Error('Barber booking ownership mismatch')
     assertBookingStatus(doc.status)
     if (!Number.isSafeInteger(doc.id) || doc.id <= 0 ||
         typeof doc.customerName !== 'string' ||
-        !Array.isArray(doc.services) || !doc.services.every(s => typeof s === 'number' && Number.isSafeInteger(s) && s > 0) ||
-        typeof doc.location !== 'number' || !Number.isSafeInteger(doc.location) ||
+        !Array.isArray(doc.services) || doc.services.length === 0 ||
+        typeof doc.location !== 'number' || !Number.isSafeInteger(doc.location) || doc.location <= 0 ||
         typeof doc.startsAt !== 'string' || typeof doc.endsAt !== 'string' ||
         !Number.isFinite(Date.parse(doc.startsAt)) || !Number.isFinite(Date.parse(doc.endsAt))) {
       throw new Error('Invalid barber booking row')
     }
+    // Payload relationship arrays may contain expanded objects, even when
+    // depth=0 is requested. Never return a populated record to the client.
+    const serviceIds = doc.services.map(service => {
+      if (typeof service !== 'number' || !Number.isSafeInteger(service) || service <= 0) {
+        throw new Error('Invalid barber booking service reference')
+      }
+      return service
+    })
     return {
       id: doc.id,
       locationId: doc.location,
@@ -171,7 +179,7 @@ export async function getOwnBarberBookings(
       endsAt: doc.endsAt,
       status: doc.status,
       customerName: doc.customerName,
-      serviceIds: doc.services,
+      serviceIds,
     }
   })
   return { bookings, page, totalPages: result.totalPages, hasNextPage: result.hasNextPage }
