@@ -58,8 +58,9 @@ async function main() {
   const day = '2037-01-02'
   const assigned = await getOwnBarberBookings(payload, barberActor, { date: day, limit: 50 })
   assert.ok(assigned.bookings.length >= 2, 'Expected booked CI test appointments')
-  assert.ok(assigned.bookings.every(booking => booking.customerName === 'CI trusted booking'))
-  const pending = assigned.bookings.filter(booking => booking.status === 'pending')
+  // Other disposable CI scenarios also create bookings for this barber.
+  const pending = assigned.bookings.filter(booking =>
+    booking.status === 'pending' && booking.customerName === 'CI trusted booking')
   assert.ok(pending.length >= 2, 'Expected two pending fixtures')
 
   const forCustomer = pending.find(booking => booking.startsAt === day + 'T09:00:00.000Z')
@@ -156,31 +157,29 @@ async function main() {
   assert.equal(barberEvents.docs[0]?.actor, barberUser.id)
   assert.equal(barberEvents.docs[0]?.actorRole, 'assigned_barber')
 
-  // A customer cancellation racing a barber confirmation must converge on
-  // one status and exactly one event. A loser must report a conflict, never
-  // append a second audit entry or silently overwrite the winner.
+  // Racing the SAME action must never create two confirmations or audit
+  // events. Unlike cancellation-versus-confirmation, these two operations
+  // cannot both succeed sequentially under the approved state machine.
   const raceBooking = pending.find(booking => booking.startsAt === day + 'T13:00:00.000Z')
   assert.ok(raceBooking, 'Missing pending 13:00 race fixture')
-  await payload.update({
-    collection: 'bookings', id: raceBooking.id, overrideAccess: true,
-    data: { customer: customerUser.id },
-  })
   const contenders = await Promise.allSettled([
-    cancelOwnedBooking(payload, String(raceBooking.id), customerActor),
+    changeOwnBarberBookingStatus(payload, String(raceBooking.id), 'confirmed', barberActor),
     changeOwnBarberBookingStatus(payload, String(raceBooking.id), 'confirmed', barberActor),
   ])
   assert.equal(contenders.filter(result => result.status === 'fulfilled').length, 1)
-  assert.equal(contenders.filter(result => result.status === 'rejected').length, 1)
+  const losers = contenders.filter(result => result.status === 'rejected')
+  assert.equal(losers.length, 1)
+  assert.ok(losers[0].status === 'rejected' && losers[0].reason instanceof BarberBookingConflictError)
   const raceRecord = await payload.findByID({
     collection: 'bookings', id: raceBooking.id, overrideAccess: true, depth: 0,
   })
-  assert.ok(['cancelled', 'confirmed'].includes(raceRecord.status))
+  assert.equal(raceRecord.status, 'confirmed')
   const raceEvents = await payload.find({
     collection: 'booking-events', overrideAccess: true, depth: 0,
     where: { booking: { equals: raceBooking.id } },
   })
-  assert.equal(raceEvents.totalDocs, 1, 'Concurrent operations must create one audit event')
-  assert.equal(raceEvents.docs[0]?.action, raceRecord.status)
+  assert.equal(raceEvents.totalDocs, 1, 'Concurrent confirmations must create one audit event')
+  assert.equal(raceEvents.docs[0]?.action, 'confirmed')
   assert.equal(raceEvents.docs[0]?.previousStatus, 'pending')
   console.info('Booking operations PostgreSQL integration passed: staff scope, history isolation, ownership, atomic cancellation and status CAS')
 }
