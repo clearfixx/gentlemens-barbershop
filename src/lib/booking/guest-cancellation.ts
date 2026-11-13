@@ -60,11 +60,9 @@ export function cancellationCodeHash(bookingId: number, code: string, secret: st
     .update(':').update(code).digest('hex')
 }
 
-export function guestCancellationDeliveryConfigured(environment: {
-  RESEND_API_KEY?: string
-  RESEND_FROM_EMAIL?: string
-  PAYLOAD_SECRET?: string
-}): boolean {
+export function guestCancellationDeliveryConfigured(
+  environment: { [key: string]: string | undefined },
+): boolean {
   return typeof environment.RESEND_API_KEY === 'string' &&
     environment.RESEND_API_KEY.length >= 16 &&
     typeof environment.RESEND_FROM_EMAIL === 'string' &&
