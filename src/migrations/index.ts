@@ -11,6 +11,8 @@ import * as migration_20261111_123000_booking_fk_integrity from './20261111_1230
 
 import * as migration_20261112_060000_booking_shared_rate_limit from './20261112_060000_booking_shared_rate_limit';
 
+import * as migration_20261113_150000_guest_cancellation_challenge from './20261113_150000_guest_cancellation_challenge';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -46,5 +48,10 @@ export const migrations = [
     up: migration_20261112_060000_booking_shared_rate_limit.up,
     down: migration_20261112_060000_booking_shared_rate_limit.down,
     name: '20261112_060000_booking_shared_rate_limit',
+  },
+  {
+    up: migration_20261113_150000_guest_cancellation_challenge.up,
+    down: migration_20261113_150000_guest_cancellation_challenge.down,
+    name: '20261113_150000_guest_cancellation_challenge',
   },
 ];
