@@ -49,11 +49,12 @@ export function InternalNavMenu({
         aria-controls="internal-nav-panel"
         onClick={() => setOpen(value => !value)}
       >
-        {open
-          ? <X size={23} strokeWidth={1.75} aria-hidden="true" />
-          : <Menu size={23} strokeWidth={1.75} aria-hidden="true" />}
+        <span className="internal-nav-menu__glyphs" aria-hidden="true">
+          <Menu className="internal-nav-menu__menu-icon" size={23} strokeWidth={1.75} />
+          <X className="internal-nav-menu__close-icon" size={23} strokeWidth={1.75} />
+        </span>
       </button>
-      {open && <div id="internal-nav-panel" className="internal-nav-menu__panel">
+      <div id="internal-nav-panel" className="internal-nav-menu__panel" data-state={open ? 'open' : 'closed'} aria-hidden={!open} inert={!open}>
         <p className="internal-nav-menu__caption">{uk ? 'Розділи сайту' : 'Pages'}</p>
         {internalLinks.map(link => (
           <Link key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</Link>
@@ -64,7 +65,7 @@ export function InternalNavMenu({
             <Link key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</Link>
           ))}
         </div>
-      </div>}
+      </div>
     </div>
   )
 }
