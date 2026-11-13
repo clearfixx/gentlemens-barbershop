@@ -46,7 +46,7 @@ export function isBookingWizardAvailability(
       !item.serviceIds.every((id, index) => id === expected.serviceIds[index]) ||
       typeof item.timeZone !== 'string' || typeof item.price !== 'number' ||
       !Number.isSafeInteger(item.price) || item.price < 0 ||
-      !Number.isSafeInteger(item.durationMinutes) || item.durationMinutes < 5 ||
+      typeof item.durationMinutes !== 'number' || !Number.isSafeInteger(item.durationMinutes) || item.durationMinutes < 5 ||
       item.durationMinutes > 480 || !Array.isArray(item.slots)) return false
   try {
     new Intl.DateTimeFormat('en-GB', { timeZone: item.timeZone })
