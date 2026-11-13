@@ -6,6 +6,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 import { getPayload } from 'payload'
+import { headers } from 'next/headers'
 import config from '@/payload.config'
 import { SiteHeader } from '@/components/site-header'
 import { loadPublicMessages } from '@/i18n/load-public-messages'
@@ -22,8 +23,18 @@ export default async function BookingPage({ params }: { params: Promise<{ locale
   if (!isLocale(locale)) notFound()
   const t = await loadPublicMessages(locale)
   const payload = await getPayload({ config })
-  const catalog = await loadPublicCatalog(payload, {}, locale)
-  const locations = catalog.locations.map(item => ({ id: Number(item.id), name: String(item.name), city: String(item.city) }))
+  const [catalog, auth] = await Promise.all([
+    loadPublicCatalog(payload, {}, locale),
+    headers().then(requestHeaders => payload.auth({ headers: requestHeaders })),
+  ])
+  const verifiedUser = auth.user
+  const initialContact = verifiedUser && 'email' in verifiedUser && typeof verifiedUser.email === 'string'
+    ? {
+      name: 'displayName' in verifiedUser && typeof verifiedUser.displayName === 'string'
+        ? verifiedUser.displayName : '',
+      email: verifiedUser.email,
+    } : undefined
+  const locations = catalog.locations.map(item => ({ id: Number(item.id), name: String(item.name), city: String(item.city), timeZone: String(item.timeZone) }))
   const services = catalog.services.map(item => ({ id: Number(item.id), name: String(item.name) }))
   const barbers = catalog.barbers.map(item => ({
     id: Number(item.id),
@@ -34,15 +45,14 @@ export default async function BookingPage({ params }: { params: Promise<{ locale
   // Server request time is intentionally dynamic; never computed during client render.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
-  const today = new Date(now).toISOString().slice(0, 10)
-  const maxDate = new Date(now + 30 * 86400000).toISOString().slice(0, 10)
+  const nowIso = new Date(now).toISOString()
   return <main className="landing">
     <SiteHeader locale={locale} messages={t} />
     <div className="catalog-page">
       <p className="eyebrow">Gentlemen’s Barbershop</p>
       <h1>{t.booking.title}</h1>
       <p className="catalog-intro">{t.booking.intro}</p>
-      <BookingWizard locations={locations} barbers={barbers} services={services} today={today} maxDate={maxDate} locale={locale} messages={t} bookingEnabled={bookingWritesEnabled(process.env)} />
+      <BookingWizard locations={locations} barbers={barbers} services={services} nowIso={nowIso} locale={locale} messages={t} initialContact={initialContact} bookingEnabled={bookingWritesEnabled(process.env)} />
     </div>
     <footer className="site-footer">© 2026 GENTLEMEN’S BARBERSHOP</footer>
   </main>
