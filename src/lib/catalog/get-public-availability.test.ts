@@ -92,7 +92,7 @@ test('rejects combinations longer than eight hours before slot queries', async (
     services: longServices,
     barber: {
       ...barber,
-      serviceOfferings: longServices.map(item => ({ service: item.id })),
+      serviceOfferings: longServices.map(item => ({ service: item.id, durationOverrideMinutes: 60, priceOverride: 500 })),
     },
   })
   assert.equal(await getPublicAvailability(veryLong.payload, {
