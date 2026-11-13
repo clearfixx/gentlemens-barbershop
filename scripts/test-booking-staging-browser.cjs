@@ -65,6 +65,10 @@ async function main() {
       response.url() === origin + '/api/bookings' && response.request().method() === 'POST')
     await confirm.click()
     const saved = await firstResponse
+    if (saved.status() !== 201) {
+      // Public API response only. Do not log customer request data or token.
+      console.error('Staging booking returned HTTP', saved.status(), (await saved.text()).slice(0, 250))
+    }
     assert.equal(saved.status(), 201, 'Guest checkout must create a real booking')
     const { id, replayed } = await saved.json()
     assert.ok(Number.isSafeInteger(id) && id > 0)
