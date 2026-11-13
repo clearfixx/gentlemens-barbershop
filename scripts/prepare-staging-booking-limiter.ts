@@ -27,4 +27,6 @@ async function main() {
   assert.equal(result.rows[0]?.installed, true)
   console.log('STAGING LIMITER OK: committed shared-limiter migration installed on disposable DB')
 }
-main().catch(error => { console.error(error); process.exitCode = 1 })
+// CI-only one-shot setup. Payload's Postgres pool otherwise keeps the Node
+// event loop open after the migration has completed and verified.
+main().then(() => process.exit(0)).catch(error => { console.error(error); process.exit(1) })
