@@ -96,6 +96,18 @@ async function run() {
       })
       const overflow = await page.evaluate(() =>
         document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      if (overflow > 1) {
+        const offenders = await page.evaluate(() => [...document.querySelectorAll('body *')]
+          .map(node => ({
+            name: node.tagName.toLowerCase(),
+            className: typeof node.className === 'string' ? node.className : '',
+            right: Math.round(node.getBoundingClientRect().right * 10) / 10,
+            width: Math.round(node.getBoundingClientRect().width * 10) / 10,
+          }))
+          .filter(node => node.right > document.documentElement.clientWidth + 1)
+          .slice(0, 12))
+        console.error('Mobile overflow diagnostics:', JSON.stringify(offenders))
+      }
       assert.ok(overflow <= 1, 'Page has horizontal viewport overflow: ' + overflow)
       assert.deepEqual(exceptions, [], 'React/runtime page exceptions')
       assert.deepEqual(errors.filter(text => !text.includes('favicon')), [], 'Browser console errors')
