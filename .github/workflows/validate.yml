@@ -418,7 +418,7 @@ jobs:
           curl --fail --silent --show-error --output /dev/null http://localhost:3000/
           # Production HTTP writes must remain disabled even if test mode leaks
           # into the runtime environment. Neither route may reach a mutation.
-          for endpoint in /api/bookings /api/bookings/1/status /api/bookings/1/cancel /api/barber/bookings/1/status; do
+          for endpoint in /api/bookings /api/bookings/1/status /api/bookings/1/cancel /api/barber/bookings/1/status /api/admin/bookings/1/status; do
             method=POST
             if [[ "$endpoint" == /api/bookings/1/status ]]; then method=PATCH; fi
             code="$(curl --silent --show-error --output /tmp/booking-production-denied.json \
