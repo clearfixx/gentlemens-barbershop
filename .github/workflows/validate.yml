@@ -929,6 +929,15 @@ jobs:
             }
           '
 
+      - name: Upload booking browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-wizard-browser-screenshots
+          path: /tmp/barbershop-browser-artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+
   prelocalization-baseline:
     runs-on: ubuntu-latest
     timeout-minutes: 15
