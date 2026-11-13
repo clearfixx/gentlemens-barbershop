@@ -72,6 +72,11 @@ test('admin inventory without filters sends no empty condition object', async ()
   assert.ok(!Object.hasOwn(queries[0], 'where'))
 })
 
+test('admin inventory preserves a legacy booking without service relations', async () => {
+  const page = await getAdminBookings(readPayload([{ ...booking, services: [] }]), admin)
+  assert.deepEqual(page.bookings[0]?.serviceIds, [])
+})
+
 test('admin inventory rejects malformed inputs and malformed records', async () => {
   let calls = 0
   const payload = readPayload([], () => { calls++ })
@@ -84,7 +89,7 @@ test('admin inventory rejects malformed inputs and malformed records', async () 
   assert.equal(calls, 0)
   for (const bad of [
     { ...booking, customerPhone: null },
-    { ...booking, services: [] },
+    { ...booking, services: null },
     { ...booking, status: 'unrecognized' },
     { ...booking, id: '1; SELECT * FROM users' },
   ]) {
