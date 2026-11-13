@@ -877,6 +877,38 @@ jobs:
               process.exit(1);
             }
           '
+          # Exercise the actual hydration, keyboard-selectable steps and responsive
+          # booking wizard in Chromium. Production mutations remain disabled.
+          browser_service_status=$(curl --silent --show-error --output /tmp/barbershop-second-service.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data '{"name":"CI Beard","slug":"ci-beard","durationMinutes":30,"price":500,"isActive":true}' \
+            http://localhost:3000/api/services)
+          if [ "$browser_service_status" != "201" ]; then
+            echo "Could not create secondary browser-test service"
+            cat /tmp/barbershop-second-service.json
+            exit 1
+          fi
+          second_service_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-second-service.json","utf8")).doc.id')
+          browser_barber_payload=$(FIRST_ID="$service_id" SECOND_ID="$second_service_id" node -e '
+            process.stdout.write(JSON.stringify({serviceOfferings:[
+              {service:Number(process.env.FIRST_ID),durationOverrideMinutes:60,priceOverride:650},
+              {service:Number(process.env.SECOND_ID),durationOverrideMinutes:30,priceOverride:500},
+            ]}))
+          ')
+          browser_barber_status=$(curl --silent --show-error --output /tmp/barbershop-browser-barber-update.json --write-out '%{http_code}' \
+            --request PATCH --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data "$browser_barber_payload" "http://localhost:3000/api/barbers/$barber_id")
+          if [ "$browser_barber_status" != "200" ]; then
+            echo "Could not update barber service offerings for browser test"
+            cat /tmp/barbershop-browser-barber-update.json
+            exit 1
+          fi
+          # Hosted Ubuntu runners have Chrome. Install just the automation
+          # library in /tmp; no app dependency or lockfile mutation.
+          command -v google-chrome
+          npm install --silent --no-save --ignore-scripts --prefix /tmp/barbershop-playwright playwright@1.56.1
+          timeout 120s node scripts/test-booking-wizard-browser.cjs
+
           # A customer must not be able to enumerate the administrator or other users.
           customer_list_status=$(curl --silent --show-error --output /tmp/barbershop-customer-list.json --write-out '%{http_code}' \
             --header "Authorization: JWT $token" \
@@ -896,6 +928,15 @@ jobs:
               process.exit(1);
             }
           '
+
+      - name: Upload booking browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-wizard-browser-screenshots
+          path: /tmp/barbershop-browser-artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 7
 
   prelocalization-baseline:
     runs-on: ubuntu-latest
