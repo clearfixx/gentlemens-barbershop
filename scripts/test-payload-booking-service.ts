@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { getPayload } from 'payload'
 import config from '../src/payload.config.ts'
 import { createIdempotentPayloadBooking, createPayloadBooking } from '../src/lib/booking/payload-booking-service.ts'
+import { submitBooking } from '../src/lib/booking/submit-booking.ts'
 
 async function main() {
   const locationId = Number(process.env.CI_LOCATION_ID)
@@ -58,6 +59,42 @@ async function main() {
   })
   assert.equal(saved.totalDocs, 1)
   assert.equal(saved.docs[0]?.id, created.id)
+  // Anonymous v1 checkout must persist a real accountless booking using the
+  // same catalog, availability, PostgreSQL overlap, and idempotency pipeline.
+  const guestRequest = {
+    ...request, startsAt: '2037-01-09T09:00:00.000Z',
+    customerName: 'CI guest booking', customerPhone: '+380501234567',
+    customerEmail: 'visitor@example.invalid',
+  }
+  const guestKey = 'e8f2c48b-0a4f-4f16-9a3d-a8c6f034e42b'
+  const guestSecret = process.env.PAYLOAD_SECRET
+  const createGuest = (body: typeof guestRequest) => submitBooking({
+    body, idempotencyKey: guestKey, actor: null, allowed: true,
+    guestSecret,
+    create: (input, scope, key) => createIdempotentPayloadBooking(payload, input, scope, key),
+  })
+  const guestCreated = await createGuest(guestRequest)
+  assert.equal(guestCreated.replayed, false)
+  const guestSaved = await payload.findByID({
+    collection: 'bookings', id: guestCreated.booking.id, overrideAccess: true, depth: 0,
+  })
+  assert.equal(guestSaved.customer ?? null, null, 'Guest booking must not link an account')
+  assert.equal(guestSaved.status, 'pending')
+  assert.match(guestSaved.idempotencyScope ?? '', /^guest:[a-f0-9]{64}$/)
+  assert.equal(guestSaved.customerEmail, guestRequest.customerEmail)
+  assert.equal(guestSaved.customerPhone, guestRequest.customerPhone)
+  const guestRetried = await createGuest(guestRequest)
+  assert.equal(guestRetried.replayed, true)
+  assert.equal(guestRetried.booking.id, guestCreated.booking.id)
+  await assert.rejects(createGuest({
+    ...guestRequest, customerName: 'Different guest name',
+  }), { name: 'BookingIdempotencyConflictError' })
+  const guestRows = await payload.find({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    where: { idempotencyScope: { equals: guestSaved.idempotencyScope } },
+  })
+  assert.equal(guestRows.totalDocs, 1, 'Guest retry cannot produce a second booking')
+
   const retryRequest = { ...request, startsAt: '2037-01-02T11:00:00.000Z' }
   const firstRetry = await createIdempotentPayloadBooking(payload, retryRequest, 'ci:customer:retry', 'stable-key')
   assert.equal(firstRetry.replayed, false)

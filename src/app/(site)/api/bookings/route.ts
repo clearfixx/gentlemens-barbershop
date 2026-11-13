@@ -3,8 +3,9 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { bookingHttpError } from '@/lib/booking/booking-http'
 import { BookingBodyError, readBookingBody } from '@/lib/booking/read-booking-body'
+import { BookingAuthenticationError } from '@/lib/booking/booking-identity'
 import { bookingWritesEnabled, checkBookingWriteBudget, checkSharedBookingWriteBudget } from '@/lib/booking/booking-write-guard'
-import { submitAuthenticatedBooking } from '@/lib/booking/submit-authenticated-booking'
+import { submitBooking } from '@/lib/booking/submit-booking'
 import { createIdempotentPayloadBooking } from '@/lib/booking/payload-booking-service'
 
 export const dynamic = 'force-dynamic'
@@ -52,6 +53,8 @@ export async function POST(request: Request) {
       typeof user.role === 'string' && typeof user.email === 'string'
       ? { id: Number(user.id), role: user.role, email: user.email }
       : null
+    // A broken authenticated identity must never silently become a guest.
+    if (user && !actor) throw new BookingAuthenticationError()
 
     const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
     if (contentType !== 'application/json') {
@@ -59,11 +62,12 @@ export async function POST(request: Request) {
     }
     const body = await readBookingBody(request)
 
-    const result = await submitAuthenticatedBooking({
+    const result = await submitBooking({
       body,
       idempotencyKey: request.headers.get('idempotency-key'),
       actor,
       allowed: true,
+      guestSecret: process.env.PAYLOAD_SECRET,
       create: (input, scope, key) => createIdempotentPayloadBooking(payload, input, scope, key),
     })
     return NextResponse.json({
