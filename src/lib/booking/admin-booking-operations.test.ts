@@ -59,6 +59,19 @@ test('admin list is bounded and filtered; only allowlisted columns are returned'
   assert.ok(!JSON.stringify(result).includes('secret'))
 })
 
+test('admin inventory without filters sends no empty condition object', async () => {
+  const queries: Record<string, unknown>[] = []
+  const result = await getAdminBookings(
+    readPayload([booking], args => { queries.push(args) }), admin,
+  )
+  assert.equal(result.bookings.length, 1)
+  assert.equal(queries.length, 1)
+  assert.equal(queries[0].collection, 'bookings')
+  assert.equal(queries[0].limit, 20)
+  assert.equal(queries[0].page, 1)
+  assert.ok(!Object.hasOwn(queries[0], 'where'))
+})
+
 test('admin inventory rejects malformed inputs and malformed records', async () => {
   let calls = 0
   const payload = readPayload([], () => { calls++ })
