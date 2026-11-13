@@ -143,6 +143,12 @@ async function main() {
 
   // An administrator can cancel an appointment inside the customer deadline,
   // but only via a separate role-scoped audited transition.
+  // The primary network-wide admin view must work with no query filters.
+  // Exercise Payload/Postgres directly instead of relying on a mocked find().
+  const entireNetwork = await getAdminBookings(payload, adminActor)
+  assert.ok(entireNetwork.bookings.length > 0, 'Admin inventory should return CI fixtures')
+  assert.ok(entireNetwork.bookings.some(booking => booking.id === tooLate.id))
+  assert.equal(entireNetwork.page, 1)
   const adminListing = await getAdminBookings(payload, adminActor, {
     locationId, barberId, status: 'pending', date: new Date(soonStart).toISOString().slice(0, 10),
   })
