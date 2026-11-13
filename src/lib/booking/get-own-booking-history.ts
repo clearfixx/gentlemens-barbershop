@@ -1,4 +1,4 @@
-import type { Payload } from 'payload'
+import type { Payload, Where } from 'payload'
 import { bookingIdentityScope, type BookingActor } from './booking-identity.ts'
 import { assertBookingStatus, type BookingStatus } from './booking-lifecycle.ts'
 
@@ -95,7 +95,7 @@ export async function getOwnBookingHistory(
   }
   const now = options.now ?? new Date()
   if (!Number.isFinite(now.getTime())) throw new RangeError('Invalid booking history clock')
-  const and: Array<Record<string, unknown>> = [{ customer: { equals: customerId } }]
+  const and: Where[] = [{ customer: { equals: customerId } }]
   if (filter === 'upcoming') and.push({ startsAt: { greater_than_equal: now.toISOString() } })
   if (filter === 'past') and.push({ startsAt: { less_than: now.toISOString() } })
   const result = await payload.find({
