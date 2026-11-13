@@ -239,6 +239,45 @@
 .site-header.floating-header :is(.internal-nav-menu__panel,.auth-nav__panel,.locale-compact__panel) :is(a,button):hover{
   color:var(--gold);
 }
+/* Small, restrained open/close animations. Closed panels stay mounted so exits can run.
+   inert + aria-hidden prevent keyboard interaction with a hidden panel. */
+.site-header.floating-header :is(.internal-nav-menu__panel,.locale-compact__panel,.auth-nav__panel){
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transform:translateY(-7px) scale(.985);
+  transform-origin:top right;
+  transition:opacity 220ms ease,transform 220ms cubic-bezier(.22,1,.36,1),visibility 0s linear 220ms;
+}
+.site-header.floating-header :is(.internal-nav-menu__panel,.locale-compact__panel,.auth-nav__panel)[data-state="open"]{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+  transform:translateY(0) scale(1);
+  transition:opacity 240ms ease,transform 240ms cubic-bezier(.22,1,.36,1),visibility 0s;
+}
+/* Both Lucide icons stay in place; a crossfade/rotation reads as Menu → X. */
+.internal-nav-menu__glyphs{position:relative;display:grid;place-items:center;width:23px;height:23px}
+.internal-nav-menu__glyphs :is(.internal-nav-menu__menu-icon,.internal-nav-menu__close-icon){
+  position:absolute;inset:0;
+  transform-origin:center;
+  transition:opacity 240ms ease,transform 280ms cubic-bezier(.22,1,.36,1);
+}
+.internal-nav-menu__menu-icon{opacity:1;transform:rotate(0deg) scale(1)}
+.internal-nav-menu__close-icon{opacity:0;transform:rotate(-90deg) scale(.78)}
+.internal-nav-menu__trigger[aria-expanded="true"] .internal-nav-menu__menu-icon{
+  opacity:0;transform:rotate(90deg) scale(.78)
+}
+.internal-nav-menu__trigger[aria-expanded="true"] .internal-nav-menu__close-icon{
+  opacity:1;transform:rotate(0deg) scale(1)
+}
+.locale-compact__trigger svg{transition:transform 240ms ease}
+.locale-compact__trigger[aria-expanded="true"] svg{transform:rotate(180deg)}
+@media(prefers-reduced-motion:reduce){
+  .site-header.floating-header :is(.internal-nav-menu__panel,.locale-compact__panel,.auth-nav__panel),
+  .internal-nav-menu__glyphs :is(.internal-nav-menu__menu-icon,.internal-nav-menu__close-icon),
+  .locale-compact__trigger svg{transition:none}
+}
 @media(max-width:1500px){
   .site-header.floating-header{grid-template-columns:clamp(155px,16vw,230px) minmax(0,1fr) auto;gap:10px;padding-inline:clamp(15px,2vw,30px)}
   .site-header.floating-header .site-nav__anchors{gap:clamp(8px,1vw,17px)}
