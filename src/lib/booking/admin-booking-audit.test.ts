@@ -49,6 +49,38 @@ test('event history filters by booking and returns only explicit fields', async 
   assert.ok(!JSON.stringify(result).includes('never expose'))
 })
 
+test('paged timeline preserves stable chronological order and booking scope', async () => {
+  const confirmed = {
+    ...example, id: 6, action: 'confirmed', previousStatus: 'pending',
+    actor: 4, actorRole: 'assigned_barber',
+    createdAt: '2037-01-02T11:00:00.000Z',
+  }
+  const rows = [confirmed, example]
+  const queries: Record<string, unknown>[] = []
+  const pagedPayload = { find: async (args: Record<string, unknown>) => {
+    queries.push(args)
+    const page = args.page as number
+    const limit = args.limit as number
+    return {
+      docs: rows.slice((page - 1) * limit, page * limit),
+      totalPages: 2,
+      hasNextPage: page < 2,
+    }
+  } } as unknown as Pick<Payload, 'find'>
+  const first = await getAdminBookingAudit(pagedPayload, admin, '42', { page: 1, limit: 1 })
+  const second = await getAdminBookingAudit(pagedPayload, admin, '42', { page: 2, limit: 1 })
+  assert.deepEqual([first.events[0]?.action, second.events[0]?.action], ['confirmed', 'cancelled'])
+  assert.deepEqual([first.events[0]?.id, second.events[0]?.id], [6, 7])
+  assert.equal(first.hasNextPage, true)
+  assert.equal(second.hasNextPage, false)
+  assert.equal(first.totalPages, 2)
+  assert.equal(second.totalPages, 2)
+  assert.ok(queries.every(query => JSON.stringify(query.where) === JSON.stringify({
+    booking: { equals: 42 },
+  })))
+  assert.ok(queries.every(query => JSON.stringify(query.sort) === JSON.stringify(['createdAt', 'id'])))
+})
+
 test('invalid pagination and booking IDs are rejected before querying', async () => {
   let calls = 0
   const payload = payloadFor([], () => { calls++ })
