@@ -1024,7 +1024,7 @@ jobs:
           # Exercise verified guest cancellation on the same disposable database.
           # This invokes an injected fake email delivery, never a live provider.
           CI_GUEST_BOOKING_ID="$booking_id" CI_ACCOUNT_BOOKING_ID="$account_booking_id" \
-            timeout 90s node --experimental-strip-types scripts/test-guest-cancellation-postgres.ts
+            timeout 90s node --experimental-strip-types scripts/test-guest-cancellation-postgres.cjs
           cancelled_status=$(psql -X -At -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
             SELECT status FROM bookings WHERE id = $booking_id")
           test "$cancelled_status" = "cancelled"
