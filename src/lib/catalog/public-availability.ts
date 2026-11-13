@@ -1,16 +1,18 @@
 import { resolveBookingOffering } from '../booking/resolve-offering.ts'
 
-export type AvailabilityInput = { barberId: number; serviceId: number; date: string }
+export type AvailabilityInput = { barberId: number; serviceIds: number[]; date: string }
 
 export function parseAvailabilityInput(params: URLSearchParams, now = new Date()): AvailabilityInput {
   if ([...params.keys()].some(key => !['barber', 'service', 'date'].includes(key))) {
     throw new RangeError('Unexpected query parameter')
   }
   const barber = params.getAll('barber')
-  const service = params.getAll('service')
+  // Repeated service parameters represent one atomic combination.
+  // Preserve the original single-service query form for existing clients.
+  const services = params.getAll('service')
   const dates = params.getAll('date')
-  if (barber.length !== 1 || service.length !== 1 || dates.length !== 1) {
-    throw new RangeError('Expected one barber, service and date')
+  if (barber.length !== 1 || services.length < 1 || services.length > 10 || dates.length !== 1) {
+    throw new RangeError('Expected one barber, 1–10 services and one date')
   }
   const parseId = (value: string): number => {
     if (!/^[1-9]\d{0,8}$/.test(value)) throw new RangeError('Invalid catalog ID')
@@ -28,7 +30,11 @@ export function parseAvailabilityInput(params: URLSearchParams, now = new Date()
   if (utcDay < currentDay - 86400000 || utcDay > currentDay + 31 * 86400000) {
     throw new RangeError('Date outside booking window')
   }
-  return { barberId: parseId(barber[0]), serviceId: parseId(service[0]), date }
+  const serviceIds = services.map(parseId)
+  if (new Set(serviceIds).size !== serviceIds.length) {
+    throw new RangeError('Duplicate services are not allowed')
+  }
+  return { barberId: parseId(barber[0]), serviceIds, date }
 }
 
 export function resolvePublicDuration(
