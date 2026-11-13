@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Standalone CI CommonJS script. */
 /* Real Chromium regression against a production-built Next.js + Payload server.
  * This script runs only on disposable CI fixtures. It mocks availability
  * responses to exercise the interactive wizard deterministically, while
