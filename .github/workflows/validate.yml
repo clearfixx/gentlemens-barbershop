@@ -929,6 +929,75 @@ jobs:
             }
           '
 
+      - name: Staging browser guest checkout and PostgreSQL replay (non-production only)
+        shell: bash
+        timeout-minutes: 5
+        env:
+          NODE_ENV: development
+          BOOKING_WRITE_TEST_MODE: enabled
+          NEXT_PUBLIC_SITE_URL: http://localhost:3001
+          CI: "true"
+        run: |
+          set -euo pipefail
+          # The managed shared-limiter migration was rehearsed against a
+          # separate migration DB. Initialize it explicitly on the disposable
+          # push-mode staging fixture DB using that exact committed migration.
+          timeout 60s node --experimental-strip-types scripts/prepare-staging-booking-limiter.ts
+          # Never enable writes in the production smoke process. The preceding
+          # pnpm start has exited; run an isolated Next dev server on port 3001.
+          pnpm exec next dev -p 3001 -H 127.0.0.1 > /tmp/barbershop-staging-server.log 2>&1 &
+          staging_pid=$!
+          trap 'kill "$staging_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in {1..60}; do
+            if curl --fail --silent --output /dev/null http://localhost:3001/uk/booking; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$staging_pid" 2>/dev/null; then break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            tail -100 /tmp/barbershop-staging-server.log
+            echo "Local staging server did not start"
+            exit 1
+          fi
+          # The production smoke seeded exactly one Monday shift. Reconfigure
+          # the same disposable fixture for every weekday so the *real* public
+          # availability endpoint offers a slot tomorrow regardless of CI date.
+          schedule_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-schedule-created.json","utf8")).doc.id')
+          admin_token=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-admin-login.json","utf8")).token')
+          schedule_json=$(node -e '
+            process.stdout.write(JSON.stringify({
+              weeklyShifts: Array.from({length:7},(_,weekday)=>({
+                weekday:String(weekday), startMinute:540, endMinute:1080,
+              })),
+            }))
+          ')
+          patch_code=$(curl --silent --show-error --output /tmp/barbershop-staging-schedule.json --write-out '%{http_code}' \
+            -X PATCH -H "Authorization: JWT $admin_token" -H 'Content-Type: application/json' \
+            --data "$schedule_json" "http://localhost:3001/api/barber-schedules/$schedule_id")
+          if [ "$patch_code" != "200" ]; then
+            echo "Staging weekly schedule setup failed: HTTP $patch_code"
+            cat /tmp/barbershop-staging-schedule.json
+            exit 1
+          fi
+          timeout 120s node scripts/test-booking-staging-browser.cjs
+          booking_id=$(cat /tmp/barbershop-staging-booking-id.txt)
+          [[ "$booking_id" =~ ^[1-9][0-9]*$ ]]
+          # Confirm the browser wrote precisely one true guest appointment with
+          # the authoritative total and full duration. No customer account.
+          persisted=$(psql -X -At -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            SELECT count(*) FROM bookings
+            WHERE id = $booking_id
+              AND customer_id IS NULL
+              AND status = 'pending'
+              AND idempotency_scope LIKE 'guest:%'
+              AND total_price = 1150
+              AND EXTRACT(EPOCH FROM (ends_at - starts_at)) = 5400")
+          test "$persisted" = "1"
+          echo "STAGING POSTGRES OK: exactly one accountless booking persisted"
+
       - name: Upload booking browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
