@@ -48,22 +48,39 @@ export async function changeOwnBarberBookingStatus(
 ): Promise<{ id: number; status: BarberTargetStatus }> {
   const { bookingId: id, userId, target: status, from } = parseBarberStatusChange(bookingId, target, actor)
   const result = await payload.db.drizzle.execute(sql`
-    UPDATE bookings AS booking
-    SET status = ${status}, updated_at = NOW()
-    WHERE booking.id = ${id}
-      AND booking.status = ${from}
-      AND EXISTS (
-        SELECT 1 FROM barbers AS barber
-        WHERE barber.id = booking.barber_id
-          AND barber.user_id = ${userId}
-          AND barber.is_active = TRUE
-      )
-      AND (
-        (${status} = 'confirmed' AND booking.starts_at > NOW())
-        OR (${status} = 'completed' AND booking.ends_at <= NOW())
-        OR (${status} = 'no_show' AND booking.starts_at <= NOW())
-      )
-    RETURNING booking.id, booking.status
+    WITH eligible AS MATERIALIZED (
+      SELECT booking.id, booking.status AS previous_status
+      FROM bookings AS booking
+      JOIN barbers AS barber ON barber.id = booking.barber_id
+      WHERE booking.id = ${id}
+        AND booking.status = ${from}::public.enum_bookings_status
+        AND barber.user_id = ${userId}
+        AND barber.is_active = TRUE
+        AND (
+          (${status} = 'confirmed' AND booking.starts_at > NOW())
+          OR (${status} = 'completed' AND booking.ends_at <= NOW())
+          OR (${status} = 'no_show' AND booking.starts_at <= NOW())
+        )
+      FOR UPDATE OF booking
+    ),
+    changed AS (
+      UPDATE bookings AS booking
+      SET status = ${status}::public.enum_bookings_status, updated_at = NOW()
+      FROM eligible
+      WHERE booking.id = eligible.id AND booking.status = eligible.previous_status
+      RETURNING booking.id, booking.status, eligible.previous_status
+    ),
+    recorded AS (
+      INSERT INTO booking_events
+        (booking_id, action, previous_status, actor_id, actor_role, updated_at, created_at)
+      SELECT id, ${status}::public.enum_booking_events_action,
+        previous_status::text::public.enum_booking_events_previous_status,
+        ${userId}, 'assigned_barber'::public.enum_booking_events_actor_role, NOW(), NOW()
+      FROM changed
+      RETURNING booking_id
+    )
+    SELECT changed.id, changed.status
+    FROM changed JOIN recorded ON recorded.booking_id = changed.id
   `)
   if (!Array.isArray(result.rows) || result.rows.length > 1) {
     throw new Error('Invalid barber booking update response')
@@ -73,6 +90,18 @@ export async function changeOwnBarberBookingStatus(
   assertBookingStatus(row.status)
   if (Number(row.id) !== id || row.status !== status) throw new Error('Invalid barber booking update identity')
   return { id, status }
+}
+
+/** Payload's document ID type may be string or number; expose validated numeric IDs only. */
+function numericPayloadId(value: string | number): number {
+  if (typeof value === 'string' && !/^[1-9][0-9]*$/.test(value)) {
+    throw new Error('Invalid Payload booking identifier')
+  }
+  const id = Number(value)
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new Error('Invalid Payload booking identifier')
+  }
+  return id
 }
 
 export type BarberBookingSummary = {
@@ -117,16 +146,17 @@ export async function getOwnBarberBookings(
   if (assigned.docs.length !== 1 || assigned.hasNextPage) throw new Error('Ambiguous barber assignment')
   const barber = assigned.docs[0]
   if (typeof barber.user !== 'number' || barber.user !== userId ||
-      !Number.isSafeInteger(barber.id) || barber.id <= 0) {
+      !Number.isSafeInteger(numericPayloadId(barber.id))) {
     throw new Error('Invalid barber account assignment')
   }
+  const assignedBarberId = numericPayloadId(barber.id)
   const start = date + 'T00:00:00.000Z'
   const end = new Date(Date.parse(start) + 86_400_000).toISOString()
   const result = await payload.find({
     collection: 'bookings', overrideAccess: true, depth: 0, limit, page,
     sort: ['startsAt', 'id'],
     where: { and: [
-      { barber: { equals: barber.id } },
+      { barber: { equals: assignedBarberId } },
       { startsAt: { less_than: end } },
       { endsAt: { greater_than: start } },
     ] },
@@ -136,25 +166,35 @@ export async function getOwnBarberBookings(
       typeof result.hasNextPage !== 'boolean') {
     throw new Error('Invalid barber booking pagination response')
   }
-  const bookings = result.docs.map(doc => {
-    if (doc.barber !== barber.id) throw new Error('Barber booking ownership mismatch')
+  const bookings: BarberBookingSummary[] = result.docs.map(doc => {
+    if (typeof doc.barber !== 'number' || doc.barber !== assignedBarberId) {
+      throw new Error('Barber booking ownership mismatch')
+    }
+    const bookingId = numericPayloadId(doc.id)
     assertBookingStatus(doc.status)
-    if (!Number.isSafeInteger(doc.id) || doc.id <= 0 ||
-        typeof doc.customerName !== 'string' ||
-        !Array.isArray(doc.services) || !doc.services.every(s => typeof s === 'number' && Number.isSafeInteger(s) && s > 0) ||
-        typeof doc.location !== 'number' || !Number.isSafeInteger(doc.location) ||
+    if (typeof doc.customerName !== 'string' ||
+        !Array.isArray(doc.services) || doc.services.length === 0 ||
+        typeof doc.location !== 'number' || !Number.isSafeInteger(doc.location) || doc.location <= 0 ||
         typeof doc.startsAt !== 'string' || typeof doc.endsAt !== 'string' ||
         !Number.isFinite(Date.parse(doc.startsAt)) || !Number.isFinite(Date.parse(doc.endsAt))) {
       throw new Error('Invalid barber booking row')
     }
+    // Payload relationship arrays may contain expanded objects, even when
+    // depth=0 is requested. Never return a populated record to the client.
+    const serviceIds = doc.services.map(service => {
+      if (typeof service !== 'number' || !Number.isSafeInteger(service) || service <= 0) {
+        throw new Error('Invalid barber booking service reference')
+      }
+      return service
+    })
     return {
-      id: doc.id,
+      id: bookingId,
       locationId: doc.location,
       startsAt: doc.startsAt,
       endsAt: doc.endsAt,
       status: doc.status,
       customerName: doc.customerName,
-      serviceIds: doc.services,
+      serviceIds,
     }
   })
   return { bookings, page, totalPages: result.totalPages, hasNextPage: result.hasNextPage }

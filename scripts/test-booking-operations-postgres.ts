@@ -16,7 +16,11 @@ async function main() {
     throw new Error('Refusing booking operations test without disposable database acknowledgment')
   }
   const barberId = Number(process.env.CI_BARBER_ID)
-  if (!Number.isSafeInteger(barberId) || barberId <= 0) throw new Error('Missing CI barber')
+  const locationId = Number(process.env.CI_LOCATION_ID)
+  const serviceId = Number(process.env.CI_SERVICE_ID)
+  if (![barberId, locationId, serviceId].every(id => Number.isSafeInteger(id) && id > 0)) {
+    throw new Error('Missing CI booking catalog fixture')
+  }
   const payload = await getPayload({ config })
 
   const barberUser = await payload.create({
@@ -54,8 +58,9 @@ async function main() {
   const day = '2037-01-02'
   const assigned = await getOwnBarberBookings(payload, barberActor, { date: day, limit: 50 })
   assert.ok(assigned.bookings.length >= 2, 'Expected booked CI test appointments')
-  assert.ok(assigned.bookings.every(booking => booking.customerName === 'CI trusted booking'))
-  const pending = assigned.bookings.filter(booking => booking.status === 'pending')
+  // Other disposable CI scenarios also create bookings for this barber.
+  const pending = assigned.bookings.filter(booking =>
+    booking.status === 'pending' && booking.customerName === 'CI trusted booking')
   assert.ok(pending.length >= 2, 'Expected two pending fixtures')
 
   const forCustomer = pending.find(booking => booking.startsAt === day + 'T09:00:00.000Z')
@@ -85,6 +90,46 @@ async function main() {
     collection: 'bookings', id: forCustomer.id, overrideAccess: true, depth: 0,
   })
   assert.equal(savedCancellation.status, 'cancelled')
+  const cancellationEvents = await payload.find({
+    collection: 'booking-events', overrideAccess: true, depth: 0,
+    where: { booking: { equals: forCustomer.id } },
+  })
+  assert.equal(cancellationEvents.totalDocs, 1, 'One cancellation, one immutable audit event')
+  assert.equal(cancellationEvents.docs[0]?.action, 'cancelled')
+  assert.equal(cancellationEvents.docs[0]?.previousStatus, 'pending')
+  assert.equal(cancellationEvents.docs[0]?.actor, customerUser.id)
+  assert.equal(cancellationEvents.docs[0]?.actorRole, 'customer')
+
+  // Enforce the configured shop cancellation window, not merely starts_at > NOW().
+  const soonStart = new Date(Date.now() + 30 * 60_000)
+  const soonEnd = new Date(soonStart.getTime() + 60 * 60_000)
+  await payload.update({
+    collection: 'locations', id: locationId, overrideAccess: true,
+    data: { cancellationDeadlineMinutes: 60 },
+  })
+  const tooLate = await payload.create({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    data: {
+      location: locationId, barber: barberId, services: [serviceId],
+      customer: customerUser.id, customerName: 'CI deadline fixture',
+      customerPhone: '+380671234567',
+      startsAt: soonStart.toISOString(), endsAt: soonEnd.toISOString(),
+      totalPrice: 650, status: 'pending',
+    },
+  })
+  await assert.rejects(
+    cancelOwnedBooking(payload, String(tooLate.id), customerActor),
+    BookingCancellationConflictError,
+  )
+  const deadlineRecord = await payload.findByID({
+    collection: 'bookings', id: tooLate.id, overrideAccess: true, depth: 0,
+  })
+  assert.equal(deadlineRecord.status, 'pending', 'Deadline rejection keeps booking active')
+  const deadlineEvents = await payload.find({
+    collection: 'booking-events', overrideAccess: true, depth: 0,
+    where: { booking: { equals: tooLate.id } },
+  })
+  assert.equal(deadlineEvents.totalDocs, 0, 'Rejected cancellation must not append audit')
 
   const confirmed = await changeOwnBarberBookingStatus(
     payload, String(forBarber.id), 'confirmed', barberActor,
@@ -102,7 +147,84 @@ async function main() {
     collection: 'bookings', id: forBarber.id, overrideAccess: true, depth: 0,
   })
   assert.equal(stored.status, 'confirmed')
-  console.info('Booking operations PostgreSQL integration passed: staff scope, history isolation, ownership, atomic cancellation and status CAS')
+  const barberEvents = await payload.find({
+    collection: 'booking-events', overrideAccess: true, depth: 0,
+    where: { booking: { equals: forBarber.id } },
+  })
+  assert.equal(barberEvents.totalDocs, 1, 'Repeated staff action must not duplicate audit')
+  assert.equal(barberEvents.docs[0]?.action, 'confirmed')
+  assert.equal(barberEvents.docs[0]?.previousStatus, 'pending')
+  assert.equal(barberEvents.docs[0]?.actor, barberUser.id)
+  assert.equal(barberEvents.docs[0]?.actorRole, 'assigned_barber')
+
+  // Racing the SAME action must never create two confirmations or audit
+  // events. Unlike cancellation-versus-confirmation, these two operations
+  // cannot both succeed sequentially under the approved state machine.
+  const raceBooking = pending.find(booking => booking.startsAt === day + 'T13:00:00.000Z')
+  assert.ok(raceBooking, 'Missing pending 13:00 race fixture')
+  const contenders = await Promise.allSettled([
+    changeOwnBarberBookingStatus(payload, String(raceBooking.id), 'confirmed', barberActor),
+    changeOwnBarberBookingStatus(payload, String(raceBooking.id), 'confirmed', barberActor),
+  ])
+  assert.equal(contenders.filter(result => result.status === 'fulfilled').length, 1)
+  const losers = contenders.filter(result => result.status === 'rejected')
+  assert.equal(losers.length, 1)
+  assert.ok(losers[0].status === 'rejected' && losers[0].reason instanceof BarberBookingConflictError)
+  const raceRecord = await payload.findByID({
+    collection: 'bookings', id: raceBooking.id, overrideAccess: true, depth: 0,
+  })
+  assert.equal(raceRecord.status, 'confirmed')
+  const raceEvents = await payload.find({
+    collection: 'booking-events', overrideAccess: true, depth: 0,
+    where: { booking: { equals: raceBooking.id } },
+  })
+  assert.equal(raceEvents.totalDocs, 1, 'Concurrent confirmations must create one audit event')
+  assert.equal(raceEvents.docs[0]?.action, 'confirmed')
+  assert.equal(raceEvents.docs[0]?.previousStatus, 'pending')
+  // Complete and no-show actions require a confirmed appointment in the
+  // past. Seed through trusted Local API, then verify both status and audit.
+  // Use a separate historical year so these fixtures cannot overlap active
+  // bookings created by another CI scenario.
+  const pastBase = Date.parse('2020-01-02T09:00:00.000Z')
+  for (const [index, next] of (['completed', 'no_show'] as const).entries()) {
+    const startsAt = new Date(pastBase + index * 2 * 60 * 60_000).toISOString()
+    const endsAt = new Date(Date.parse(startsAt) + 60 * 60_000).toISOString()
+    const historical = await payload.create({
+      collection: 'bookings', overrideAccess: true, depth: 0,
+      data: {
+        location: locationId, barber: barberId, services: [serviceId],
+        customer: customerUser.id, customerName: 'CI historical barber operation',
+        customerPhone: '+380671234567',
+        startsAt, endsAt, totalPrice: 650, status: 'pending',
+      },
+    })
+    await payload.update({
+      collection: 'bookings', id: historical.id, overrideAccess: true,
+      data: { status: 'confirmed' },
+    })
+    const outcome = await changeOwnBarberBookingStatus(
+      payload, String(historical.id), next, barberActor,
+    )
+    assert.deepEqual(outcome, { id: historical.id, status: next })
+    await assert.rejects(
+      changeOwnBarberBookingStatus(payload, String(historical.id), next, barberActor),
+      BarberBookingConflictError,
+    )
+    const finalBooking = await payload.findByID({
+      collection: 'bookings', id: historical.id, overrideAccess: true, depth: 0,
+    })
+    assert.equal(finalBooking.status, next)
+    const historicalEvents = await payload.find({
+      collection: 'booking-events', overrideAccess: true, depth: 0,
+      where: { booking: { equals: historical.id } },
+    })
+    assert.equal(historicalEvents.totalDocs, 1, 'Historical action requires exactly one audit')
+    assert.equal(historicalEvents.docs[0]?.action, next)
+    assert.equal(historicalEvents.docs[0]?.previousStatus, 'confirmed')
+    assert.equal(historicalEvents.docs[0]?.actorRole, 'assigned_barber')
+    assert.equal(historicalEvents.docs[0]?.actor, barberUser.id)
+  }
+  console.info('Booking operations PostgreSQL integration passed: ownership, cancellation policy, confirmation, completion, no-show and audit')
 }
 
 main().then(
