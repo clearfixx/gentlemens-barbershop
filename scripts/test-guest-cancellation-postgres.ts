@@ -3,7 +3,7 @@ import { getPayload } from 'payload'
 import { sql } from '@payloadcms/db-postgres'
 import config from '../src/payload.config.ts'
 import { confirmGuestCancellation, GuestCancellationConflictError, requestGuestCancellation } from '../src/lib/booking/guest-cancellation.ts'
-import { up } from '../src/migrations/20261113_150000_guest_cancellation_challenge.ts'
+import { up } from '../src/migrations/20261113_150000_booking_guest_cancellation_challenge.ts'
 
 async function main() {
   assert.equal(process.env.CI, 'true')
