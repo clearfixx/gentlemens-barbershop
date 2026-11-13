@@ -120,7 +120,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
         className="auth-nav__avatar-image"
       />
     </button>
-    {open && <div className="auth-nav__panel" role="menu" aria-label={uk ? 'Меню профілю' : 'Account menu'}>
+    <div className="auth-nav__panel" role="menu" aria-label={uk ? 'Меню профілю' : 'Account menu'} data-state={open ? 'open' : 'closed'} aria-hidden={!open} inert={!open}>
       <p className="auth-nav__identity">{name}</p>
       <Link role="menuitem" href={`/${locale}/booking`} onClick={() => setOpen(false)}>{uk ? 'Новий запис' : 'Book a visit'}</Link>
       <Link role="menuitem" href={`/${locale}/catalog`} onClick={() => setOpen(false)}>{uk ? 'Каталог' : 'Catalog'}</Link>
@@ -129,6 +129,6 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
       <button type="button" role="menuitem" disabled={signingOut} onClick={() => void signOut()}>
         <LogOut size={18} strokeWidth={1.75} aria-hidden="true" /> {uk ? 'Вийти' : 'Log out'}
       </button>
-    </div>}
+    </div>
   </div>
 }
