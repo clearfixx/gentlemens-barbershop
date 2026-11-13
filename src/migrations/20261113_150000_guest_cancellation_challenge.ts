@@ -7,17 +7,27 @@ import { sql } from '@payloadcms/db-postgres'
  */
 export async function up({ db }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
-    CREATE TYPE "public"."enum_booking_events_actor_role_guest"
-      AS ENUM('customer', 'assigned_barber', 'admin', 'guest');
-    ALTER TABLE "booking_events"
-      ALTER COLUMN "actor_role" TYPE "enum_booking_events_actor_role_guest"
-        USING "actor_role"::text::"enum_booking_events_actor_role_guest";
-    DROP TYPE "public"."enum_booking_events_actor_role";
-    ALTER TYPE "public"."enum_booking_events_actor_role_guest"
-      RENAME TO "enum_booking_events_actor_role";
+    -- Payload push-mode disposable CI databases may already expose guest
+    -- in the enum. Only the versioned migration changes production schemas.
+    DO $guest_role$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'enum_booking_events_actor_role' AND e.enumlabel = 'guest'
+      ) THEN
+        CREATE TYPE "public"."enum_booking_events_actor_role_guest"
+          AS ENUM('customer', 'assigned_barber', 'admin', 'guest');
+        ALTER TABLE "booking_events"
+          ALTER COLUMN "actor_role" TYPE "enum_booking_events_actor_role_guest"
+            USING "actor_role"::text::"enum_booking_events_actor_role_guest";
+        DROP TYPE "public"."enum_booking_events_actor_role";
+        ALTER TYPE "public"."enum_booking_events_actor_role_guest"
+          RENAME TO "enum_booking_events_actor_role";
+      END IF;
+    END $guest_role$;
     ALTER TABLE "booking_events" ALTER COLUMN "actor_id" DROP NOT NULL;
 
-    CREATE TABLE "booking_guest_cancellation_challenges" (
+    CREATE TABLE IF NOT EXISTS "booking_guest_cancellation_challenges" (
       "booking_id" integer PRIMARY KEY NOT NULL
         REFERENCES "public"."bookings"("id") ON DELETE CASCADE,
       "code_hash" varchar(64) NOT NULL,
@@ -27,7 +37,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
       "consumed_at" timestamp(3) with time zone,
       CONSTRAINT "guest_cancel_challenge_interval" CHECK ("expires_at" > "issued_at")
     );
-    CREATE INDEX "guest_cancel_challenges_expiry_idx"
+    CREATE INDEX IF NOT EXISTS "guest_cancel_challenges_expiry_idx"
       ON "booking_guest_cancellation_challenges" ("expires_at");
   `)
 }
