@@ -7,6 +7,7 @@ import { getPayload } from 'payload'
 import { notFound } from 'next/navigation'
 
 import { HeroSlider } from '@/components/hero-slider'
+import { AtmosphereParallax } from '@/components/atmosphere-parallax'
 import { SiteHeader } from '@/components/site-header'
 import { isLocale } from '@/i18n/config'
 import { loadPublicMessages } from '@/i18n/load-public-messages'
@@ -128,6 +129,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </div> : <p className="home-section__empty">{labels.noBarbers}</p>}
       </div>
     </section>
+
+    <AtmosphereParallax locale={locale} />
 
     <section id="reviews" className="home-section home-section--muted" aria-labelledby="reviews-title">
       <div className="home-container">
