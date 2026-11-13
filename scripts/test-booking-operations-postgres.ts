@@ -181,7 +181,50 @@ async function main() {
   assert.equal(raceEvents.totalDocs, 1, 'Concurrent confirmations must create one audit event')
   assert.equal(raceEvents.docs[0]?.action, 'confirmed')
   assert.equal(raceEvents.docs[0]?.previousStatus, 'pending')
-  console.info('Booking operations PostgreSQL integration passed: staff scope, history isolation, ownership, atomic cancellation and status CAS')
+  // Complete and no-show actions require a confirmed appointment in the
+  // past. Seed through trusted Local API, then verify both status and audit.
+  // Use a separate historical year so these fixtures cannot overlap active
+  // bookings created by another CI scenario.
+  const pastBase = Date.parse('2020-01-02T09:00:00.000Z')
+  for (const [index, next] of (['completed', 'no_show'] as const).entries()) {
+    const startsAt = new Date(pastBase + index * 2 * 60 * 60_000).toISOString()
+    const endsAt = new Date(Date.parse(startsAt) + 60 * 60_000).toISOString()
+    const historical = await payload.create({
+      collection: 'bookings', overrideAccess: true, depth: 0,
+      data: {
+        location: locationId, barber: barberId, services: [serviceId],
+        customer: customerUser.id, customerName: 'CI historical barber operation',
+        customerPhone: '+380671234567',
+        startsAt, endsAt, totalPrice: 650, status: 'pending',
+      },
+    })
+    await payload.update({
+      collection: 'bookings', id: historical.id, overrideAccess: true,
+      data: { status: 'confirmed' },
+    })
+    const outcome = await changeOwnBarberBookingStatus(
+      payload, String(historical.id), next, barberActor,
+    )
+    assert.deepEqual(outcome, { id: historical.id, status: next })
+    await assert.rejects(
+      changeOwnBarberBookingStatus(payload, String(historical.id), next, barberActor),
+      BarberBookingConflictError,
+    )
+    const finalBooking = await payload.findByID({
+      collection: 'bookings', id: historical.id, overrideAccess: true, depth: 0,
+    })
+    assert.equal(finalBooking.status, next)
+    const historicalEvents = await payload.find({
+      collection: 'booking-events', overrideAccess: true, depth: 0,
+      where: { booking: { equals: historical.id } },
+    })
+    assert.equal(historicalEvents.totalDocs, 1, 'Historical action requires exactly one audit')
+    assert.equal(historicalEvents.docs[0]?.action, next)
+    assert.equal(historicalEvents.docs[0]?.previousStatus, 'confirmed')
+    assert.equal(historicalEvents.docs[0]?.actorRole, 'assigned_barber')
+    assert.equal(historicalEvents.docs[0]?.actor, barberUser.id)
+  }
+  console.info('Booking operations PostgreSQL integration passed: ownership, cancellation policy, confirmation, completion, no-show and audit')
 }
 
 main().then(
