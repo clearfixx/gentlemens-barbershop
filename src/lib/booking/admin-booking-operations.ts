@@ -131,7 +131,7 @@ export function parseAdminBookingChange(
 ): { id: number; adminId: number; next: AdminTargetStatus; previous: readonly BookingStatus[] } {
   const adminId = adminUserId(actor)
   const id = safeId(bookingId)
-  if (!['confirmed', 'completed', 'no_show', 'cancelled'].includes(String(status))) {
+  if (typeof status !== 'string' || !['confirmed', 'completed', 'no_show', 'cancelled'].includes(status)) {
     throw new RangeError('Invalid administrative status action')
   }
   const next = status as AdminTargetStatus
