@@ -113,6 +113,28 @@ async function run() {
       assert.deepEqual(errors.filter(text => !text.includes('favicon')), [], 'Browser console errors')
       console.log('BROWSER OK', locale, mobile ? '375px mobile' : '1440px desktop',
         'multiple services, invalid response recovery, read-only production gate, no overflow')
+
+      // Read-only production must never expose an actionable cancellation
+      // endpoint, even though its educational UI and instructions render.
+      await page.goto(origin + '/' + locale + '/booking/cancel?bookingId=42',
+        { waitUntil: 'networkidle' })
+      const sendCancellation = page.locator('.guest-cancel-card').first()
+        .locator('button[type="submit"]')
+      assert.equal(await sendCancellation.isDisabled(), true,
+        'Production guest cancellation must remain disabled')
+      assert.equal(await page.locator('#guest-cancel-booking').inputValue(), '42')
+      assert.ok(await page.locator('.guest-cancel-warning').isVisible())
+      const cancelOverflow = await page.evaluate(() =>
+        document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      assert.ok(cancelOverflow <= 1,
+        'Cancellation page viewport overflow at ' + (mobile ? 375 : 1440) + 'px: ' + cancelOverflow)
+      await page.screenshot({
+        path: '/tmp/barbershop-browser-artifacts/guest-cancel-' + locale + '-read-only.png',
+        fullPage: true,
+      })
+      assert.deepEqual(exceptions, [], 'No browser exceptions including cancellation page')
+      console.log('CANCELLATION PRODUCTION BROWSER OK', locale,
+        'readonly gate, localized page, no overflow')
       await context.close()
     }
   } finally {
