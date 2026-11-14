@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { getFallbackMessages } from '@/i18n/messages'
 import { type Locale } from '@/i18n/config'
@@ -153,6 +155,10 @@ export function BookingWizard({
       <p>{locations.find(item => item.id === locationId)?.name} · {selectedBarber?.name}</p>
       <p>{date} · {availability && formatTime(selectedSlot, availability.timeZone)}</p>
       <p>{t.booking.confirmationNote}</p>
+      {!initialContact && customerEmail.trim() && <Link className="catalog-inline-link"
+        href={`/${locale}/booking/cancel?bookingId=${receipt.id}`}>
+        {t.guestCancellation.title}
+      </Link>}
     </div> : <>
       <ol className="booking-progress">{t.booking.steps.map((name, index) =>
         <li key={name} aria-current={step === index ? 'step' : undefined}
