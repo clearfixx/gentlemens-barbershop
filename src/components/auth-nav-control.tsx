@@ -122,6 +122,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
     </button>
     <div className="auth-nav__panel" role="menu" aria-label={uk ? 'Меню профілю' : 'Account menu'} data-state={open ? 'open' : 'closed'} aria-hidden={!open} inert={!open}>
       <p className="auth-nav__identity">{name}</p>
+      <Link role="menuitem" href={`/${locale}/account`} onClick={() => setOpen(false)}>{uk ? 'Особистий кабінет' : 'My account'}</Link>
       <Link role="menuitem" href={`/${locale}/booking`} onClick={() => setOpen(false)}>{uk ? 'Новий запис' : 'Book a visit'}</Link>
       <Link role="menuitem" href={`/${locale}/catalog`} onClick={() => setOpen(false)}>{uk ? 'Каталог' : 'Catalog'}</Link>
       {user.role === 'admin' && <Link role="menuitem" href="/admin">{uk ? 'Адміністрування' : 'Admin'}</Link>}

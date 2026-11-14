@@ -29,7 +29,10 @@
 }
 .customer-auth__panel h1 {
   margin: 0 0 10px;
-  font: 400 clamp(30px, 3.5vw, 46px)/1.05 Georgia, serif;
+  font-family: inherit;
+  font-size: clamp(30px, 3.5vw, 46px);
+  font-weight: 650;
+  line-height: 1.12;
 }
 .customer-auth__intro {
   margin: 0 0 25px;
@@ -104,6 +107,8 @@
   font-weight: 700;
 }
 .customer-auth__submit:disabled { opacity: .65; cursor: wait; }
+.customer-auth__recover{display:block;margin-top:18px;color:var(--ink);font-size:13px;text-underline-offset:5px}
+.customer-auth__success{line-height:1.6;color:var(--ink);font-size:14px}
 .customer-auth__back {
   display: inline-block;
   margin-top: 22px;

@@ -43,7 +43,7 @@ async function main() {
     // to verify server-side displayName prefill, rather than hardcoded UI data.
     const changed = await context.request.patch(origin + '/api/users/' + customerId, {
       headers: { Authorization: 'JWT ' + loginBody.token },
-      data: { displayName },
+      data: { displayName, phone },
     })
     assert.equal(changed.status(), 200, 'Customer should be able to edit own display name')
 
@@ -88,10 +88,27 @@ async function main() {
       'Verified account display name must be prefilled')
     assert.equal(await page.locator('input[autocomplete="email"]').inputValue(), customerEmail,
       'Verified account email must be prefilled')
-    await page.locator('input[autocomplete="tel"]').fill(phone)
-
-    const confirm = page.getByRole('button', { name: 'Підтвердити запис' })
+    const phoneField = page.locator('input[autocomplete="tel"]')
+    assert.equal(await phoneField.inputValue(), phone,
+      'Verified profile phone must be prefilled in the booking wizard')
+    // Full contact prefill must NOT cause an implicit submit when the previous
+    // "Continue" button becomes the enabled confirmation action.
+    await page.waitForTimeout(350)
+    assert.equal(requests.length, 0,
+      'Prefilled customer contact must never submit before explicit confirmation')
+    const confirm = page.locator('.booking-actions button[type="submit"]')
+    if (await confirm.count() !== 1) {
+      fs.mkdirSync('/tmp/barbershop-browser-artifacts', { recursive: true })
+      await page.screenshot({
+        path: '/tmp/barbershop-browser-artifacts/auth-booking-missing-confirm.png',
+        fullPage: true,
+      })
+      console.error('Unexpected booking wizard step:', (await page.locator('.booking-panel').innerText()).slice(0, 750))
+      throw new Error('Booking confirmation action missing after prefilled contact')
+    }
+    assert.match(await confirm.innerText(), /підтвердити запис/i)
     assert.equal(await confirm.isEnabled(), true)
+    assert.equal(requests.length, 0, 'Booking must still be unsubmitted before click')
     const pending = page.waitForResponse(response =>
       response.url() === origin + '/api/bookings' && response.request().method() === 'POST')
     await confirm.click()
