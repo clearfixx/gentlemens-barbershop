@@ -6,8 +6,9 @@ test('customer account is self-scoped for reads and updates', () => {
   for (const operation of ['read', 'update'] as const) {
     const access = Users.access?.[operation]
     assert.equal(typeof access, 'function')
-    assert.deepEqual((access as Function)({ req: { user: { id: 19, role: 'customer' } } }), { id: { equals: 19 } })
-    assert.equal((access as Function)({ req: { user: null } }), false)
+    if (typeof access !== 'function') throw new Error('Expected a collection access function')
+    assert.deepEqual(access({ req: { user: { id: 19, role: 'customer' } } } as never), { id: { equals: 19 } })
+    assert.equal(access({ req: { user: null } } as never), false)
   }
 })
 test('public customers cannot set their own privileged role', () => {
