@@ -8,7 +8,8 @@ import { CalendarDays, ChevronRight, CircleUserRound, Star } from 'lucide-react'
 import config from '@/payload.config'
 import { isLocale } from '@/i18n/config'
 import { SiteHeader } from '@/components/site-header'
-import { getOwnBookingHistory } from '@/lib/booking/get-own-booking-history'
+import { getOwnBookingHistory, type BookingHistoryFilter } from '@/lib/booking/get-own-booking-history'
+import { AccountProfileName } from '@/components/account-profile-name'
 import './account.css'
 
 export const dynamic = 'force-dynamic'
@@ -26,7 +27,10 @@ const statusLabels = {
   en: { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No show' },
 } as const
 
-export default async function AccountPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function AccountPage({ params, searchParams }: {
+  params: Promise<{ locale: string }>
+  searchParams: Promise<{ filter?: string; page?: string }>
+}) {
   const { locale } = await params
   if (!isLocale(locale)) notFound()
 
@@ -37,11 +41,24 @@ export default async function AccountPage({ params }: { params: Promise<{ locale
   if (!user) redirect(`/${locale}/auth`)
   if (user.role !== 'customer' && user.role !== 'admin') notFound()
 
-  const page = await getOwnBookingHistory(
+  const query = await searchParams
+  const filter: BookingHistoryFilter = query.filter === 'upcoming' || query.filter === 'past'
+    ? query.filter : 'all'
+  const requestedPage = typeof query.page === 'string' && /^[1-9][0-9]{0,2}$/.test(query.page)
+    ? Number(query.page) : 1
+  const history = await getOwnBookingHistory(
     payload,
     { id: Number(user.id), role: user.role },
-    { limit: 10 },
+    { limit: 10, page: requestedPage, filter },
   )
+  const pageNumber = Math.min(requestedPage, Math.max(1, history.totalPages))
+  const page = pageNumber === requestedPage ? history : await getOwnBookingHistory(
+    payload, { id: Number(user.id), role: user.role },
+    { limit: 10, page: pageNumber, filter },
+  )
+  const accountUrl = (nextFilter: BookingHistoryFilter, nextPage = 1) =>
+    `/${locale}/account?filter=${nextFilter}&page=${nextPage}#appointments`
+
   const displayName = typeof user.displayName === 'string' && user.displayName.trim()
     ? user.displayName.trim()
     : user.email
@@ -67,11 +84,7 @@ export default async function AccountPage({ params }: { params: Promise<{ locale
             <h1 id="account-profile-heading">{uk ? 'Профіль' : 'Profile'}</h1>
             <div className="account-identity">
               <span className="account-identity__avatar" aria-hidden="true"><CircleUserRound size={42} strokeWidth={1.1} /></span>
-              <div>
-                <h2>{displayName}</h2>
-                <p>{user.email}</p>
-                <span className="account-subtle">{uk ? 'Персональні дані та історія відвідувань' : 'Personal details and visit history'}</span>
-              </div>
+              <AccountProfileName initialName={displayName} email={user.email} userId={Number(user.id)} locale={locale} />
             </div>
           </section>
 
@@ -83,10 +96,18 @@ export default async function AccountPage({ params }: { params: Promise<{ locale
               </div>
               <Link href={`/${locale}/booking`} className="account-text-link">{uk ? 'Новий запис' : 'New booking'} <ChevronRight size={16} /></Link>
             </div>
+            <nav className="account-filters" aria-label={uk ? 'Фільтр записів' : 'Booking filter'}>
+              {(['all', 'upcoming', 'past'] as const).map(option =>
+                <Link key={option} href={accountUrl(option)} aria-current={filter === option ? 'page' : undefined}
+                  className={filter === option ? 'is-active' : undefined}>
+                  {option === 'all' ? (uk ? 'Усі' : 'All') : option === 'upcoming' ? (uk ? 'Майбутні' : 'Upcoming') : (uk ? 'Минулі' : 'Past')}
+                </Link>
+              )}
+            </nav>
             {page.bookings.length === 0 ? (
               <div className="account-empty">
                 <CalendarDays size={30} strokeWidth={1.25} />
-                <p>{uk ? 'У вас поки немає записів.' : 'You have no bookings yet.'}</p>
+                <p>{filter === 'upcoming' ? (uk ? 'Майбутніх записів немає.' : 'No upcoming bookings.') : filter === 'past' ? (uk ? 'Минулих записів немає.' : 'No past bookings.') : (uk ? 'У вас поки немає записів.' : 'You have no bookings yet.')}</p>
                 <Link href={`/${locale}/booking`}>{uk ? 'Обрати час' : 'Find a time'}</Link>
               </div>
             ) : (
@@ -107,7 +128,15 @@ export default async function AccountPage({ params }: { params: Promise<{ locale
                 ))}
               </ul>
             )}
-            {page.hasNextPage && <p className="account-note">{uk ? 'Показано останні 10 записів. Повна історія буде доступна в окремому розділі.' : 'Showing the latest 10 bookings. The full history will be available in a dedicated view.'}</p>}
+            {page.totalPages > 1 && <nav className="account-pagination" aria-label={uk ? 'Сторінки історії' : 'Booking history pages'}>
+              {pageNumber > 1
+                ? <Link href={accountUrl(filter, pageNumber - 1)}>{uk ? '← Назад' : '← Previous'}</Link>
+                : <span aria-disabled="true">{uk ? '← Назад' : '← Previous'}</span>}
+              <span>{uk ? `Сторінка ${pageNumber} із ${page.totalPages}` : `Page ${pageNumber} of ${page.totalPages}`}</span>
+              {page.hasNextPage
+                ? <Link href={accountUrl(filter, pageNumber + 1)}>{uk ? 'Далі →' : 'Next →'}</Link>
+                : <span aria-disabled="true">{uk ? 'Далі →' : 'Next →'}</span>}
+            </nav>}
           </section>
 
           <section className="account-panel account-panel--preview" aria-label={uk ? 'Відгуки' : 'Reviews'}>
