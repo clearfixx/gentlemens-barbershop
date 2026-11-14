@@ -19,14 +19,22 @@ async function run() {
       const context = await browser.newContext({ viewport, deviceScaleFactor: 1 })
       const email = 'browser-cabinet-' + randomUUID().replace(/-/g, '') + '@example.invalid'
       const password = 'ci-test-only-Password-2026!'
-      const registered = await context.request.post(origin + '/api/users', {
-        data: { email, password, displayName: 'Cabinet Test' },
-      })
-      assert.equal(registered.status(), 201, 'Disposable browser user registration must succeed')
       const page = await context.newPage()
       const exceptions = []
       page.on('pageerror', error => exceptions.push(error.message))
 
+      // Registration happens through the actual client UI (not the API
+      // shortcut); then sign out and explicitly test the login form.
+      await page.goto(origin + '/' + locale + '/auth', { waitUntil: 'networkidle' })
+      await page.locator('.customer-auth__tabs button').nth(1).click()
+      await page.locator('input[autocomplete="name"]').fill('Cabinet Test')
+      await page.locator('input[type="email"]').fill(email)
+      await page.locator('input[type="password"]').fill(password)
+      await page.locator('.customer-auth__submit').click()
+      await page.waitForURL('**/' + locale + '/account', { timeout: 20_000 })
+      await page.locator('.auth-nav__avatar').click()
+      await page.getByRole('menuitem', { name: locale === 'uk' ? 'Вийти' : 'Log out' }).click()
+      await page.waitForURL('**/' + locale, { timeout: 20_000 })
       await page.goto(origin + '/' + locale + '/auth', { waitUntil: 'networkidle' })
       await page.locator('input[type="email"]').fill(email)
       await page.locator('input[type="password"]').fill(password)

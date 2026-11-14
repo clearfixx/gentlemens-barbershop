@@ -29,7 +29,10 @@
 }
 .customer-auth__panel h1 {
   margin: 0 0 10px;
-  font: 650 clamp(30px, 3.5vw, 46px)/1.12 inherit;
+  font-family: inherit;
+  font-size: clamp(30px, 3.5vw, 46px);
+  font-weight: 650;
+  line-height: 1.12;
 }
 .customer-auth__intro {
   margin: 0 0 25px;
