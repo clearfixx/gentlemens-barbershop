@@ -936,6 +936,10 @@ jobs:
           NODE_ENV: development
           BOOKING_WRITE_TEST_MODE: enabled
           NEXT_PUBLIC_SITE_URL: http://localhost:3001
+          # No actual email is sent: browser intercepts verification calls,
+          # and the separate database test injects a fake delivery callback.
+          RESEND_API_KEY: ci-only-resend-key-no-external-mail
+          RESEND_FROM_EMAIL: cancellation@example.invalid
           CI: "true"
         run: |
           set -euo pipefail
@@ -1029,6 +1033,9 @@ jobs:
             SELECT status FROM bookings WHERE id = $booking_id")
           test "$cancelled_status" = "cancelled"
           echo "GUEST CANCELLATION CI OK: audited guest cancellation verified"
+          # UI-only Chrome flow: 202 non-enumerating request, 409 invalid
+          # proof, 200 success; intercepted responses never trigger Resend.
+          timeout 90s node scripts/test-guest-cancellation-ui-browser.cjs
 
 
       - name: Upload booking browser screenshots
