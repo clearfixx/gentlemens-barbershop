@@ -1256,8 +1256,10 @@ jobs:
           # This job tests the historical localization upgrade, not later
           # Booking Management schema additions. Keep those migrations out of
           # this isolated rehearsal; the main checks job applies all of them.
+          # The customer profile migration is also post-localization.
           mkdir -p /tmp/booking-migrations-outside-historical-rehearsal
           mv src/migrations/*booking*.ts src/migrations/*barber_account_binding.ts \
+            src/migrations/*customer_phone.ts \
             /tmp/booking-migrations-outside-historical-rehearsal/
           # Rehearse the committed, previously normalized localization files unchanged.
           mkdir -p /tmp/incremental-migration

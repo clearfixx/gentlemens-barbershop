@@ -40,7 +40,7 @@ export function AccountProfileName({ initialName, initialPhone, email, userId, l
     setError('')
     try {
       // Payload's user collection enforces authenticated self-only updates.
-      // Only the display name is submitted; role and email are never modified here.
+      // Only editable profile fields are submitted; role and email are never modified here.
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PATCH',
         credentials: 'same-origin',
@@ -65,17 +65,17 @@ export function AccountProfileName({ initialName, initialPhone, email, userId, l
       {editing ? (
         <form className="account-profile-edit" onSubmit={event => void save(event)}>
           <label htmlFor="account-display-name">{uk ? 'Ваше ім’я' : 'Your name'}</label>
-          <div className="account-profile-edit__controls">
-            <input id="account-display-name" name="displayName" autoComplete="name"
-              minLength={2} maxLength={100} required value={draft}
-              onChange={event => setDraft(event.target.value)} disabled={saving} />
-            <button type="submit" disabled={saving} aria-label={uk ? 'Зберегти ім’я' : 'Save name'}><Check size={20} /></button>
-            <button type="button" disabled={saving} aria-label={uk ? 'Скасувати редагування' : 'Cancel editing'} onClick={() => { setEditing(false); setDraft(name); setPhoneDraft(phone); setError('') }}><X size={20} /></button>
-          </div>
+          <input id="account-display-name" name="displayName" autoComplete="name"
+            minLength={2} maxLength={100} required value={draft}
+            onChange={event => setDraft(event.target.value)} disabled={saving} />
           <label htmlFor="account-phone">{uk ? 'Телефон для бронювання' : 'Phone for bookings'}</label>
           <input id="account-phone" type="tel" autoComplete="tel" maxLength={32}
             value={phoneDraft} onChange={event => setPhoneDraft(event.target.value)} disabled={saving} />
           {error && <p className="account-profile-error" role="alert">{error}</p>}
+          <div className="account-profile-edit__controls">
+            <button type="submit" disabled={saving} aria-label={uk ? 'Зберегти зміни' : 'Save changes'}><Check size={20} /></button>
+            <button type="button" disabled={saving} aria-label={uk ? 'Скасувати редагування' : 'Cancel editing'} onClick={() => { setEditing(false); setDraft(name); setPhoneDraft(phone); setError('') }}><X size={20} /></button>
+          </div>
         </form>
       ) : (
         <div className="account-profile-name">
