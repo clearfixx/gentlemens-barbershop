@@ -106,7 +106,7 @@ async function main() {
       console.error('Unexpected booking wizard step:', (await page.locator('.booking-panel').innerText()).slice(0, 750))
       throw new Error('Booking confirmation action missing after prefilled contact')
     }
-    assert.match(await confirm.innerText(), /Підтвердити запис/)
+    assert.match(await confirm.innerText(), /підтвердити запис/i)
     assert.equal(await confirm.isEnabled(), true)
     assert.equal(requests.length, 0, 'Booking must still be unsubmitted before click')
     const pending = page.waitForResponse(response =>
