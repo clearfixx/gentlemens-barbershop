@@ -13,6 +13,8 @@ import * as migration_20261112_060000_booking_shared_rate_limit from './20261112
 
 import * as migration_20261113_150000_booking_guest_cancellation_challenge from './20261113_150000_booking_guest_cancellation_challenge';
 
+import * as migration_20261114_130000_customer_phone from './20261114_130000_customer_phone';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -53,5 +55,10 @@ export const migrations = [
     up: migration_20261113_150000_booking_guest_cancellation_challenge.up,
     down: migration_20261113_150000_booking_guest_cancellation_challenge.down,
     name: '20261113_150000_booking_guest_cancellation_challenge',
+  },
+  {
+    up: migration_20261114_130000_customer_phone.up,
+    down: migration_20261114_130000_customer_phone.down,
+    name: '20261114_130000_customer_phone',
   },
 ];

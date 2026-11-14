@@ -43,7 +43,9 @@
 .account-profile-name h2{margin:0}
 .account-profile-pencil,.account-profile-edit__controls button{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--ink);cursor:pointer}
 .account-profile-pencil:hover,.account-profile-edit__controls button:hover{border-color:var(--gold)}
-.account-profile-email{margin:8px 0;overflow-wrap:anywhere}
+.account-profile-email,.account-profile-phone{margin:8px 0;overflow-wrap:anywhere}
+.account-profile-phone{font-size:14px;color:var(--muted)}
+.account-profile-edit>input{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--paper);color:var(--ink);font:inherit}
 .account-profile-edit{display:grid;gap:8px;max-width:480px}
 .account-profile-edit label{font-size:13px;color:var(--muted)}
 .account-profile-edit__controls{display:flex;align-items:center;gap:7px}

@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { buildPasswordResetEmail } from '../../lib/account/password-reset-email.ts'
+import { validateProfilePhone } from '../../lib/account/profile-phone.ts'
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -35,7 +36,8 @@ export const Users: CollectionConfig = {
     delete: ({ req }) => req.user?.role === 'admin',
   },
   fields: [
-    { name: 'displayName', type: 'text' },
+    { name: 'displayName', type: 'text', maxLength: 100 },
+    { name: 'phone', type: 'text', maxLength: 32, validate: validateProfilePhone },
     {
       name: 'role', type: 'select', required: true, defaultValue: 'customer',
       options: ['customer', 'barber', 'admin'],

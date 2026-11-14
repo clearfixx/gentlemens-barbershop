@@ -119,7 +119,7 @@ export default async function AccountPage({ params, searchParams }: {
             <h1 id="account-profile-heading">{uk ? 'Профіль' : 'Profile'}</h1>
             <div className="account-identity">
               <span className="account-identity__avatar" aria-hidden="true"><CircleUserRound size={42} strokeWidth={1.1} /></span>
-              <AccountProfileName initialName={displayName} email={typeof user.email === 'string' ? user.email : ''} userId={Number(user.id)} locale={locale} />
+              <AccountProfileName initialName={displayName} initialPhone={'phone' in user && typeof user.phone === 'string' ? user.phone : ''} email={typeof user.email === 'string' ? user.email : ''} userId={Number(user.id)} locale={locale} />
             </div>
           </section>
 

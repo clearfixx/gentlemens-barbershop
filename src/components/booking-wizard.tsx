@@ -17,7 +17,7 @@ export function BookingWizard({
   barbers: Barber[]
   services: Service[]
   nowIso: string
-  initialContact?: { name: string; email: string }
+  initialContact?: { name: string; email: string; phone?: string }
   locale: Locale
   messages?: ReturnType<typeof getFallbackMessages>
   bookingEnabled?: boolean
@@ -35,7 +35,7 @@ export function BookingWizard({
   const [receipt, setReceipt] = useState<{ id: number; replayed: boolean } | null>(null)
   const [error, setError] = useState('')
   const [customerName, setCustomerName] = useState(initialContact?.name ?? '')
-  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerPhone, setCustomerPhone] = useState(initialContact?.phone ?? '')
   const [customerEmail, setCustomerEmail] = useState(initialContact?.email ?? '')
   const retryKey = useRef<string | null>(null)
   const eligibleBarbers = useMemo(() => barbers.filter(item => item.locationId === locationId), [barbers, locationId])
