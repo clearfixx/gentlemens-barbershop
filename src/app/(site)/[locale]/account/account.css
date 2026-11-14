@@ -35,3 +35,27 @@
 .account-panel--preview{display:flex;align-items:start;gap:16px;color:var(--muted)}.account-panel--preview h2{color:var(--ink);font-size:19px}.account-panel--preview p{margin:8px 0 0;font-size:13px;line-height:1.6}
 @media(max-width:900px){.account-shell{grid-template-columns:1fr}.account-sidebar{position:static;min-height:0;padding:15px}.account-sidebar__title{padding:0 10px 10px}.account-sidebar nav{display:flex;flex-wrap:wrap}.account-sidebar__booking{margin:10px 0 0}}
 @media(max-width:620px){.account-page{padding-top:76px}.account-shell{padding:12px 12px 56px}.account-panel{padding:20px}.account-identity{align-items:flex-start;gap:14px}.account-identity__avatar{flex-basis:64px;width:64px;height:64px}.account-identity__avatar svg{width:32px}.account-heading{align-items:flex-start;flex-wrap:wrap}.account-booking{align-items:flex-start;flex-wrap:wrap}.account-booking__date{flex-basis:100%;flex-wrap:wrap}.account-status{margin-left:auto}}
+
+
+/* Account profile: subtle, inline editing without a separate modal. */
+.account-profile-fields{flex:1;min-width:0}
+.account-profile-name{display:flex;align-items:center;gap:10px}
+.account-profile-name h2{margin:0}
+.account-profile-pencil,.account-profile-edit__controls button{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--ink);cursor:pointer}
+.account-profile-pencil:hover,.account-profile-edit__controls button:hover{border-color:var(--gold)}
+.account-profile-email{margin:8px 0;overflow-wrap:anywhere}
+.account-profile-edit{display:grid;gap:8px;max-width:480px}
+.account-profile-edit label{font-size:13px;color:var(--muted)}
+.account-profile-edit__controls{display:flex;align-items:center;gap:7px}
+.account-profile-edit__controls input{flex:1;min-width:0;min-height:42px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--paper);color:var(--ink);font:inherit}
+.account-profile-edit__controls input:focus-visible,.account-profile-edit__controls button:focus-visible,.account-profile-pencil:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.account-profile-edit__controls button:disabled{opacity:.5;cursor:wait}
+.account-profile-error{margin:0;color:#bd513a;font-size:13px}
+.account-filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px}
+.account-filters a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 18px;border:1px solid var(--border);border-radius:6px;text-decoration:none;font-size:13px}
+.account-filters a:hover{border-color:var(--gold)}
+.account-filters a.is-active{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.account-pagination{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-top:22px;font-size:13px;color:var(--muted)}
+.account-pagination a{color:var(--ink);text-underline-offset:4px}
+.account-pagination span[aria-disabled="true"]{opacity:.45}
+@media(max-width:620px){.account-profile-name h2{font-size:19px}.account-pagination{flex-wrap:wrap}.account-filters a{flex:1}}
