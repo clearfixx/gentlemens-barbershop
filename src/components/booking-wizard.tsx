@@ -241,9 +241,15 @@ export function BookingWizard({
           {step > 0 && <button type="button" className="booking-back" disabled={submitting}
             onClick={() => { setStep(value => value - 1); setError('') }}>{t.actions.back}</button>}
           {step < 4
-            ? <button type="button" className="cta" disabled={!canContinue}
-                onClick={() => setStep(value => value + 1)}>{t.actions.continue}</button>
-            : <button type="submit" className="cta" disabled={!canSubmit}>
+            ? <button key="continue-step" type="button" className="cta" disabled={!canContinue}
+                onClick={event => {
+                  // A fully prefilled contact form makes the confirmation button
+                  // immediately enabled. Prevent the click's default action before
+                  // React replaces this button with a submit button on step 5.
+                  event.preventDefault()
+                  setStep(value => value + 1)
+                }}>{t.actions.continue}</button>
+            : <button key="confirm-booking" type="submit" className="cta" disabled={!canSubmit}>
                 {submitting ? t.booking.submitting : t.booking.confirm}
               </button>}
         </div>
