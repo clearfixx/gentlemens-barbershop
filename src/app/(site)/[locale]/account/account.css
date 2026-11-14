@@ -1,0 +1,37 @@
+.account-page{min-height:100svh;padding-top:100px;background:var(--paper)}
+.account-shell{display:grid;grid-template-columns:235px minmax(0,1fr);gap:20px;max-width:1480px;margin:0 auto;padding:24px clamp(16px,3vw,48px) 80px}
+.account-sidebar{position:sticky;top:120px;align-self:start;display:flex;flex-direction:column;min-height:560px;padding:26px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px}
+.account-sidebar__title{padding:0 16px 26px;margin:0;font-size:12px;letter-spacing:.15em;color:var(--gold);font-weight:700}
+.account-sidebar nav{display:grid;gap:7px}
+.account-sidebar__item{display:flex;align-items:center;gap:13px;min-height:48px;padding:12px 14px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:14px}
+.account-sidebar__item:hover{background:color-mix(in srgb,var(--gold) 10%,transparent)}
+.account-sidebar__item.is-current{background:var(--ink);color:var(--paper)}
+.account-sidebar__booking{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:auto 5px 0;padding:14px 12px;border:1px solid var(--border);border-radius:6px;text-decoration:none;font-size:14px}
+.account-sidebar__booking:hover{border-color:var(--gold)}
+.account-content{display:grid;align-content:start;gap:14px;min-width:0}
+.account-panel{min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:clamp(22px,3vw,36px)}
+.account-kicker{margin:0 0 12px;font-size:11px;letter-spacing:.16em;font-weight:700;color:var(--gold)}
+.account-panel h1,.account-panel h2{font-family:inherit;letter-spacing:-.025em}
+.account-panel h1{margin:0 0 25px;font-size:clamp(27px,3vw,38px)}
+.account-panel h2{margin:0;font-size:clamp(20px,2vw,27px)}
+.account-identity{display:flex;align-items:center;gap:24px}
+.account-identity__avatar{display:grid;place-items:center;flex:0 0 100px;width:100px;height:100px;border-radius:50%;background:color-mix(in srgb,var(--gold) 25%,var(--paper));color:var(--ink)}
+.account-identity h2{margin:0 0 8px}.account-identity p{margin:0 0 8px;overflow-wrap:anywhere}
+.account-subtle,.account-note{font-size:13px;color:var(--muted);line-height:1.6}
+.account-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px}
+.account-text-link{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);text-underline-offset:5px;white-space:nowrap}
+.account-booking-list{list-style:none;display:grid;gap:10px;margin:0;padding:0}
+.account-booking{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:18px;border:1px solid var(--border);border-radius:7px}
+.account-booking__date{display:flex;align-items:center;gap:10px;flex:0 1 260px;font-size:13px}
+.account-booking__date strong{white-space:nowrap;color:var(--gold)}
+.account-booking__info{display:grid;gap:6px;margin-right:auto;font-size:14px}
+.account-booking__info span{font-size:12px;color:var(--muted)}
+.account-status{padding:7px 10px;border-radius:5px;font-size:12px;white-space:nowrap;background:color-mix(in srgb,var(--gold) 15%,var(--paper))}
+.account-status--completed{background:color-mix(in srgb,#78956a 18%,var(--paper))}
+.account-status--cancelled,.account-status--no_show{background:color-mix(in srgb,#ad7562 18%,var(--paper))}
+.account-empty{display:grid;justify-items:center;gap:10px;padding:42px 12px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:7px}
+.account-empty p{margin:0}.account-empty a{color:var(--ink);text-underline-offset:5px}
+.account-note{margin:18px 0 0}
+.account-panel--preview{display:flex;align-items:start;gap:16px;color:var(--muted)}.account-panel--preview h2{color:var(--ink);font-size:19px}.account-panel--preview p{margin:8px 0 0;font-size:13px;line-height:1.6}
+@media(max-width:900px){.account-shell{grid-template-columns:1fr}.account-sidebar{position:static;min-height:0;padding:15px}.account-sidebar__title{padding:0 10px 10px}.account-sidebar nav{display:flex;flex-wrap:wrap}.account-sidebar__booking{margin:10px 0 0}}
+@media(max-width:620px){.account-page{padding-top:76px}.account-shell{padding:12px 12px 56px}.account-panel{padding:20px}.account-identity{align-items:flex-start;gap:14px}.account-identity__avatar{flex-basis:64px;width:64px;height:64px}.account-identity__avatar svg{width:32px}.account-heading{align-items:flex-start;flex-wrap:wrap}.account-booking{align-items:flex-start;flex-wrap:wrap}.account-booking__date{flex-basis:100%;flex-wrap:wrap}.account-status{margin-left:auto}}
