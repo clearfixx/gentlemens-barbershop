@@ -1,0 +1,122 @@
+/* One full-width cinematic pause after the team section.
+   The background is 280px taller than its clipped frame so ±120px of parallax
+   never reveals an edge. Foreground always scrolls at normal document speed. */
+.atmosphere-parallax {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: clamp(620px, 90svh, 1000px);
+  padding: 130px 24px;
+  overflow: hidden;
+  background: #211913;
+  color: #f2e7d6;
+  text-align: center;
+}
+.atmosphere-parallax__background {
+  position: absolute;
+  inset: -140px 0;
+  z-index: -2;
+  background-image: url('/images/hero/barbershop-interior.webp');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  will-change: transform;
+  pointer-events: none;
+}
+.atmosphere-parallax__shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(22, 15, 11, .48), rgba(22, 15, 11, .70) 50%, rgba(22, 15, 11, .60)),
+    linear-gradient(90deg, rgba(22, 15, 11, .38), transparent 30%, transparent 70%, rgba(22, 15, 11, .38));
+}
+.atmosphere-parallax__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 980px);
+  gap: 0;
+}
+.atmosphere-parallax__kicker {
+  margin: 0 0 23px;
+  color: #d5af76;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: clamp(11px, .78vw, 14px);
+  font-weight: 600;
+  letter-spacing: .22em;
+}
+.atmosphere-parallax h2 {
+  margin: 0;
+  max-width: 950px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: clamp(38px, 5.6vw, 90px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+  color: #f2e7d6;
+}
+.atmosphere-parallax__description {
+  margin: 24px 0 0;
+  color: #e5d7c3;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: clamp(16px, 1.25vw, 22px);
+  line-height: 1.5;
+}
+.atmosphere-parallax__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 49px;
+  margin-top: 34px;
+  padding: 12px 25px;
+  border: 1px solid rgba(213, 175, 118, .8);
+  border-radius: 5px;
+  background: rgba(24, 17, 12, .26);
+  color: #f2e7d6;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color .25s ease, border-color .25s ease;
+}
+.atmosphere-parallax__action:hover,
+.atmosphere-parallax__action:focus-visible {
+  background: rgba(213, 175, 118, .20);
+  border-color: #d5af76;
+}
+.atmosphere-parallax__action:focus-visible {
+  outline: 2px solid #f2e7d6;
+  outline-offset: 4px;
+}
+@media (max-width: 767px) {
+  .atmosphere-parallax {
+    min-height: min(74svh, 700px);
+    padding: 100px 22px;
+  }
+  .atmosphere-parallax__background {
+    inset: 0;
+    background-position: 59% center;
+    will-change: auto;
+    transform: none !important;
+  }
+  .atmosphere-parallax__kicker { letter-spacing: .14em; }
+  .atmosphere-parallax h2 {
+    font-size: clamp(32px, 8.5vw, 56px);
+  }
+  .atmosphere-parallax__description { margin-top: 18px; }
+  .atmosphere-parallax__action { margin-top: 27px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .atmosphere-parallax__background {
+    will-change: auto;
+    transform: none !important;
+  }
+  .atmosphere-parallax__action { transition: none; }
+}

@@ -1,0 +1,53 @@
+/* Gentlemen's Hero — geometry follows the approved 600 × 302 reference.
+   Independent photo, chair and copy; zero inheritance from old .hero layout. */
+.barber-hero{--hero-gold:#c8a46a;position:relative;isolation:isolate;z-index:1;min-height:100svh;width:100%;overflow:visible;color:var(--ink);background:var(--paper);border-bottom:1px solid color-mix(in srgb,var(--ink) 15%,transparent)}
+.barber-hero__interior,.barber-hero__wash{position:absolute;inset:0;pointer-events:none}
+.barber-hero__interior{z-index:-2;background:url('/images/hero/barbershop-interior.webp') center center/cover no-repeat}
+.barber-hero__wash{z-index:-1;background:linear-gradient(90deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 98%,transparent) 16%,color-mix(in srgb,var(--paper) 85%,transparent) 31%,color-mix(in srgb,var(--paper) 44%,transparent) 48%,transparent 69%)}
+:root[data-theme=dark] .barber-hero__wash{background:linear-gradient(90deg,#1c140f 0%,rgba(28,20,15,.97) 18%,rgba(28,20,15,.88) 34%,rgba(28,20,15,.48) 49%,rgba(28,20,15,.12) 68%,rgba(28,20,15,.06) 100%)}
+.barber-hero__content{position:relative;z-index:2;width:min(35vw,515px);margin-left:9%;min-height:100svh;padding:clamp(176px,24.5svh,252px) 0 90px}
+.barber-hero__eyebrow{margin:0 0 15px;color:var(--hero-gold);font-size:clamp(11px,.76vw,14px);font-weight:500;letter-spacing:.18em}
+.barber-hero__headline{display:flex;flex-direction:column;gap:0;margin:0 0 17px;color:var(--ink);font-family:Georgia,'Times New Roman',serif;font-size:clamp(50px,3.85vw,73px);font-weight:400;letter-spacing:-.024em;line-height:.99}
+:root[data-theme=dark] .barber-hero__headline{color:#dfc49a}
+.barber-hero__headline span{display:block;white-space:nowrap}
+.barber-hero__headline--long{font-size:clamp(41px,3.2vw,62px)}
+ .barber-hero__description{max-width:350px;margin:0;color:var(--ink);font-size:clamp(14px,.93vw,17px);font-weight:400;line-height:1.44}
+.barber-hero__actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:26px}
+.barber-hero__primary,.barber-hero__secondary{display:inline-flex;align-items:center;justify-content:center;gap:13px;min-height:51px;padding:12px 24px;border:1px solid transparent;border-radius:5px;text-decoration:none;font-size:14px;font-weight:500;line-height:1.1;white-space:nowrap}
+.barber-hero__primary{background:var(--hero-gold);color:#21170f;font-weight:700}
+.barber-hero__secondary{border-color:color-mix(in srgb,var(--ink) 46%,transparent);background:rgba(20,12,8,.12);color:var(--ink)}
+.barber-hero__controls{display:flex;align-items:center;gap:13px;margin-top:30px;color:var(--ink);font-size:12px;font-weight:600}
+.barber-hero__track{display:block;position:relative;width:clamp(125px,8vw,155px);height:3px;overflow:hidden;padding:0;border:0;border-radius:0;background:color-mix(in srgb,var(--ink) 28%,transparent);cursor:pointer}
+.barber-hero__fill{display:block;width:34%;height:100%;background:var(--hero-gold)}
+.barber-hero__fill--running{animation:barber-hero-progress 7s linear forwards}
+@keyframes barber-hero-progress{to{width:100%}}
+.barber-hero__pause{display:grid;place-items:center;width:34px;height:34px;border:1px solid color-mix(in srgb,var(--ink) 36%,transparent);border-radius:50%;padding:0;background:rgba(20,12,8,.22);color:var(--hero-gold);cursor:pointer;font-size:14px}
+.barber-hero__scene{position:absolute;z-index:1;right:2.8%;bottom:0;width:54%;height:74%;pointer-events:none}
+.barber-hero__chair{object-fit:contain;object-position:center bottom;filter:drop-shadow(0 12px 18px rgba(0,0,0,.18))}
+.barber-hero__down{position:absolute;z-index:10;left:50%;bottom:0;display:grid;place-items:center;width:49px;height:49px;transform:translate(-50%,50%);border:1px solid var(--hero-gold);border-radius:50%;background:var(--paper);color:var(--hero-gold);text-decoration:none}
+.barber-hero__down svg{animation:barber-hero-down 2.3s ease-in-out infinite}
+@keyframes barber-hero-down{0%,100%{transform:translateY(-3px)}55%{transform:translateY(4px)}}
+@media(max-width:1279px){.barber-hero__content{width:41%;margin-left:6%;padding-top:clamp(140px,19svh,210px)}.barber-hero__headline{font-size:clamp(42px,5vw,64px)}.barber-hero__headline--long{font-size:clamp(33px,3.7vw,54px)}.barber-hero__scene{right:1%;width:52%;height:70%}}
+@media(max-width:767px){.barber-hero{display:flex;flex-direction:column;min-height:100svh;padding-bottom:70px}.barber-hero__interior{background-position:62% center}.barber-hero__wash{background:linear-gradient(180deg,var(--paper) 0%,color-mix(in srgb,var(--paper) 89%,transparent) 49%,transparent 100%)}:root[data-theme=dark] .barber-hero__wash{background:linear-gradient(180deg,rgba(28,20,15,.97),rgba(28,20,15,.9) 50%,rgba(28,20,15,.18) 100%)}.barber-hero__content{width:100%;min-height:0;margin:0;padding:106px 23px 0}.barber-hero__eyebrow{margin-bottom:13px}.barber-hero__headline{font-size:clamp(41px,9.5vw,59px);margin-bottom:13px}.barber-hero__headline--long{font-size:clamp(30px,7.5vw,47px)}.barber-hero__description{max-width:340px;font-size:14px}.barber-hero__actions{margin-top:17px;gap:10px}.barber-hero__primary,.barber-hero__secondary{min-height:43px;padding:10px 13px;font-size:12px}.barber-hero__controls{margin-top:25px}.barber-hero__scene{position:relative;right:auto;bottom:auto;width:100%;height:min(40svh,380px);min-height:200px;margin:10px auto 0}.barber-hero__down{bottom:0;width:44px;height:44px}}
+@media(prefers-reduced-motion:reduce){.barber-hero__fill--running,.barber-hero__down svg{animation:none}.barber-hero__fill--running{width:40%}}
+
+/* Match the thin section divider and the circular arrow centered across it. */
+.barber-hero + .content-section{border-top:0}
+.barber-hero__number{font-variant-numeric:tabular-nums;font-size:14px}
+.barber-hero__track:focus-visible{outline:2px solid var(--hero-gold);outline-offset:5px}
+@media(min-width:768px){.barber-hero__description{font-size:clamp(16px,1vw,18px)}.barber-hero__eyebrow{font-size:clamp(13px,.9vw,16px)}.barber-hero__primary,.barber-hero__secondary{font-size:14px}.barber-hero__controls{font-size:14px}}
+
+/* The mockup's floor and chair continue to the section seam; no detached gap. */
+@media(min-width:1280px){
+  .barber-hero__scene{z-index:1}
+  .barber-hero__primary{min-width:250px}
+  .barber-hero__secondary{min-width:145px}
+}
+@media(max-width:767px){
+  .barber-hero__content{padding-top:104px}
+  .barber-hero__scene{bottom:auto;height:min(40svh,380px)}
+  .barber-hero__description{max-width:340px}
+}
+
+/* Keep the circular scroll cue above the following section, not beneath its painted background. */
+.barber-hero + .home-section{z-index:0}

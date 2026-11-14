@@ -1,20 +1,34 @@
-import { localizedCopy } from '@/i18n/localized-copy'
+import './home-page.css'
+
+import Link from 'next/link'
+import Image from 'next/image'
 import type { Metadata } from 'next'
+import { getPayload } from 'payload'
+import { notFound } from 'next/navigation'
+
+import { HeroSlider } from '@/components/hero-slider'
+import { AtmosphereParallax } from '@/components/atmosphere-parallax'
+import { SiteHeader } from '@/components/site-header'
+import { isLocale } from '@/i18n/config'
+import { loadPublicMessages } from '@/i18n/load-public-messages'
+import { localizedCopy } from '@/i18n/localized-copy'
 import { generatePublicPageMetadata } from '@/i18n/seo'
+import config from '@/payload.config'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   return generatePublicPageMetadata(params, 'home')
 }
 
-import Link from 'next/link'
-import { getPayload } from 'payload'
-import config from '@/payload.config'
-import { SiteHeader } from '@/components/site-header'
-import { loadPublicMessages } from '@/i18n/load-public-messages'
-import { isLocale } from '@/i18n/config'
-import { notFound } from 'next/navigation'
-
 export const dynamic = 'force-dynamic'
+
+function BenefitIcon({ index }: { index: number }) {
+  const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  if (index === 0) return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><circle cx="12" cy="34" r="5"/><circle cx="28" cy="34" r="5"/><path d="M15 30 38 9M30 30 9 9M23 24 39 39M36 10l3-3"/></svg>
+  if (index === 1) return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><path d="m6 17 8 7 10-14 10 14 8-7-4 22H10L6 17Z"/><circle cx="6" cy="15" r="2"/><circle cx="24" cy="8" r="2"/><circle cx="42" cy="15" r="2"/></svg>
+  if (index === 2) return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><path d="M10 16h13v24H10zM13 10h7v6h-7zM12 7h9M29 21h11v19H29zM32 16h5v5h-5zM32 12h5M13 25h7M32 29h5"/></svg>
+  if (index === 3) return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><rect x="9" y="9" width="30" height="23" rx="7"/><rect x="15" y="20" width="18" height="8" rx="3"/><path d="M12 32v8M36 32v8M5 24h6M37 24h6M18 13h12"/></svg>
+  return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><path d="M13 9h22l9 12-20 20L4 21 13 9Zm-9 12h40M13 9l5 12 6 20 6-20 5-12"/></svg>
+}
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
@@ -22,28 +36,210 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const t = await loadPublicMessages(locale)
   const payload = await getPayload({ config })
   const [services, barbers, locations] = await Promise.all([
-    payload.find({ collection: 'services', locale, depth: 0, limit: 30, sort: 'name', overrideAccess: false }),
-    payload.find({ collection: 'barbers', locale, depth: 1, limit: 30, sort: 'name', overrideAccess: false }),
-    payload.find({ collection: 'locations', locale, depth: 0, limit: 30, sort: 'name', overrideAccess: false }),
+    payload.find({ collection: 'services', locale, depth: 0, limit: 8, sort: 'name', overrideAccess: false }),
+    payload.find({ collection: 'barbers', locale, depth: 1, limit: 8, sort: 'name', overrideAccess: false }),
+    payload.find({ collection: 'locations', locale, depth: 0, limit: 8, sort: 'name', overrideAccess: false }),
   ])
-  return <main id="top" className="landing">
+
+  const uk = locale === 'uk'
+  const labels = uk ? {
+    benefits: 'ЧОМУ ОБИРАЮТЬ НАС',
+    team: 'НАШІ МАЙСТРИ',
+    reviews: 'ВІДГУКИ КЛІЄНТІВ',
+    products: 'ТОП ТОВАРИ',
+    findUs: 'ЯК НАС ЗНАЙТИ',
+    questions: 'ЗАЛИШИЛИСЬ ПИТАННЯ?',
+    social: 'МИ В СОЦМЕРЕЖАХ',
+    intro: 'Ми поєднуємо традиції барбер-культури з сучасним сервісом, щоб ти завжди виглядав бездоганно.',
+    benefitNames: ['Досвідчені майстри', 'Преміальний сервіс', 'Якісна косметика', 'Атмосфера', 'Індивідуальний підхід'],
+    benefitDetails: ['Команда професіоналів', 'Комфорт, увага та турбота про кожного', 'Професійні бренди для догляду вдома', 'Класичний стиль і сучасний комфорт', 'Рішення, що підкреслюють твій стиль'],
+    moreTeam: 'Переглянути всю команду',
+    moreServices: 'Переглянути послуги',
+    moreProducts: 'Усі товари',
+    emptyReviews: 'Відгуки з’являться тут після публікації.',
+    emptyProducts: 'Каталог товарів наразі наповнюється.',
+    questionCopy: 'Зв’яжись із нами, і ми допоможемо обрати зручний час та послугу.',
+    socialCopy: 'Слідкуй за новинами, акціями та життям барбершопу.',
+    phone: 'Зателефонувати',
+    booking: 'Записатися онлайн',
+    noBarbers: 'Інформацію про майстрів незабаром буде додано.',
+    noLocations: 'Адреси закладів незабаром будуть доступні.',
+    noServices: 'Перелік послуг наразі наповнюється.',
+    services: 'ПОСЛУГИ',
+  } : {
+    benefits: 'WHY CHOOSE US',
+    team: 'OUR BARBERS',
+    reviews: 'CLIENT REVIEWS',
+    products: 'TOP PRODUCTS',
+    findUs: 'FIND US',
+    questions: 'HAVE A QUESTION?',
+    social: 'FOLLOW US',
+    intro: 'We combine barbering traditions with modern service so you always look your best.',
+    benefitNames: ['Experienced barbers', 'Premium service', 'Quality grooming', 'Atmosphere', 'Personal approach'],
+    benefitDetails: ['Attention to every detail', 'Comfort in every visit', 'Professional care', 'Tradition meets modern comfort', 'Style made for you'],
+    moreTeam: 'Meet our barbers',
+    moreServices: 'Explore services',
+    moreProducts: 'All products',
+    emptyReviews: 'Customer reviews will appear once published.',
+    emptyProducts: 'The product catalog is being prepared.',
+    questionCopy: 'Contact us and we will help you choose a service and time.',
+    socialCopy: 'Follow our news, offers and barbershop life.',
+    phone: 'Call us',
+    booking: 'Book online',
+    noBarbers: 'Barber profiles will be available soon.',
+    noLocations: 'Shop locations will be available soon.',
+    noServices: 'Our service list is being prepared.',
+    services: 'SERVICES',
+  }
+
+  return <main id="top" className="landing home-landing">
     <SiteHeader locale={locale} messages={t} />
-    <section className="hero" aria-labelledby="hero-title">
-      <div className="hero-copy">
-        <p className="eyebrow">{t.home.eyebrow}</p>
-        <h1 id="hero-title">{t.home.heroLine1}<br/>{t.home.heroLine2}<br/><em>{t.home.heroAccent}</em></h1>
-        <p>{t.home.heroIntro}</p>
-        <div className="hero-actions"><Link className="cta" href={`/${locale}/booking`}>{t.actions.planVisit}</Link><a href="#about">{t.home.learnMore} ↗</a></div>
+    <HeroSlider locale={locale} />
+
+    <section id="about" className="home-section home-section--benefits" aria-labelledby="benefits-title">
+      <div className="home-container">
+        <h2 id="benefits-title" className="home-section__heading">{labels.benefits}</h2>
+        <p className="home-section__intro">{labels.intro}</p>
+        <div className="home-benefits">
+          {labels.benefitNames.map((name, index) => <article className="home-benefit" key={name}>
+            <BenefitIcon index={index} />
+            <h3>{name}</h3>
+            <p>{labels.benefitDetails[index]}</p>
+          </article>)}
+        </div>
       </div>
-      <div className="hero-art" role="img" aria-label={t.home.heroArtLabel}><span>✦<small>GENTLEMEN’S BARBERSHOP</small></span></div>
-      <a className="scroll-hint scroll-mouse" href="#about" aria-label={t.home.scrollLabel}><svg viewBox="0 0 32 48" width="32" height="48" fill="none" aria-hidden="true"><rect x="5" y="2" width="22" height="42" rx="11" stroke="currentColor" strokeWidth="1.5"/><path d="M16 11v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></a>
     </section>
-    <section id="about" className="content-section"><p className="eyebrow">{t.home.whyEyebrow}</p><h2>{t.home.whyTitle}</h2><p>{t.home.whyIntro}</p></section>
-    <section id="philosophy" className="cinematic-section philosophy-scene" aria-labelledby="philosophy-title"><div className="cinematic-copy"><p className="eyebrow">{t.home.philosophyEyebrow}</p><h2 id="philosophy-title">{t.home.philosophyTitle}</h2><p>{t.home.philosophyIntro}</p><Link className="cinematic-link" href={`/${locale}/booking`}>{t.home.chooseTime} →</Link></div></section>
-    <section id="services" className="content-section alt"><p className="eyebrow">{t.home.servicesEyebrow}</p><h2>{t.home.servicesTitle}</h2>{services.docs.length ? <ul className="catalog-grid service-grid">{services.docs.map(service => <li className="catalog-card" key={service.id}><div className="catalog-card__top"><h3>{service.name}</h3><span className="catalog-card__price">{service.price} {t.common.currency}</span></div>{localizedCopy(service, 'localizedDescription', 'description') && <p>{localizedCopy(service, 'localizedDescription', 'description')}</p>}<div className="catalog-card__meta"><span>{service.durationMinutes} {t.common.minutes}</span><span aria-hidden="true">✦</span></div></li>)}</ul> : <p>{t.home.servicesEmpty}</p>}<p><Link className="catalog-inline-link" href={`/${locale}/catalog`}>{t.home.fullCatalog} →</Link></p></section>
-    <section id="team" className="content-section"><p className="eyebrow">{t.home.teamEyebrow}</p><h2>{t.home.teamTitle}</h2>{barbers.docs.length ? <ul className="catalog-grid team-grid">{barbers.docs.map(barber => <li className="catalog-card team-card" key={barber.id}>{barber.portrait && typeof barber.portrait === 'object' && barber.portrait.url ? <img className="team-card__portrait" src={barber.portrait.url} alt={barber.portrait.alt || `${t.home.barberPortrait} ${barber.name}`} loading="lazy" /> : <div className="team-card__monogram" aria-hidden="true">{barber.name.slice(0, 1).toLocaleUpperCase('uk')}</div>}<h3>{barber.name}</h3>{localizedCopy(barber, 'localizedBio', 'bio') && <p>{localizedCopy(barber, 'localizedBio', 'bio')}</p>}</li>)}</ul> : <p>{t.home.teamEmpty}</p>}<p><Link className="catalog-inline-link" href={`/${locale}/catalog`}>{t.home.allBarbers} →</Link></p></section>
-    <section id="locations" className="content-section alt"><p className="eyebrow">{t.home.locationsEyebrow}</p><h2>{t.home.locationsTitle}</h2>{locations.docs.length ? <ul className="catalog-grid location-grid">{locations.docs.map(location => <li className="catalog-card location-card" key={location.id}><span className="catalog-card__kicker">{location.city}</span><h3>{location.name}</h3><address>{location.address}</address>{location.phone && <a href={`tel:${location.phone.replace(/[^+\\d]/g, '')}`}>{location.phone}</a>}{localizedCopy(location, 'localizedDescription', 'description') && <p>{localizedCopy(location, 'localizedDescription', 'description')}</p>}</li>)}</ul> : <p>{t.home.locationsEmpty}</p>}</section>
-    <section id="booking" className="cinematic-section final-booking-scene" aria-labelledby="booking-title"><div className="cinematic-copy"><p className="eyebrow">{t.home.finalEyebrow}</p><h2 id="booking-title">{t.home.finalTitle}</h2><p>{t.home.finalIntro}</p><Link className="cta" href={`/${locale}/booking`}>{t.actions.planVisit}</Link></div></section>
-    <footer className="site-footer">© 2026 GENTLEMEN’S BARBERSHOP</footer>
+
+    <section id="team" className="home-section" aria-labelledby="team-title">
+      <div className="home-container">
+        <div className="home-section__heading-row">
+          <h2 id="team-title" className="home-section__heading">{labels.team}</h2>
+          <Link href={`/${locale}/catalog`} className="home-section__more">{labels.moreTeam} →</Link>
+        </div>
+        {barbers.docs.length ? <div className="home-team-grid">
+          {barbers.docs.slice(0, 4).map(barber => <article className="home-team-card" key={barber.id}>
+            {barber.portrait && typeof barber.portrait === 'object' && barber.portrait.url
+              ? <Image className="home-team-card__portrait" src={barber.portrait.url} alt={barber.portrait.alt || barber.name} width={500} height={625} unoptimized />
+              : <div className="home-team-card__placeholder" aria-hidden="true">{barber.name.slice(0, 1).toUpperCase()}</div>}
+            <div className="home-team-card__caption">
+              <h3>{barber.name}</h3>
+              {localizedCopy(barber, 'localizedBio', 'bio') && <p>{localizedCopy(barber, 'localizedBio', 'bio')}</p>}
+            </div>
+          </article>)}
+        </div> : <p className="home-section__empty">{labels.noBarbers}</p>}
+      </div>
+    </section>
+
+    <AtmosphereParallax locale={locale} />
+
+    <section id="reviews" className="home-section home-section--muted" aria-labelledby="reviews-title">
+      <div className="home-container">
+        <h2 id="reviews-title" className="home-section__heading">{labels.reviews}</h2>
+        <div className="home-review-previews" aria-hidden="true">
+          {Array.from({ length: 3 }, (_, index) => <div className="home-review-preview" key={index}>
+            <span className="home-review-preview__avatar" />
+            <div><span className="home-review-preview__line" /><span className="home-review-preview__rating" /></div>
+            <span className="home-review-preview__body" /><span className="home-review-preview__body home-review-preview__body--short" />
+          </div>)}
+        </div>
+        <p className="home-section__note">{labels.emptyReviews}</p>
+      </div>
+    </section>
+
+    <section id="products" className="home-section" aria-labelledby="products-title">
+      <div className="home-container">
+        <div className="home-section__heading-row">
+          <h2 id="products-title" className="home-section__heading">{labels.products}</h2>
+          <Link href={`/${locale}/catalog`} className="home-section__more">{labels.moreProducts} →</Link>
+        </div>
+        <div className="home-product-previews" aria-hidden="true">
+          {Array.from({ length: 4 }, (_, index) => <div className="home-product-preview" key={index}>
+            <div className="home-product-preview__image" />
+            <span className="home-product-preview__label" />
+            <span className="home-product-preview__short" />
+          </div>)}
+        </div>
+        <p className="home-section__note">{labels.emptyProducts}</p>
+      </div>
+    </section>
+
+    <section id="services" className="home-section home-section--muted" aria-labelledby="services-title">
+      <div className="home-container">
+        <div className="home-section__heading-row">
+          <h2 id="services-title" className="home-section__heading">{labels.services}</h2>
+          <Link href={`/${locale}/catalog`} className="home-section__more">{labels.moreServices} →</Link>
+        </div>
+        {services.docs.length ? <div className="home-services-grid">
+          {services.docs.slice(0, 4).map(service => <article className="home-service-card" key={service.id}>
+            <h3>{service.name}</h3>
+            <p>{localizedCopy(service, 'localizedDescription', 'description')}</p>
+            <div><span>{service.durationMinutes} {t.common.minutes}</span><strong>{service.price} {t.common.currency}</strong></div>
+          </article>)}
+        </div> : <p className="home-section__empty">{labels.noServices}</p>}
+      </div>
+    </section>
+
+    <section id="locations" className="home-section" aria-labelledby="locations-title">
+      <div className="home-container">
+        <h2 id="locations-title" className="home-section__heading">{labels.findUs}</h2>
+        <div className="home-location-layout">
+          <div className="home-location-layout__art" aria-hidden="true"><span className="home-location-layout__compass">✦</span></div>
+          <div className="home-location-list">
+            {locations.docs.length ? locations.docs.map(location => <address key={location.id}>
+              <h3>{location.name}</h3>
+              <p>{location.city}, {location.address}</p>
+              {location.phone && <a href={`tel:${location.phone.replace(/[^+\d]/g, '')}`}>{location.phone}</a>}
+            </address>) : <p className="home-section__empty">{labels.noLocations}</p>}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="questions" className="home-section home-section--questions" aria-labelledby="questions-title">
+      <div className="home-container">
+        <h2 id="questions-title" className="home-section__heading">{labels.questions}</h2>
+        <p className="home-section__intro">{labels.questionCopy}</p>
+        <div className="home-question-actions">
+          {locations.docs[0]?.phone && <a className="home-question-actions__outline" href={`tel:${locations.docs[0].phone.replace(/[^+\d]/g, '')}`}>{labels.phone}</a>}
+          <Link className="home-question-actions__primary" href={`/${locale}/booking`}>{labels.booking} →</Link>
+        </div>
+      </div>
+    </section>
+
+    <section id="social" className="home-section home-section--social">
+      <span id="news" className="home-anchor" aria-hidden="true" />
+      <div className="home-container">
+        <h2 className="home-section__heading">{labels.social}</h2>
+        <p className="home-section__intro">{labels.socialCopy}</p>
+      </div>
+    </section>
+
+    <footer className="home-footer">
+      <div className="home-container home-footer__layout">
+        <div className="home-footer__brand">
+          <strong>GENTLEMEN’S <small>BARBERSHOP</small></strong>
+          <p>{uk ? 'Місце, де стиль стає традицією. Сучасний догляд для чоловіків із характером.' : 'Where style becomes tradition. Modern grooming for men with character.'}</p>
+        </div>
+        <nav aria-label={t.nav.primary} className="home-footer__nav">
+          <h3>{uk ? 'Навігація' : 'Navigation'}</h3>
+          <Link href={`/${locale}/#about`}>{labels.benefits}</Link>
+          <Link href={`/${locale}/#team`}>{labels.team}</Link>
+          <Link href={`/${locale}/#services`}>{labels.services}</Link>
+          <Link href={`/${locale}/#products`}>{labels.products}</Link>
+          <Link href={`/${locale}/#locations`}>{labels.findUs}</Link>
+        </nav>
+        <nav className="home-footer__nav" aria-label={uk ? 'Клієнтам' : 'For clients'}>
+          <h3>{uk ? 'Клієнтам' : 'For clients'}</h3>
+          <Link href={`/${locale}/booking`}>{labels.booking}</Link>
+          <Link href={`/${locale}/catalog`}>{labels.moreServices}</Link>
+          <Link href={`/${locale}/#questions`}>{labels.questions}</Link>
+        </nav>
+        <div className="home-footer__newsletter">
+          <h3>{uk ? 'Підписка на розсилку' : 'Newsletter'}</h3>
+          <p>{uk ? 'Новини та спеціальні пропозиції — незабаром.' : 'News and special offers — coming soon.'}</p>
+        </div>
+      </div>
+      <div className="home-container home-footer__bottom">© 2026 GENTLEMEN’S BARBERSHOP</div>
+    </footer>
   </main>
 }
