@@ -79,8 +79,8 @@ async function run() {
         route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }))
       await page.locator('input[type="email"]').fill(email)
       await page.locator('.customer-auth__submit').click()
-      await page.getByRole('alert').waitFor()
-      assert.match(await page.getByRole('alert').innerText(),
+      await page.locator('.customer-auth__error').waitFor()
+      assert.match(await page.locator('.customer-auth__error').innerText(),
         locale === 'uk' ? /недоступний/i : /unavailable/i)
       await page.unroute('**/api/users/forgot-password')
       await page.goto(origin + '/' + locale + '/auth/reset-password', { waitUntil: 'networkidle' })
@@ -93,13 +93,13 @@ async function run() {
       await page.route('**/api/users/reset-password', route =>
         route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }))
       await page.locator('.customer-auth__submit').click()
-      await page.getByRole('alert').waitFor()
-      assert.match(await page.getByRole('alert').innerText(),
+      await page.locator('.customer-auth__error').waitFor()
+      assert.match(await page.locator('.customer-auth__error').innerText(),
         locale === 'uk' ? /недоступний/i : /unavailable/i)
       await page.unroute('**/api/users/reset-password')
       await page.locator('.customer-auth__submit').click()
-      await page.getByRole('alert').waitFor()
-      assert.match(await page.getByRole('alert').innerText(),
+      await page.locator('.customer-auth__error').waitFor()
+      assert.match(await page.locator('.customer-auth__error').innerText(),
         locale === 'uk' ? /недійсне|минув/i : /invalid|expired/i)
       await page.goto(origin + '/' + locale + '/account', { waitUntil: 'networkidle' })
       const overflow = await page.evaluate(() =>
