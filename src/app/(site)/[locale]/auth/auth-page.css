@@ -29,7 +29,7 @@
 }
 .customer-auth__panel h1 {
   margin: 0 0 10px;
-  font: 400 clamp(30px, 3.5vw, 46px)/1.05 Georgia, serif;
+  font: 650 clamp(30px, 3.5vw, 46px)/1.12 inherit;
 }
 .customer-auth__intro {
   margin: 0 0 25px;

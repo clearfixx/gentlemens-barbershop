@@ -911,6 +911,7 @@ jobs:
           command -v google-chrome
           npm install --silent --no-save --ignore-scripts --prefix /tmp/barbershop-playwright playwright@1.56.1
           timeout 120s node scripts/test-booking-wizard-browser.cjs
+          timeout 120s node scripts/test-customer-account-browser.cjs
 
           # A customer must not be able to enumerate the administrator or other users.
           customer_list_status=$(curl --silent --show-error --output /tmp/barbershop-customer-list.json --write-out '%{http_code}' \

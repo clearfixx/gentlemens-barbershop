@@ -43,7 +43,7 @@ async function main() {
     // to verify server-side displayName prefill, rather than hardcoded UI data.
     const changed = await context.request.patch(origin + '/api/users/' + customerId, {
       headers: { Authorization: 'JWT ' + loginBody.token },
-      data: { displayName },
+      data: { displayName, phone },
     })
     assert.equal(changed.status(), 200, 'Customer should be able to edit own display name')
 
@@ -88,7 +88,8 @@ async function main() {
       'Verified account display name must be prefilled')
     assert.equal(await page.locator('input[autocomplete="email"]').inputValue(), customerEmail,
       'Verified account email must be prefilled')
-    await page.locator('input[autocomplete="tel"]').fill(phone)
+    assert.equal(await page.locator('input[autocomplete="tel"]').inputValue(), phone,
+      'Verified profile phone must be prefilled in the booking wizard')
 
     const confirm = page.getByRole('button', { name: 'Підтвердити запис' })
     assert.equal(await confirm.isEnabled(), true)

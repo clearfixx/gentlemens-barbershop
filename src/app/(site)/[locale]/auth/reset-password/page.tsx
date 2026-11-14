@@ -7,7 +7,7 @@ import { isLocale } from '@/i18n/config'
 
 export const dynamic = 'force-dynamic'
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: 'Gentlemen’s Barbershop | Password recovery', robots: { index: false, follow: false } }
+  return { title: 'Gentlemen’s Barbershop | Password recovery', robots: { index: false, follow: false }, referrer: 'no-referrer' }
 }
 export default async function Page({ params, searchParams }: {
   params: Promise<{ locale: string }>
