@@ -53,7 +53,7 @@ export function CustomerAuthForm({ locale }: { locale: Locale }) {
         )
       }
 
-      router.replace(`/${locale}`)
+      router.replace(`/${locale}/account`)
       router.refresh()
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : (uk ? 'Сталася помилка. Спробуй ще раз.' : 'An error occurred. Please try again.'))
