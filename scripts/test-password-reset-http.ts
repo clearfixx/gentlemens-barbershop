@@ -37,3 +37,6 @@ assert.notEqual(await post('/api/users/login', { email, password: first }), 200)
 assert.equal(await post('/api/users/login', { email, password: second }), 200)
 assert.notEqual(await post('/api/users/reset-password', { token, password: 'reuse-Password-2026!' }), 200)
 console.log('RESET CI OK: token created, one-time redemption, old password refused, new password accepted')
+// This disposable CI process instantiated a Payload PostgreSQL pool.
+// All requests have completed; exit explicitly instead of retaining idle handles.
+process.exit(0)

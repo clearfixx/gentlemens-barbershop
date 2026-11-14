@@ -494,7 +494,7 @@ jobs:
           # PostgreSQL-backed production build. No real users or emails involved.
           node --experimental-strip-types scripts/ci-account-smoke.ts
           NODE_ENV=production CI_ACCOUNT_BASE_URL=http://localhost:3000 \
-            node --experimental-strip-types scripts/test-password-reset-http.ts
+            timeout 60s node --experimental-strip-types scripts/test-password-reset-http.ts
           # Inactive catalog records must remain hidden from anonymous readers.
           admin_login_status=$(curl --silent --show-error --output /tmp/barbershop-admin-login.json --write-out '%{http_code}' \
             --header 'Content-Type: application/json' \
