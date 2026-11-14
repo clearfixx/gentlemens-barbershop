@@ -77,7 +77,7 @@ function ownBookingRow(value: unknown, ownerId: number): OwnBookingHistoryItem {
 export async function getOwnBookingHistory(
   payload: Pick<Payload, 'find'>,
   actor: BookingActor | null,
-  options: { page?: number; limit?: number; filter?: BookingHistoryFilter; now?: Date } = {},
+  options: { page?: number; limit?: number; filter?: BookingHistoryFilter; now?: Date; activeOnly?: boolean; ascending?: boolean } = {},
 ): Promise<OwnBookingHistoryPage> {
   bookingIdentityScope(actor)
   const customerId = actor!.id
@@ -93,9 +93,12 @@ export async function getOwnBookingHistory(
   if (!['all', 'upcoming', 'past'].includes(filter)) {
     throw new RangeError('Invalid booking history filter')
   }
+  if (options.activeOnly !== undefined && typeof options.activeOnly !== 'boolean') throw new RangeError('Invalid status filter')
+  if (options.ascending !== undefined && typeof options.ascending !== 'boolean') throw new RangeError('Invalid sort direction')
   const now = options.now ?? new Date()
   if (!Number.isFinite(now.getTime())) throw new RangeError('Invalid booking history clock')
   const and: Where[] = [{ customer: { equals: customerId } }]
+  if (options.activeOnly) and.push({ status: { in: ['pending', 'confirmed'] } })
   if (filter === 'upcoming') and.push({ startsAt: { greater_than_equal: now.toISOString() } })
   if (filter === 'past') and.push({ startsAt: { less_than: now.toISOString() } })
   const result = await payload.find({
@@ -105,7 +108,7 @@ export async function getOwnBookingHistory(
     page,
     limit,
     pagination: true,
-    sort: ['-startsAt', '-id'],
+    sort: options.ascending ? ['startsAt', 'id'] : ['-startsAt', '-id'],
     where: { and },
   })
   if (!Array.isArray(result.docs) || result.docs.length > limit ||

@@ -65,8 +65,10 @@ export default async function AccountPage({ params, searchParams }: {
     ? user.displayName.trim()
     : (typeof user.email === 'string' ? user.email : '')
   const canCancel = bookingWritesEnabled(process.env)
-  const upcoming = await getOwnBookingHistory(payload, { id: Number(user.id), role: user.role }, { filter: 'upcoming', limit: 10 })
-  const nextBooking = upcoming.bookings.filter(item => item.status === 'pending' || item.status === 'confirmed').sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0]
+  const upcoming = await getOwnBookingHistory(payload, { id: Number(user.id), role: user.role }, {
+    filter: 'upcoming', activeOnly: true, ascending: true, limit: 1,
+  })
+  const nextBooking = upcoming.bookings[0]
   const dateLocale = uk ? 'uk-UA' : 'en-GB'
   const dateFormat = new Intl.DateTimeFormat(dateLocale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Kyiv' })
   const timeFormat = new Intl.DateTimeFormat(dateLocale, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
@@ -158,7 +160,7 @@ export default async function AccountPage({ params, searchParams }: {
                     </div>
                     <div className="account-booking__actions">
                       <span className={`account-status account-status--${booking.status}`}>{statusLabels[locale][booking.status]}</span>
-                      {canCancel && (booking.status === 'pending' || booking.status === 'confirmed') && new Date(booking.startsAt).getTime() > Date.now() && <AccountBookingCancel id={booking.id} locale={locale} />}
+                      {canCancel && (booking.status === 'pending' || booking.status === 'confirmed') && <AccountBookingCancel id={booking.id} locale={locale} />}
                     </div>
                   </li>
                 ))}

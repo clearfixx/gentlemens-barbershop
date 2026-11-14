@@ -36,6 +36,9 @@ export function PasswordRecovery({ locale, token }: { locale: Locale; token?: st
         setError(uk ? 'Забагато запитів. Спробуйте пізніше.' : 'Too many requests. Try later.')
       } else if (response.status >= 500) {
         setError(uk ? 'Сервіс тимчасово недоступний.' : 'Service temporarily unavailable.')
+      } else if (!isReset && !response.ok) {
+        // Avoid revealing whether an account exists.
+        setDone(true)
       } else {
         setDone(true)
         setPassword('')
