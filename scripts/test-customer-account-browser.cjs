@@ -52,6 +52,11 @@ async function run() {
       const newPhone = '+380 67 123 45 67'
       await page.locator('.account-profile-pencil').click()
       await page.locator('#account-display-name').fill(newName)
+      await page.locator('#account-phone').fill('not-a-phone')
+      await page.locator('.account-profile-edit button[type="submit"]').click()
+      await page.locator('.account-profile-error').waitFor()
+      assert.equal(await page.locator('.account-profile-edit').count(), 1,
+        'Invalid profile edits must remain in edit mode')
       await page.locator('#account-phone').fill(newPhone)
       await page.locator('.account-profile-edit button[type="submit"]').click()
       await page.getByRole('heading', { name: newName, exact: true }).waitFor()
@@ -68,9 +73,34 @@ async function run() {
       assert.equal(await page.locator('.account-booking-list li').count(), 0)
       await page.goto(origin + '/' + locale + '/auth/forgot-password', { waitUntil: 'networkidle' })
       assert.ok(await page.locator('input[type="email"]').isVisible())
+      // No external mail: provider failures and request throttling are mocked
+      // at the browser boundary to exercise the actual localized UI states.
+      await page.route('**/api/users/forgot-password', route =>
+        route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }))
+      await page.locator('input[type="email"]').fill(email)
+      await page.locator('.customer-auth__submit').click()
+      await page.getByRole('alert').waitFor()
+      assert.match(await page.getByRole('alert').innerText(),
+        locale === 'uk' ? /недоступний/i : /unavailable/i)
+      await page.unroute('**/api/users/forgot-password')
       await page.goto(origin + '/' + locale + '/auth/reset-password', { waitUntil: 'networkidle' })
       assert.equal(await page.locator('.customer-auth__submit').isDisabled(), true,
         'Reset without a token must be unavailable')
+      await page.goto(origin + '/' + locale + '/auth/reset-password?token=ci-invalid-token',
+        { waitUntil: 'networkidle' })
+      await page.locator('input[autocomplete="new-password"]').nth(0).fill('ci-fresh-password-2026!')
+      await page.locator('input[autocomplete="new-password"]').nth(1).fill('ci-fresh-password-2026!')
+      await page.route('**/api/users/reset-password', route =>
+        route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }))
+      await page.locator('.customer-auth__submit').click()
+      await page.getByRole('alert').waitFor()
+      assert.match(await page.getByRole('alert').innerText(),
+        locale === 'uk' ? /недоступний/i : /unavailable/i)
+      await page.unroute('**/api/users/reset-password')
+      await page.locator('.customer-auth__submit').click()
+      await page.getByRole('alert').waitFor()
+      assert.match(await page.getByRole('alert').innerText(),
+        locale === 'uk' ? /недійсне|минув/i : /invalid|expired/i)
       await page.goto(origin + '/' + locale + '/account', { waitUntil: 'networkidle' })
       const overflow = await page.evaluate(() =>
         document.documentElement.scrollWidth - document.documentElement.clientWidth)
@@ -86,6 +116,9 @@ async function run() {
       await page.waitForURL('**/' + locale, { timeout: 20_000 })
       await page.goto(origin + '/' + locale + '/account', { waitUntil: 'domcontentloaded' })
       await page.waitForURL('**/' + locale + '/auth', { timeout: 20_000 })
+      const anonymousAfterLogout = await context.request.get(origin + '/api/users/me')
+      const logoutBody = await anonymousAfterLogout.json()
+      assert.ok(!logoutBody.user, 'Sign-out must clear the authenticated session')
       assert.deepEqual(exceptions, [], 'No React exceptions during account auth and editing')
       console.log('CUSTOMER CABINET BROWSER OK:', locale, viewport.width,
         'login, profile edit, reload, history, recovery routes, logout, overflow')

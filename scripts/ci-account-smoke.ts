@@ -74,6 +74,18 @@ const stored = profile.doc && typeof profile.doc === 'object' ? profile.doc as J
 assert.equal(stored.displayName, 'Updated smoke customer')
 assert.equal(stored.phone, newPhone)
 assert.equal(stored.role, 'customer', 'Self-update must not elevate role')
+const rejected = await patch('/api/users/' + first.id,
+  { displayName: 'Attempted invalid edit', phone: 'invalid-phone' }, first.token)
+assert.ok([400, 422].includes(rejected.status), 'Server must reject invalid phone')
+const stillOwn = await request('/api/users/' + first.id, {
+  headers: { authorization: 'JWT ' + first.token },
+})
+const afterRejected = stillOwn.json.doc && typeof stillOwn.json.doc === 'object'
+  ? stillOwn.json.doc as Json : stillOwn.json
+assert.equal(afterRejected.displayName, 'Updated smoke customer',
+  'Invalid partial update must not mutate profile name')
+assert.equal(afterRejected.phone, newPhone,
+  'Invalid partial update must not mutate phone')
 const foreignUpdate = await patch('/api/users/' + second.id, { displayName: 'Unauthorized change' }, first.token)
 assert.ok([403, 404].includes(foreignUpdate.status), 'Customers must not update another customer')
 const history = await request('/api/bookings/mine?filter=upcoming', { headers: { authorization: 'JWT ' + first.token } })

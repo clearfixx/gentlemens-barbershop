@@ -30,14 +30,14 @@ export function PasswordRecovery({ locale, token }: { locale: Locale; token?: st
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(isReset ? { token, password } : { email: email.trim().toLowerCase() }),
       })
-      if (isReset && !response.ok) {
-        setError(uk ? 'Посилання недійсне або термін його дії минув.' : 'This link is invalid or expired.')
-      } else if (response.status === 429) {
+      if (response.status === 429) {
         setError(uk ? 'Забагато запитів. Спробуйте пізніше.' : 'Too many requests. Try later.')
       } else if (response.status >= 500) {
         setError(uk ? 'Сервіс тимчасово недоступний.' : 'Service temporarily unavailable.')
+      } else if (isReset && !response.ok) {
+        setError(uk ? 'Посилання недійсне або термін його дії минув.' : 'This link is invalid or expired.')
       } else if (!isReset && !response.ok) {
-        // Avoid revealing whether an account exists.
+        // Do not disclose whether a recovery address is registered.
         setDone(true)
       } else {
         setDone(true)

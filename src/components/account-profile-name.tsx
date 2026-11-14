@@ -48,6 +48,10 @@ export function AccountProfileName({ initialName, initialPhone, email, userId, l
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName: next, phone: phoneValue }),
       })
+      if (response.status === 401 || response.status === 403) {
+        router.replace(`/${locale}/auth`)
+        return
+      }
       if (!response.ok) throw new Error('Failed to save')
       setName(next)
       setPhone(phoneValue)

@@ -20,6 +20,10 @@ test('configured production delivery needs HTTPS and sender credentials', () => 
     NEXT_PUBLIC_SITE_URL: 'http://example.com', NODE_ENV: 'production',
   } as NodeJS.ProcessEnv), false)
   assert.equal(resetMailDeliveryConfigured({ NODE_ENV: 'production' } as NodeJS.ProcessEnv), false)
+  assert.equal(resetMailDeliveryConfigured({
+    RESEND_API_KEY: key, RESEND_FROM_EMAIL: 'bad sender',
+    NEXT_PUBLIC_SITE_URL: 'https://example.com', NODE_ENV: 'production',
+  } as NodeJS.ProcessEnv), false)
 })
 
 test('delivery uses Resend endpoint and does not expose secret in result', async () => {
