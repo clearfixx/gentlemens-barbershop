@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Metadata } from 'next'
 import { generatePublicPageMetadata } from '@/i18n/seo'
 
@@ -52,6 +53,9 @@ export default async function BookingPage({ params }: { params: Promise<{ locale
       <p className="eyebrow">Gentlemen’s Barbershop</p>
       <h1>{t.booking.title}</h1>
       <p className="catalog-intro">{t.booking.intro}</p>
+      <Link className="catalog-inline-link" href={`/${locale}/booking/cancel`}>
+        {t.guestCancellation.title}
+      </Link>
       <BookingWizard locations={locations} barbers={barbers} services={services} nowIso={nowIso} locale={locale} messages={t} initialContact={initialContact} bookingEnabled={bookingWritesEnabled(process.env)} />
     </div>
     <footer className="site-footer">© 2026 GENTLEMEN’S BARBERSHOP</footer>
