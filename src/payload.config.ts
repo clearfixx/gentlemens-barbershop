@@ -9,6 +9,7 @@ import { Locations } from './payload/collections/Locations.ts'
 import { Services } from './payload/collections/Services.ts'
 import { Barbers } from './payload/collections/Barbers.ts'
 import { Bookings } from './payload/collections/Bookings.ts'
+import { BookingEvents } from './payload/collections/BookingEvents.ts'
 import { BarberSchedules } from './payload/collections/BarberSchedules.ts'
 import { BarberTimeOff } from './payload/collections/BarberTimeOff.ts'
 import { Translations } from './payload/collections/Translations.ts'
@@ -23,7 +24,7 @@ export default buildConfig({
     // Customer and barber accounts never enter the CMS administration UI.
     // First administrator must be provisioned by a trusted server-side bootstrap.
   },
-  collections: [Users, Media, Locations, Services, Barbers, Bookings, BarberSchedules, BarberTimeOff, Translations],
+  collections: [Users, Media, Locations, Services, Barbers, Bookings, BookingEvents, BarberSchedules, BarberTimeOff, Translations],
   editor: lexicalEditor(),
   localization: {
     locales: [

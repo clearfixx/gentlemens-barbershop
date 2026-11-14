@@ -12,6 +12,10 @@ export const Barbers: CollectionConfig = {
   fields: [
     { name: 'name', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    {
+      name: 'user', type: 'relationship', relationTo: 'users', unique: true,
+      admin: { description: 'Verified barber account authorized to manage this barber’s bookings. Assign through an administrator.' },
+    },
     { name: 'bio', type: 'textarea' },
     // Do not convert the existing bio column in place before data migration.
     { name: 'localizedBio', type: 'textarea', localized: true },

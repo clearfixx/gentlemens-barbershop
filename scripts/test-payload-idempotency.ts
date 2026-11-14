@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { getPayload } from 'payload'
 import config from '../src/payload.config.ts'
 import { persistIdempotentPayloadBooking } from '../src/lib/booking/payload-idempotency.ts'
-import { BookingIdempotencyConflictError } from '../src/lib/booking/idempotency.ts'
+import { BookingIdempotencyConflictError, prepareBookingIdempotency } from '../src/lib/booking/idempotency.ts'
 import type { BookingQuote } from '../src/lib/booking/booking-request.ts'
 
 async function main() {
@@ -19,11 +19,11 @@ async function main() {
     customerName: 'CI Local API idempotency',
     customerPhone: '+380671234567',
   }
-  const token = {
+  const token = prepareBookingIdempotency({
     scope: 'ci:local-api',
     key: 'same-request-retry',
-    requestHash: 'a'.repeat(64),
-  }
+    request: quote,
+  })
   const first = await persistIdempotentPayloadBooking(payload, quote, token)
   assert.equal(first.replayed, false)
   const second = await persistIdempotentPayloadBooking(payload, quote, token)
@@ -45,12 +45,14 @@ async function main() {
   )
   // Two simultaneous Local API requests with one fresh key must converge on
   // one persisted booking. The PostgreSQL unique index is the arbiter.
-  const concurrentToken = { ...token, key: 'concurrent-retry' }
   const concurrentQuote: BookingQuote = {
     ...quote,
     startsAt: '2036-01-03T09:00:00.000Z',
     endsAt: '2036-01-03T10:00:00.000Z',
   }
+  const concurrentToken = prepareBookingIdempotency({
+    scope: token.scope, key: 'concurrent-retry', request: concurrentQuote,
+  })
   const concurrent = await Promise.all([
     persistIdempotentPayloadBooking(payload, concurrentQuote, concurrentToken),
     persistIdempotentPayloadBooking(payload, concurrentQuote, concurrentToken),
@@ -69,12 +71,14 @@ async function main() {
   assert.equal(concurrentStored.totalDocs, 1)
   // Racing requests that reuse a key for different payloads must never
   // silently return the winner's booking as if the requests matched.
-  const mismatchedToken = { ...token, key: 'concurrent-mismatch' }
   const mismatchQuote: BookingQuote = {
     ...quote,
     startsAt: '2036-01-04T09:00:00.000Z',
     endsAt: '2036-01-04T10:00:00.000Z',
   }
+  const mismatchedToken = prepareBookingIdempotency({
+    scope: token.scope, key: 'concurrent-mismatch', request: mismatchQuote,
+  })
   const mismatchResults = await Promise.allSettled([
     persistIdempotentPayloadBooking(payload, mismatchQuote, mismatchedToken),
     persistIdempotentPayloadBooking(payload, mismatchQuote, {

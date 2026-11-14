@@ -1,9 +1,18 @@
 name: Validate scaffold
 
 on:
-  # Temporarily manual-only while GitHub Actions billing is blocked.
-  # Restore PR checks once billing is resolved.
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
   workflow_dispatch:
+
+# A newer push supersedes unfinished checks for the same branch.
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -34,15 +43,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.2
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "24.22.3"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Booking availability unit tests
-        run: node --experimental-strip-types --test src/lib/booking/availability.test.ts src/lib/booking/local-time.test.ts src/lib/booking/zoned-availability.test.ts src/lib/booking/barber-day.test.ts src/lib/booking/interval-conflicts.test.ts src/lib/booking/validate-weekly-shifts.test.ts src/lib/booking/booking-errors.test.ts src/lib/booking/booking-http.test.ts src/lib/booking/booking-identity.test.ts src/lib/booking/submit-authenticated-booking.test.ts src/lib/booking/booking-write-guard.test.ts src/lib/booking/resolve-offering.test.ts src/lib/booking/booking-request.test.ts src/lib/booking/booking-slot.test.ts src/lib/booking/get-barber-availability.test.ts src/lib/booking/create-booking.test.ts src/lib/booking/persist-payload-booking.test.ts src/lib/booking/idempotency.test.ts src/lib/booking/idempotent-replay.test.ts src/lib/booking/persist-idempotently.test.ts src/lib/booking/payload-idempotency.test.ts src/lib/booking/load-booking-catalog.test.ts src/lib/booking/payload-booking-service.test.ts src/lib/catalog/public-catalog.test.ts src/lib/catalog/public-availability.test.ts src/lib/catalog/availability-limiter.test.ts
+      - name: Complete unit test suite (package script)
+        run: pnpm test
       - name: Loyalty history keyset pagination tests
         run: node --experimental-strip-types --test src/lib/loyalty/history-page.test.ts
       - name: Loyalty SQL read adapter tests
@@ -74,15 +81,18 @@ jobs:
           python3 scripts/test-normalize-generated-payload-migration.py
           python3 scripts/check-localization-incremental.py src/migrations
           test "$(find src/migrations -maxdepth 1 -name '*.json' | wc -l)" -eq 2
-          test "$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l)" -eq 2
+          expected_migrations="$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l | tr -d ' ')"
+          test "$expected_migrations" -ge 2
           PGPASSWORD=postgres createdb -h localhost -U postgres gentlemens_migration_bootstrap_ci
           DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
             NODE_ENV=production CI=1 timeout 120s pnpm db:migrate
+          PGPASSWORD=postgres psql -XAt -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_migration_bootstrap_ci \
+            -c "SELECT count(*) FROM payload_migrations" | grep -qx "$expected_migrations"
           PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
             -d gentlemens_migration_bootstrap_ci -c "
               DO \$\$ BEGIN
-                IF (SELECT count(*) FROM payload_migrations) <> 2
-                  OR to_regclass('public.users') IS NULL
+                IF to_regclass('public.users') IS NULL
                   OR to_regclass('public.bookings') IS NULL
                   OR to_regclass('public.translations') IS NULL
                 THEN RAISE EXCEPTION 'Committed production migrations did not initialize expected schema';
@@ -92,7 +102,7 @@ jobs:
             NODE_ENV=production CI=1 timeout 120s pnpm db:migrate
           PGPASSWORD=postgres psql -XAt -v ON_ERROR_STOP=1 -h localhost -U postgres \
             -d gentlemens_migration_bootstrap_ci \
-            -c "SELECT count(*) FROM payload_migrations" | grep -qx '2'
+            -c "SELECT count(*) FROM payload_migrations" | grep -qx "$expected_migrations"
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint
@@ -158,6 +168,49 @@ jobs:
         shell: bash
         run: |
           CONFIRM_BOOKING_MIGRATION=apply bash scripts/apply-booking-integrity.sh
+      - name: Verify read-only booking deployment preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The regular integration DB is initialized by Payload's schema push
+          # and has no recorded migrations. Use the separate production-mode
+          # migration rehearsal DB to verify the deployment migration ledger.
+          migration_database_url="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci"
+          DATABASE_URL="$migration_database_url" CONFIRM_BOOKING_MIGRATION=apply \
+            bash scripts/apply-booking-integrity.sh
+          DATABASE_URL="$migration_database_url" bash scripts/preflight-booking-deployment.sh
+          # A preflight must reject a missing connection string without writes.
+          if env -u DATABASE_URL bash scripts/preflight-booking-deployment.sh; then
+            echo "Booking deployment preflight accepted a missing database URL"
+            exit 1
+          fi
+      - name: Reject weakened booking integrity with transactional rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Exercise the same migration-rehearsal schema used by deployment preflight.
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
+            bash scripts/test-booking-integrity-negative-preflight.sh
+      - name: Verify managed shared limiter migration and retention
+        shell: bash
+        run: |
+          set -euo pipefail
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
+            bash scripts/test-managed-booking-rate-limit.sh
+      - name: Verify guarded booking rate-limit cleanup command
+        shell: bash
+        run: |
+          set -euo pipefail
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci" \
+            bash scripts/test-booking-rate-limit-cleanup.sh
+      - name: Verify atomic PostgreSQL shared booking limiter
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" \
+            -f db/booking-rate-limit/disposable-limiter.sql \
+            -f db/booking-rate-limit/test-disposable-limiter.sql
+          bash scripts/test-concurrent-booking-rate-limit.sh
       - name: Capture initialized localization schema for migration review
         shell: bash
         run: |
@@ -370,6 +423,19 @@ jobs:
             exit 1
           fi
           curl --fail --silent --show-error --output /dev/null http://localhost:3000/
+          # Production HTTP writes must remain disabled even if test mode leaks
+          # into the runtime environment. Neither route may reach a mutation.
+          for endpoint in /api/bookings /api/bookings/1/status /api/bookings/1/cancel /api/barber/bookings/1/status /api/admin/bookings/1/status; do
+            method=POST
+            if [[ "$endpoint" == /api/bookings/1/status ]]; then method=PATCH; fi
+            code="$(curl --silent --show-error --output /tmp/booking-production-denied.json \
+              --write-out '%{http_code}' -X "$method" \
+              -H 'content-type: application/json' -d '{}' \
+              "http://localhost:3000$endpoint")"
+            test "$code" = 503
+            grep -q 'Booking writes unavailable' /tmp/booking-production-denied.json
+          done
+
           curl --location --fail --silent --show-error --output /tmp/barbershop-catalog.html 'http://localhost:3000/catalog?location=1&barber=1'
           grep -q 'ОБЕРІТЬ СВІЙ СТИЛЬ' /tmp/barbershop-catalog.html
           curl --location --fail --silent --show-error --output /tmp/barbershop-booking.html http://localhost:3000/booking
@@ -435,6 +501,32 @@ jobs:
             exit 1
           fi
           admin_token=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-admin-login.json", "utf8")).token')
+          # Exercise the audit HTTP boundary, not just its Local API helper.
+          # An anonymous request must never expose event history.
+          audit_anon_status=$(curl --silent --show-error --output /tmp/barbershop-audit-anon.json --write-out '%{http_code}' \
+            http://localhost:3000/api/admin/bookings/1/events)
+          if [ "$audit_anon_status" != "403" ]; then
+            echo "Unauthenticated booking audit access was not rejected: HTTP $audit_anon_status"
+            cat /tmp/barbershop-audit-anon.json
+            exit 1
+          fi
+          # A real admin may inspect a booking with no audit entries.
+          audit_admin_status=$(curl --silent --show-error --output /tmp/barbershop-audit-admin.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" \
+            'http://localhost:3000/api/admin/bookings/1/events?limit=1')
+          if [ "$audit_admin_status" != "200" ]; then
+            echo "Authenticated admin booking audit failed: HTTP $audit_admin_status"
+            cat /tmp/barbershop-audit-admin.json
+            exit 1
+          fi
+          node -e '
+            const fs = require("node:fs");
+            const response = JSON.parse(fs.readFileSync("/tmp/barbershop-audit-admin.json", "utf8"));
+            if (!Array.isArray(response.events) || response.page !== 1 ||
+                typeof response.totalPages !== "number" || typeof response.hasNextPage !== "boolean") {
+              throw new Error("Unexpected booking audit HTTP response");
+            }
+          '
           for state in false true; do
             location_status=$(curl --silent --show-error --output "/tmp/barbershop-location-${state}.json" --write-out '%{http_code}' \
               --header "Authorization: JWT $admin_token" \
@@ -502,84 +594,47 @@ jobs:
           # Exercise the PostgreSQL constraint against real catalog fixtures.
           PGPASSWORD=postgres psql -v ON_ERROR_STOP=1 -h localhost -U postgres \
             -d gentlemens_barbershop -f db/constraints/test-booking-no-overlap.sql
-          # Verify actual Payload REST writes honor PostgreSQL's overlap constraint.
+          # Production intentionally refuses direct REST booking writes until
+          # shared/edge rate limiting is deployed. Keep this security boundary
+          # enforced; SQL and trusted Local API integration tests follow below.
           barber_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-barber-created.json", "utf8")).doc.id')
           LOCATION_ID="$location_id" BARBER_ID="$barber_id" SERVICE_ID="$service_id" node -e '
             const fs = require("node:fs");
-            const base = {
+            fs.writeFileSync("/tmp/barbershop-booking-first.json", JSON.stringify({
               location: Number(process.env.LOCATION_ID),
               barber: Number(process.env.BARBER_ID),
               services: [Number(process.env.SERVICE_ID)],
-              customerName: "CI Payload booking",
+              customerName: "CI production write guard",
               customerPhone: "+380671234567",
+              startsAt: "2031-01-02T09:00:00.000Z",
+              endsAt: "2031-01-02T10:00:00.000Z",
               totalPrice: 650,
               status: "pending",
-            };
-            for (const [name, startsAt, endsAt] of [
-              ["first", "2031-01-02T09:00:00.000Z", "2031-01-02T10:00:00.000Z"],
-              ["overlap", "2031-01-02T09:30:00.000Z", "2031-01-02T10:30:00.000Z"],
-              ["adjacent", "2031-01-02T10:00:00.000Z", "2031-01-02T11:00:00.000Z"],
-            ]) {
-              fs.writeFileSync("/tmp/barbershop-booking-" + name + ".json", JSON.stringify({ ...base, startsAt, endsAt }));
-            }
+            }));
           '
-          first_booking_status=$(curl --silent --show-error --output /tmp/barbershop-booking-first-response.json --write-out '%{http_code}' \
+          blocked_booking_status=$(curl --silent --show-error --output /tmp/barbershop-booking-blocked-response.json --write-out '%{http_code}' \
             --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
             --data-binary @/tmp/barbershop-booking-first.json http://localhost:3000/api/bookings)
-          if [ "$first_booking_status" != "201" ]; then
-            echo "Payload booking insertion failed: HTTP $first_booking_status"
-            cat /tmp/barbershop-booking-first-response.json
+          if [ "$blocked_booking_status" != "503" ]; then
+            echo "Production booking write guard did not fail closed: HTTP $blocked_booking_status"
+            cat /tmp/barbershop-booking-blocked-response.json
             exit 1
           fi
-          overlap_booking_status=$(curl --silent --show-error --output /tmp/barbershop-booking-overlap-response.json --write-out '%{http_code}' \
-            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
-            --data-binary @/tmp/barbershop-booking-overlap.json http://localhost:3000/api/bookings)
-          if [[ "$overlap_booking_status" == "200" || "$overlap_booking_status" == "201" ]]; then
-            echo "Payload incorrectly accepted overlapping booking"
-            cat /tmp/barbershop-booking-overlap-response.json
+          # Status changes share the same production write boundary. An
+          # authenticated caller must not be able to bypass it via PATCH.
+          blocked_status_update=$(curl --silent --show-error --output /tmp/barbershop-status-blocked-response.json --write-out '%{http_code}' \
+            --request PATCH --header "Authorization: JWT $admin_token" \
+            --header 'Content-Type: application/json' --data '{"status":"confirmed"}' \
+            http://localhost:3000/api/bookings/1/status)
+          if [ "$blocked_status_update" != "503" ]; then
+            echo "Production booking status guard did not fail closed: HTTP $blocked_status_update"
+            cat /tmp/barbershop-status-blocked-response.json
             exit 1
           fi
-          adjacent_booking_status=$(curl --silent --show-error --output /tmp/barbershop-booking-adjacent-response.json --write-out '%{http_code}' \
-            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
-            --data-binary @/tmp/barbershop-booking-adjacent.json http://localhost:3000/api/bookings)
-          if [ "$adjacent_booking_status" != "201" ]; then
-            echo "Payload rejected a valid adjacent booking: HTTP $adjacent_booking_status"
-            cat /tmp/barbershop-booking-adjacent-response.json
-            exit 1
-          fi
-          # Internal idempotency fields must not be writable through REST, even
-          # by an administrator. They are only set by trusted server-side code.
-          LOCATION_ID="$location_id" BARBER_ID="$barber_id" SERVICE_ID="$service_id" \
-            node -e '
-              const fs = require("node:fs");
-              fs.writeFileSync("/tmp/barbershop-booking-injected.json", JSON.stringify({
-                location: Number(process.env.LOCATION_ID),
-                barber: Number(process.env.BARBER_ID),
-                services: [Number(process.env.SERVICE_ID)],
-                customerName: "CI protected metadata",
-                customerPhone: "+380671234567",
-                startsAt: "2035-01-02T09:00:00.000Z",
-                endsAt: "2035-01-02T10:00:00.000Z",
-                totalPrice: 650,
-                idempotencyScope: "attacker:scope",
-                idempotencyKey: "attacker-key",
-                idempotencyRequestHash: "f".repeat(64),
-              }));
-            '
-          injected_status=$(curl --silent --show-error --output /tmp/barbershop-booking-injected-response.json --write-out '%{http_code}' \
-            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
-            --data-binary @/tmp/barbershop-booking-injected.json http://localhost:3000/api/bookings)
-          if [ "$injected_status" = "201" ]; then
-            injected_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-booking-injected-response.json","utf8")).doc.id')
-            leaked=$(PGPASSWORD=postgres psql -X -At -v ON_ERROR_STOP=1 -h localhost -U postgres \
-              -d gentlemens_barbershop -c "SELECT count(*) FROM bookings WHERE id = $injected_id AND (idempotency_scope IS NOT NULL OR idempotency_key IS NOT NULL OR idempotency_request_hash IS NOT NULL)")
-            if [ "$leaked" != "0" ]; then
-              echo "REST client was able to write protected booking metadata"
-              exit 1
-            fi
-          elif [[ "$injected_status" != "400" && "$injected_status" != "403" ]]; then
-            echo "Unexpected HTTP status for protected booking fields: $injected_status"
-            cat /tmp/barbershop-booking-injected-response.json
+          booking_rows=$(PGPASSWORD=postgres psql -XAt -v ON_ERROR_STOP=1 -h localhost -U postgres \
+            -d gentlemens_barbershop -c "SELECT count(*) FROM bookings")
+          if [ "$booking_rows" != "0" ]; then
+            echo "Production REST booking write unexpectedly persisted a record"
             exit 1
           fi
           # Verify two independent transactions cannot reserve an overlapping slot.
@@ -597,6 +652,11 @@ jobs:
           # Verify the full trusted booking flow with real catalog, schedules and DB writes.
           CI_LOCATION_ID="$location_id" CI_BARBER_ID="$barber_id" CI_SERVICE_ID="$service_id" \
             timeout 90s node --experimental-strip-types scripts/test-payload-booking-service.ts
+          # Exercise staff ownership, customer history and atomic mutations on actual
+          # Payload/PostgreSQL CI fixtures (never against a live deployment).
+          CI_BOOKING_DB_TEST=disposable CI_LOCATION_ID="$location_id" \
+            CI_BARBER_ID="$barber_id" CI_SERVICE_ID="$service_id" \
+            timeout 90s node --experimental-strip-types scripts/test-booking-operations-postgres.ts
           # The landing page must render the published CMS records, not static placeholders.
           curl --location --fail --silent --show-error http://localhost:3000/ > /tmp/barbershop-cms-home.html
           for expected in 'CI Location true' 'CI Haircut' 'CI Barber'; do
@@ -659,8 +719,15 @@ jobs:
               booking_status=$(curl --silent --show-error --output /tmp/barbershop-bookings-denied.json --write-out '%{http_code}' \
                 http://localhost:3000/api/bookings)
             fi
-            if [[ "$booking_status" != "401" && "$booking_status" != "403" ]]; then
-              echo "Anonymous $method bookings request was not denied: HTTP $booking_status"
+            # This route intentionally exposes POST only. GET is not a data
+            # endpoint (405), while production POST writes fail closed (503).
+            if [ "$method" = "GET" ]; then
+              expected_booking_status=405
+            else
+              expected_booking_status=503
+            fi
+            if [ "$booking_status" != "$expected_booking_status" ]; then
+              echo "Unexpected $method /api/bookings status: HTTP $booking_status (expected $expected_booking_status)"
               cat /tmp/barbershop-bookings-denied.json
               exit 1
             fi
@@ -810,6 +877,38 @@ jobs:
               process.exit(1);
             }
           '
+          # Exercise the actual hydration, keyboard-selectable steps and responsive
+          # booking wizard in Chromium. Production mutations remain disabled.
+          browser_service_status=$(curl --silent --show-error --output /tmp/barbershop-second-service.json --write-out '%{http_code}' \
+            --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data '{"name":"CI Beard","slug":"ci-beard","durationMinutes":30,"price":500,"isActive":true}' \
+            http://localhost:3000/api/services)
+          if [ "$browser_service_status" != "201" ]; then
+            echo "Could not create secondary browser-test service"
+            cat /tmp/barbershop-second-service.json
+            exit 1
+          fi
+          second_service_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-second-service.json","utf8")).doc.id')
+          browser_barber_payload=$(FIRST_ID="$service_id" SECOND_ID="$second_service_id" node -e '
+            process.stdout.write(JSON.stringify({serviceOfferings:[
+              {service:Number(process.env.FIRST_ID),durationOverrideMinutes:60,priceOverride:650},
+              {service:Number(process.env.SECOND_ID),durationOverrideMinutes:30,priceOverride:500},
+            ]}))
+          ')
+          browser_barber_status=$(curl --silent --show-error --output /tmp/barbershop-browser-barber-update.json --write-out '%{http_code}' \
+            --request PATCH --header "Authorization: JWT $admin_token" --header 'Content-Type: application/json' \
+            --data "$browser_barber_payload" "http://localhost:3000/api/barbers/$barber_id")
+          if [ "$browser_barber_status" != "200" ]; then
+            echo "Could not update barber service offerings for browser test"
+            cat /tmp/barbershop-browser-barber-update.json
+            exit 1
+          fi
+          # Hosted Ubuntu runners have Chrome. Install just the automation
+          # library in /tmp; no app dependency or lockfile mutation.
+          command -v google-chrome
+          npm install --silent --no-save --ignore-scripts --prefix /tmp/barbershop-playwright playwright@1.56.1
+          timeout 120s node scripts/test-booking-wizard-browser.cjs
+
           # A customer must not be able to enumerate the administrator or other users.
           customer_list_status=$(curl --silent --show-error --output /tmp/barbershop-customer-list.json --write-out '%{http_code}' \
             --header "Authorization: JWT $token" \
@@ -829,6 +928,124 @@ jobs:
               process.exit(1);
             }
           '
+
+      - name: Staging browser guest checkout and PostgreSQL replay (non-production only)
+        shell: bash
+        timeout-minutes: 5
+        env:
+          NODE_ENV: development
+          BOOKING_WRITE_TEST_MODE: enabled
+          NEXT_PUBLIC_SITE_URL: http://localhost:3001
+          # No actual email is sent: browser intercepts verification calls,
+          # and the separate database test injects a fake delivery callback.
+          RESEND_API_KEY: ci-only-resend-key-no-external-mail
+          RESEND_FROM_EMAIL: cancellation@example.invalid
+          CI: "true"
+        run: |
+          set -euo pipefail
+          # The managed shared-limiter migration was rehearsed against a
+          # separate migration DB. Initialize it explicitly on the disposable
+          # push-mode staging fixture DB using that exact committed migration.
+          timeout 60s node --experimental-strip-types scripts/prepare-staging-booking-limiter.ts
+          # Never enable writes in the production smoke process. The preceding
+          # pnpm start has exited; run an isolated Next dev server on port 3001.
+          pnpm exec next dev -p 3001 -H 127.0.0.1 > /tmp/barbershop-staging-server.log 2>&1 &
+          staging_pid=$!
+          trap 'kill "$staging_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in {1..60}; do
+            if curl --fail --silent --output /dev/null http://localhost:3001/uk/booking; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$staging_pid" 2>/dev/null; then break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            tail -100 /tmp/barbershop-staging-server.log
+            echo "Local staging server did not start"
+            exit 1
+          fi
+          # The production smoke seeded exactly one Monday shift. Reconfigure
+          # the same disposable fixture for every weekday so the *real* public
+          # availability endpoint offers a slot tomorrow regardless of CI date.
+          schedule_id=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-schedule-created.json","utf8")).doc.id')
+          admin_token=$(node -p 'JSON.parse(require("node:fs").readFileSync("/tmp/barbershop-admin-login.json","utf8")).token')
+          schedule_json=$(node -e '
+            process.stdout.write(JSON.stringify({
+              weeklyShifts: Array.from({length:7},(_,weekday)=>({
+                weekday:String(weekday), startMinute:540, endMinute:1080,
+              })),
+            }))
+          ')
+          patch_code=$(curl --silent --show-error --output /tmp/barbershop-staging-schedule.json --write-out '%{http_code}' \
+            -X PATCH -H "Authorization: JWT $admin_token" -H 'Content-Type: application/json' \
+            --data "$schedule_json" "http://localhost:3001/api/barber-schedules/$schedule_id")
+          if [ "$patch_code" != "200" ]; then
+            echo "Staging weekly schedule setup failed: HTTP $patch_code"
+            cat /tmp/barbershop-staging-schedule.json
+            exit 1
+          fi
+          timeout 120s node scripts/test-booking-staging-browser.cjs
+          booking_id=$(cat /tmp/barbershop-staging-booking-id.txt)
+          [[ "$booking_id" =~ ^[1-9][0-9]*$ ]]
+          # Confirm the browser wrote precisely one true guest appointment with
+          # the authoritative total and full duration. No customer account.
+          persisted=$(psql -X -At -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            SELECT count(*) FROM bookings
+            WHERE id = $booking_id
+              AND customer_id IS NULL
+              AND status = 'pending'
+              AND idempotency_scope LIKE 'guest:%'
+              AND total_price = 1150
+              AND EXTRACT(EPOCH FROM (ends_at - starts_at)) = 5400")
+          test "$persisted" = "1"
+          echo "STAGING POSTGRES OK: exactly one accountless booking persisted"
+
+          # A second, truly authenticated Chrome journey must use Payload's
+          # signed-in cookie, prefill verified profile contact and persist a
+          # distinct account-owned booking. This shares only the disposable DB.
+          timeout 120s node scripts/test-booking-authenticated-staging-browser.cjs
+          account_booking_id=$(cat /tmp/barbershop-staging-authenticated-id.txt)
+          customer_id=$(cat /tmp/barbershop-customer-id)
+          [[ "$account_booking_id" =~ ^[1-9][0-9]*$ ]]
+          [[ "$customer_id" =~ ^[1-9][0-9]*$ ]]
+          authenticated_rows=$(psql -X -At -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            SELECT count(*) FROM bookings
+            WHERE id = $account_booking_id
+              AND customer_id = $customer_id
+              AND status = 'pending'
+              AND idempotency_scope = 'user:$customer_id'
+              AND customer_email = 'customer-ci@example.invalid'
+              AND total_price = 1150
+              AND EXTRACT(EPOCH FROM (ends_at - starts_at)) = 5400")
+          test "$authenticated_rows" = "1"
+          confirmed_guest_owner=$(psql -X -At -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            SELECT count(*) FROM bookings
+            WHERE id = $booking_id AND customer_id IS NULL")
+          test "$confirmed_guest_owner" = "1"
+          echo "AUTH STAGING POSTGRES OK: account-owned appointment recorded; prior guest record still unlinked"
+          # Exercise verified guest cancellation on the same disposable database.
+          # This invokes an injected fake email delivery, never a live provider.
+          CI_GUEST_BOOKING_ID="$booking_id" CI_ACCOUNT_BOOKING_ID="$account_booking_id" \
+            timeout 90s node --experimental-strip-types scripts/test-guest-cancellation-postgres.cjs
+          cancelled_status=$(psql -X -At -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "
+            SELECT status FROM bookings WHERE id = $booking_id")
+          test "$cancelled_status" = "cancelled"
+          echo "GUEST CANCELLATION CI OK: audited guest cancellation verified"
+          # UI-only Chrome flow: 202 non-enumerating request, 409 invalid
+          # proof, 200 success; intercepted responses never trigger Resend.
+          timeout 90s node scripts/test-guest-cancellation-ui-browser.cjs
+
+
+      - name: Upload booking browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-wizard-browser-screenshots
+          path: /tmp/barbershop-browser-artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 7
 
   prelocalization-baseline:
     runs-on: ubuntu-latest
@@ -864,7 +1081,7 @@ jobs:
           version: 10.28.2
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "24.22.3"
       - name: Install frozen baseline dependencies
         run: pnpm install --frozen-lockfile
       - name: Initialize baseline Payload schema on isolated PostgreSQL
@@ -947,11 +1164,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.2
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "24.22.3"
       - name: Install current dependencies
         run: pnpm install --frozen-lockfile
       - name: Download historical PostgreSQL schema inventory
@@ -964,7 +1179,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(find src/migrations -maxdepth 1 -name '*.json' | wc -l)" -eq 2
-          test "$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l)" -eq 2
+          # Additional Booking Management migrations are expected beyond the two localization snapshots.
+          migration_count="$(find src/migrations -maxdepth 1 -name '*.ts' ! -name index.ts | wc -l | tr -d ' ')"
+          test "$migration_count" -ge 2
           test -s src/migrations/index.ts
       - name: Test historical schema equivalence gate
         run: python3 -m unittest discover -s scripts -p 'test_verify_historical_baseline.py'
@@ -1036,7 +1253,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Rehearse the committed, previously normalized migration files unchanged.
+          # This job tests the historical localization upgrade, not later
+          # Booking Management schema additions. Keep those migrations out of
+          # this isolated rehearsal; the main checks job applies all of them.
+          mkdir -p /tmp/booking-migrations-outside-historical-rehearsal
+          mv src/migrations/*booking*.ts src/migrations/*barber_account_binding.ts \
+            /tmp/booking-migrations-outside-historical-rehearsal/
+          # Rehearse the committed, previously normalized localization files unchanged.
           mkdir -p /tmp/incremental-migration
           mv src/migrations/*ci_localization_incremental.* /tmp/incremental-migration/
           # Apply only the historical bootstrap to a fresh, isolated database.
@@ -1271,10 +1494,11 @@ jobs:
           persist-credentials: false
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.28.2
+          version: 10.28.2 # Historical baseline checkout requires pnpm 10
+          package_json_file: baseline-source/package.json
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "24.22.3"
       - name: Install baseline dependencies
         working-directory: baseline-source
         run: pnpm install --frozen-lockfile

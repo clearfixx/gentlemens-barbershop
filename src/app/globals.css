@@ -82,3 +82,97 @@
 .locale-switcher a{display:inline-grid;place-items:center;min-width:44px;min-height:44px;padding:8px;color:var(--ink);text-decoration:none;border:1px solid transparent;border-radius:var(--radius-control,5px)}
 .locale-switcher a[aria-current="page"]{border-color:currentColor;font-weight:700}
 .locale-switcher a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+
+/* Booking wizard: flat multi-select, clear focus and confirmation states. */
+.booking-wizard .booking-options button[aria-pressed="true"],
+.booking-wizard .booking-slots button[aria-pressed="true"]{border-color:var(--gold);outline:2px solid var(--gold);outline-offset:-2px}
+.booking-wizard button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.booking-wizard button:disabled{cursor:not-allowed;opacity:.55}
+.booking-wizard .booking-panel[role="status"]{min-height:240px}
+.booking-wizard .booking-panel[role="status"] h2{margin-bottom:14px}
+.booking-wizard .booking-contact input:invalid:not(:placeholder-shown){border-color:var(--gold)}
+
+
+/* Booking wizard responsive polish: readable flat controls, no squeezed steps. */
+.booking-wizard{min-width:0}
+.booking-wizard .booking-progress{min-width:0}
+.booking-wizard .booking-progress li{min-width:0;overflow-wrap:normal;line-height:1.5}
+.booking-wizard .booking-panel h2{font-family:inherit;font-size:clamp(24px,3vw,34px);font-weight:600;letter-spacing:-.025em}
+.booking-wizard .booking-contact h3{font-family:inherit;font-size:22px;font-weight:600}
+.booking-wizard .booking-panel .catalog-notice[role="alert"]{margin:24px 0 0;padding:14px 0;border-top:1px solid var(--border)}
+.booking-wizard .booking-actions{flex-wrap:wrap}
+.booking-wizard .booking-actions .cta{min-width:190px}
+.booking-wizard .booking-summary{overflow-wrap:anywhere}
+@media(max-width:650px){
+  .booking-wizard{margin-top:28px}
+  .booking-wizard .booking-progress{display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;padding-bottom:8px}
+  .booking-wizard .booking-progress li{flex:0 0 118px;font-size:12px;overflow-wrap:normal}
+  .booking-wizard .booking-panel{padding:22px 18px;min-height:280px}
+  .booking-wizard .booking-options button{min-height:54px}
+  .booking-wizard .booking-actions{display:grid;grid-template-columns:1fr;gap:10px}
+  .booking-wizard .booking-actions button{width:100%}
+  .booking-wizard .booking-contact{gap:14px}
+}
+
+/* At narrow phone widths, preserve all header controls without viewport overflow. */
+@media(max-width:420px){
+  .site-header{flex-wrap:wrap;row-gap:4px}
+  .site-header__actions{width:100%;min-width:0;justify-content:flex-end}
+}
+
+
+/* Guest cancellation: flat cream/chocolate UI, accessible two-step verification. */
+.guest-cancel-page{max-width:1400px}
+.guest-cancel-heading{text-align:center}
+.guest-cancel-heading .catalog-intro{margin:0 auto;max-width:800px}
+.guest-cancel-heading h1{font-family:inherit;font-weight:700;font-size:clamp(34px,4.5vw,58px);letter-spacing:-.04em}
+.guest-cancel{margin-top:40px}
+.guest-cancel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.guest-cancel-card{min-width:0;padding:clamp(20px,3vw,36px);border:1px solid var(--border);border-radius:12px;background:var(--surface);display:flex;flex-direction:column;gap:0}
+.guest-cancel-card h2{font-family:inherit;font-size:clamp(21px,2.2vw,29px);font-weight:650;letter-spacing:-.025em;margin:20px 0 24px}
+.guest-cancel-card--inactive{opacity:.66}
+.guest-cancel-step{align-self:flex-start;margin:0;padding:7px 14px;border-radius:999px;background:color-mix(in srgb,var(--gold) 18%,var(--surface));font-size:12px;font-weight:700;color:var(--ink)}
+.guest-cancel-fields{display:flex;flex-direction:column;gap:9px}
+.guest-cancel-fields label,.guest-cancel-code-label{font-size:13px;font-weight:650;color:var(--ink)}
+.guest-cancel-fields input{width:100%;min-width:0;min-height:48px;padding:11px 13px;color:var(--ink);background:var(--paper);border:1px solid var(--border);border-radius:6px;font:inherit}
+.guest-cancel-fields input:disabled{opacity:.72}
+.guest-cancel-fields input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.guest-cancel-hint{margin:2px 0 14px;color:var(--muted);font-size:12px;line-height:1.6}
+.guest-cancel-primary,.guest-cancel-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:49px;padding:12px 20px;border-radius:6px;cursor:pointer;font-weight:650;font-size:14px;transition:background-color .2s ease,border-color .2s ease}
+.guest-cancel-primary{width:100%;margin-top:22px;border:1px solid var(--ink);background:var(--ink);color:var(--paper)}
+.guest-cancel-primary:hover:not(:disabled){background:var(--gold);color:#201711;border-color:var(--gold)}
+.guest-cancel-secondary{margin-top:22px;border:1px solid var(--border);background:transparent;color:var(--ink)}
+.guest-cancel-primary:disabled,.guest-cancel-secondary:disabled{opacity:.5;cursor:not-allowed}
+.guest-cancel-help{font-size:12px;line-height:1.65;color:var(--muted);margin:17px 0 8px}
+.guest-cancel-facts{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:16px}
+.guest-cancel-facts span{border:1px solid var(--border);border-radius:6px;padding:9px 10px;color:var(--muted);font-size:11px}
+.guest-cancel-code-label{display:block;margin:0 0 12px}
+.guest-cancel-code{position:relative;min-height:56px}
+.guest-cancel-code__cells{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:clamp(4px,.6vw,9px);pointer-events:none}
+.guest-cancel-code__cells span{display:grid;place-items:center;min-height:clamp(42px,4.2vw,60px);border:1px solid var(--border);border-radius:6px;background:var(--paper);color:var(--ink);font-size:clamp(17px,2vw,26px);font-weight:650;font-variant-numeric:tabular-nums}
+.guest-cancel-code:focus-within .guest-cancel-code__cells span{border-color:var(--gold)}
+.guest-cancel-code input{position:absolute;inset:0;width:100%;height:100%;opacity:.02;cursor:text;z-index:1;font-size:16px}
+.guest-cancel-code input:disabled{cursor:not-allowed}
+.guest-cancel-code-hint{font-size:13px;color:var(--muted);line-height:1.6;overflow-wrap:anywhere}
+.guest-cancel-code-hint strong{color:var(--ink)}
+.guest-cancel-resend{min-height:44px;margin-top:16px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.guest-cancel-resend button{padding:8px;background:transparent;border:0;color:var(--ink);text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+.guest-cancel-error,.guest-cancel-warning{padding:16px 18px;margin-top:16px;line-height:1.6;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:13px;border-radius:7px}
+.guest-cancel-error{border-color:var(--gold)}
+.guest-cancel-info{margin-top:22px;padding:24px 28px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.guest-cancel-info h2{margin:0 0 14px;font-family:inherit;font-size:20px;font-weight:700}
+.guest-cancel-info ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 24px;list-style:none;padding:0;margin:0}
+.guest-cancel-info li{position:relative;padding-left:19px;color:var(--muted);line-height:1.65;font-size:13px}
+.guest-cancel-info li::before{content:"";position:absolute;left:0;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--gold)}
+.guest-cancel-success{display:flex;align-items:flex-start;gap:24px;max-width:950px;margin:48px auto 0;padding:clamp(24px,4vw,42px);background:var(--surface);border:1px solid var(--gold);border-radius:12px}
+.guest-cancel-success__icon{display:grid;flex:none;place-items:center;width:56px;height:56px;border-radius:50%;background:color-mix(in srgb,var(--gold) 20%,var(--surface));color:var(--ink);font-size:27px}
+.guest-cancel-success h2{font-family:inherit;font-size:clamp(25px,3vw,38px);font-weight:700;margin:8px 0}
+.guest-cancel-success p{line-height:1.7}
+.guest-cancel-success__receipt{display:flex;flex-wrap:wrap;gap:20px 44px;margin:24px 0}
+.guest-cancel-success__receipt dt{font-size:12px;color:var(--muted)}
+.guest-cancel-success__receipt dd{font-weight:700;margin:5px 0 0}
+.guest-cancel-back{display:inline-flex;align-items:center;margin-top:8px;padding:11px 16px;border:1px solid var(--border);border-radius:6px;text-decoration:none}
+.guest-cancel-back:hover{border-color:var(--gold)}
+@media(max-width:850px){.guest-cancel-grid{grid-template-columns:1fr}.guest-cancel-info ul{grid-template-columns:1fr}}
+@media(max-width:520px){.guest-cancel{margin-top:26px}.guest-cancel-card{padding:20px 17px}.guest-cancel-card h2{margin:17px 0 22px}.guest-cancel-code__cells span{min-height:42px}.guest-cancel-success{gap:14px;flex-direction:column}}
