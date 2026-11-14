@@ -20,12 +20,21 @@ export async function persistPayloadBooking(
   options: { deferConflictTranslation?: boolean } = {},
 ) {
   assertBookingQuoteIntegrity(quote)
+  // The idempotency scope is derived from the authenticated Payload account
+  // by submitAuthenticatedBooking; never take this ID from the booking body.
+  const customerId = idempotency && /^user:[1-9]\d*$/.test(idempotency.scope)
+    ? Number(idempotency.scope.slice(5))
+    : null
+  if (customerId !== null && (!Number.isSafeInteger(customerId) || customerId <= 0)) {
+    throw new RangeError('Invalid authenticated booking identity')
+  }
   try {
     return await payload.create({
       collection: 'bookings',
       overrideAccess: true,
       depth: 0,
       data: {
+        ...(customerId !== null ? { customer: customerId } : {}),
         location: quote.locationId,
         barber: quote.barberId,
         services: quote.serviceIds,
