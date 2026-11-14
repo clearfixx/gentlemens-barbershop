@@ -3,13 +3,15 @@ import Link from 'next/link'
 import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { getPayload } from 'payload'
-import { CalendarDays, ChevronRight, CircleUserRound, Star } from 'lucide-react'
+import { CalendarDays, ChevronRight, CircleUserRound, LayoutDashboard, Star, Clock3, ShieldCheck } from 'lucide-react'
 
 import config from '@/payload.config'
 import { isLocale } from '@/i18n/config'
 import { SiteHeader } from '@/components/site-header'
 import { getOwnBookingHistory, type BookingHistoryFilter } from '@/lib/booking/get-own-booking-history'
 import { AccountProfileName } from '@/components/account-profile-name'
+import { AccountBookingCancel } from '@/components/account-booking-cancel'
+import { bookingWritesEnabled } from '@/lib/booking/booking-write-guard'
 import './account.css'
 
 export const dynamic = 'force-dynamic'
@@ -62,6 +64,9 @@ export default async function AccountPage({ params, searchParams }: {
   const displayName = typeof user.displayName === 'string' && user.displayName.trim()
     ? user.displayName.trim()
     : user.email
+  const canCancel = bookingWritesEnabled(process.env)
+  const upcoming = await getOwnBookingHistory(payload, { id: Number(user.id), role: user.role }, { filter: 'upcoming', limit: 10 })
+  const nextBooking = upcoming.bookings.filter(item => item.status === 'pending' || item.status === 'confirmed').sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0]
   const dateLocale = uk ? 'uk-UA' : 'en-GB'
   const dateFormat = new Intl.DateTimeFormat(dateLocale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Kyiv' })
   const timeFormat = new Intl.DateTimeFormat(dateLocale, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
@@ -73,18 +78,46 @@ export default async function AccountPage({ params, searchParams }: {
         <aside className="account-sidebar" aria-label={uk ? 'Навігація кабінету' : 'Account navigation'}>
           <p className="account-sidebar__title">GENTLEMEN’S</p>
           <nav>
-            <a href="#profile" className="account-sidebar__item is-current"><CircleUserRound size={19} />{uk ? 'Профіль' : 'Profile'}</a>
+            <a href="#overview" className="account-sidebar__item is-current"><LayoutDashboard size={19} />{uk ? 'Огляд' : 'Overview'}</a>
             <a href="#appointments" className="account-sidebar__item"><CalendarDays size={19} />{uk ? 'Мої записи' : 'My bookings'}</a>
+            <a href="#profile" className="account-sidebar__item"><CircleUserRound size={19} />{uk ? 'Профіль' : 'Profile'}</a>
+            <a href="#reviews" className="account-sidebar__item"><Star size={19} />{uk ? 'Відгуки' : 'Reviews'}</a>
           </nav>
           <Link className="account-sidebar__booking" href={`/${locale}/booking`}>{uk ? 'Записатися' : 'Book a visit'} <ChevronRight size={16} /></Link>
         </aside>
         <div className="account-content">
+          <section id="overview" className="account-welcome" aria-labelledby="account-welcome-title">
+            <div>
+              <p className="account-kicker">{uk ? 'ВАШ ПРОСТІР' : 'YOUR SPACE'}</p>
+              <h1 id="account-welcome-title">{uk ? 'Вітаємо!' : 'Welcome back!'}</h1>
+              <p>{uk ? 'Керуйте своїми записами та персональними даними.' : 'Manage your bookings and personal details.'}</p>
+            </div>
+            <Link className="account-primary-action" href={`/${locale}/booking`}><CalendarDays size={19} />{uk ? 'Новий запис' : 'New booking'}</Link>
+          </section>
+          <section className="account-next" aria-label={uk ? 'Наступний візит' : 'Next visit'}>
+            <div className="account-next__heading">
+              <p className="account-kicker">{uk ? 'ВАШ НАСТУПНИЙ ВІЗИТ' : 'YOUR NEXT VISIT'}</p>
+              <Clock3 size={23} aria-hidden="true" />
+            </div>
+            {nextBooking ? <>
+              <h2>{dateFormat.format(new Date(nextBooking.startsAt))} · {timeFormat.format(new Date(nextBooking.startsAt))}</h2>
+              <p>{uk ? `Запис №${nextBooking.id}` : `Booking #${nextBooking.id}`} · {statusLabels[locale][nextBooking.status]}</p>
+              <div className="account-next__actions">
+                <a href="#appointments">{uk ? 'Переглянути історію' : 'View bookings'} <ChevronRight size={15} /></a>
+                {canCancel && <AccountBookingCancel id={nextBooking.id} locale={locale} />}
+              </div>
+            </> : <>
+              <h2>{uk ? 'Майбутніх записів немає' : 'No upcoming visits'}</h2>
+              <p>{uk ? 'Оберіть зручний час для наступного візиту.' : 'Choose a convenient time for your next visit.'}</p>
+              <Link href={`/${locale}/booking`}>{uk ? 'Обрати час' : 'Choose a time'} <ChevronRight size={15} /></Link>
+            </>}
+          </section>
           <section id="profile" className="account-panel" aria-labelledby="account-profile-heading">
             <p className="account-kicker">{uk ? 'ОСОБИСТИЙ КАБІНЕТ' : 'MY ACCOUNT'}</p>
             <h1 id="account-profile-heading">{uk ? 'Профіль' : 'Profile'}</h1>
             <div className="account-identity">
               <span className="account-identity__avatar" aria-hidden="true"><CircleUserRound size={42} strokeWidth={1.1} /></span>
-              <AccountProfileName initialName={displayName} email={user.email} userId={Number(user.id)} locale={locale} />
+              <AccountProfileName initialName={displayName} email={typeof user.email === 'string' ? user.email : ''} userId={Number(user.id)} locale={locale} />
             </div>
           </section>
 
@@ -123,7 +156,10 @@ export default async function AccountPage({ params, searchParams }: {
                       <strong>{uk ? `Запис №${booking.id}` : `Booking #${booking.id}`}</strong>
                       <span>{uk ? `Послуг: ${booking.serviceIds.length}` : `Services: ${booking.serviceIds.length}`}</span>
                     </div>
-                    <span className={`account-status account-status--${booking.status}`}>{statusLabels[locale][booking.status]}</span>
+                    <div className="account-booking__actions">
+                      <span className={`account-status account-status--${booking.status}`}>{statusLabels[locale][booking.status]}</span>
+                      {canCancel && (booking.status === 'pending' || booking.status === 'confirmed') && new Date(booking.startsAt).getTime() > Date.now() && <AccountBookingCancel id={booking.id} locale={locale} />}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -139,10 +175,11 @@ export default async function AccountPage({ params, searchParams }: {
             </nav>}
           </section>
 
-          <section className="account-panel account-panel--preview" aria-label={uk ? 'Відгуки' : 'Reviews'}>
+          <section id="reviews" className="account-panel account-panel--preview" aria-label={uk ? 'Відгуки' : 'Reviews'}>
             <Star size={23} strokeWidth={1.4} aria-hidden="true" />
             <div><h2>{uk ? 'Ваші відгуки' : 'Your reviews'}</h2><p>{uk ? 'Оцінювання завершених візитів з’явиться в наступному пакеті.' : 'Reviews for completed visits will be added in a later package.'}</p></div>
           </section>
+          <p className="account-privacy-note"><ShieldCheck size={16} aria-hidden="true" /> {uk ? 'Дані кабінету доступні лише у вашій авторизованій сесії.' : 'Your account data is available only in your authenticated session.'}</p>
         </div>
       </div>
     </main>
