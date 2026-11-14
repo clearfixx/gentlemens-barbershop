@@ -104,6 +104,8 @@
   font-weight: 700;
 }
 .customer-auth__submit:disabled { opacity: .65; cursor: wait; }
+.customer-auth__recover{display:block;margin-top:18px;color:var(--ink);font-size:13px;text-underline-offset:5px}
+.customer-auth__success{line-height:1.6;color:var(--ink);font-size:14px}
 .customer-auth__back {
   display: inline-block;
   margin-top: 22px;

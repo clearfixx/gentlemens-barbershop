@@ -63,7 +63,7 @@ export default async function AccountPage({ params, searchParams }: {
 
   const displayName = typeof user.displayName === 'string' && user.displayName.trim()
     ? user.displayName.trim()
-    : user.email
+    : (typeof user.email === 'string' ? user.email : '')
   const canCancel = bookingWritesEnabled(process.env)
   const upcoming = await getOwnBookingHistory(payload, { id: Number(user.id), role: user.role }, { filter: 'upcoming', limit: 10 })
   const nextBooking = upcoming.bookings.filter(item => item.status === 'pending' || item.status === 'confirmed').sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0]

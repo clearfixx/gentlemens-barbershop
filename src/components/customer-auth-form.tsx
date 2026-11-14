@@ -113,6 +113,7 @@ export function CustomerAuthForm({ locale }: { locale: Locale }) {
             {busy ? (uk ? 'Виконується…' : 'Working…') : mode === 'login' ? (uk ? 'Увійти →' : 'Sign in →') : (uk ? 'Зареєструватися →' : 'Create account →')}
           </button>
         </form>
+        <Link className="customer-auth__recover" href={`/${locale}/auth/forgot-password`}>{uk ? "Забули пароль?" : "Forgot password?"}</Link>
         <Link className="customer-auth__back" href={`/${locale}`}>{uk ? '← На головну' : '← Back to home'}</Link>
       </div>
     </section>
