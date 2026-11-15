@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Eye, EyeOff } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import type { Locale } from '@/i18n/config'
 
@@ -13,6 +14,7 @@ export function CustomerAuthForm({ locale }: { locale: Locale }) {
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -73,10 +75,10 @@ export function CustomerAuthForm({ locale }: { locale: Locale }) {
             : (uk ? 'Створи обліковий запис для майбутніх візитів.' : 'Create an account for future visits.')}
         </p>
         <div className="customer-auth__tabs" role="group" aria-label={uk ? 'Тип форми' : 'Form type'}>
-          <button type="button" className={mode === 'login' ? 'is-active' : ''} aria-pressed={mode === 'login'} onClick={() => { setMode('login'); setError('') }}>
+          <button type="button" className={mode === 'login' ? 'is-active' : ''} aria-pressed={mode === 'login'} onClick={() => { setMode('login'); setShowPassword(false); setError('') }}>
             {uk ? 'Вхід' : 'Sign in'}
           </button>
-          <button type="button" className={mode === 'register' ? 'is-active' : ''} aria-pressed={mode === 'register'} onClick={() => { setMode('register'); setError('') }}>
+          <button type="button" className={mode === 'register' ? 'is-active' : ''} aria-pressed={mode === 'register'} onClick={() => { setMode('register'); setShowPassword(false); setError('') }}>
             {uk ? 'Реєстрація' : 'Sign up'}
           </button>
         </div>
@@ -96,18 +98,31 @@ export function CustomerAuthForm({ locale }: { locale: Locale }) {
             Email
             <input type="email" autoComplete="email" required value={email} onChange={event => setEmail(event.target.value)} placeholder="name@example.com" />
           </label>
-          <label>
-            {uk ? 'Пароль' : 'Password'}
-            <input
-              type="password"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              minLength={8}
-              required
-              value={password}
-              onChange={event => setPassword(event.target.value)}
-              placeholder={uk ? 'Щонайменше 8 символів' : 'At least 8 characters'}
-            />
-          </label>
+          <div className="customer-auth__password-group">
+            <label htmlFor="customer-password">{uk ? 'Пароль' : 'Password'}</label>
+            <div className="customer-auth__password-field">
+              <input
+                id="customer-password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                minLength={8}
+                required
+                value={password}
+                onChange={event => setPassword(event.target.value)}
+                placeholder={uk ? 'Щонайменше 8 символів' : 'At least 8 characters'}
+              />
+              <button
+                type="button"
+                className="customer-auth__password-toggle"
+                aria-label={showPassword ? (uk ? 'Приховати пароль' : 'Hide password') : (uk ? 'Показати пароль' : 'Show password')}
+                aria-pressed={showPassword}
+                aria-controls="customer-password"
+                onClick={() => setShowPassword(current => !current)}
+              >
+                {showPassword ? <EyeOff size={19} strokeWidth={1.8} aria-hidden="true" /> : <Eye size={19} strokeWidth={1.8} aria-hidden="true" />}
+              </button>
+            </div>
+          </div>
           {error && <p className="customer-auth__error" role="alert">{error}</p>}
           <button type="submit" disabled={busy} className="customer-auth__submit">
             {busy ? (uk ? 'Виконується…' : 'Working…') : mode === 'login' ? (uk ? 'Увійти →' : 'Sign in →') : (uk ? 'Зареєструватися →' : 'Create account →')}

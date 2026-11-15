@@ -117,3 +117,42 @@
   text-decoration-color: var(--gold);
   text-underline-offset: 4px;
 }
+
+.customer-auth__password-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.customer-auth__password-group > label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.customer-auth__password-field {
+  position: relative;
+}
+.customer-auth__form .customer-auth__password-field input {
+  padding-inline-end: 57px;
+}
+.customer-auth__password-toggle {
+  position: absolute;
+  inset-inline-end: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.customer-auth__password-toggle:hover {
+  color: var(--ink);
+}
+.customer-auth__password-toggle:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
