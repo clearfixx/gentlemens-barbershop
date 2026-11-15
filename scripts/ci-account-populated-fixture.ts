@@ -62,7 +62,7 @@ async function book(offset: number, ownerId = customer.id) {
   })
   return { id: entry.id, startsAt: start }
 }
-async function status(id: number, next: 'confirmed' | 'cancelled' | 'completed') {
+async function status(id: number | string, next: 'confirmed' | 'cancelled' | 'completed') {
   await payload.update({ collection: 'bookings', id, overrideAccess: true,
     data: { status: next } })
 }
