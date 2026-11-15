@@ -99,6 +99,31 @@ async function run() {
       await page.reload({ waitUntil: 'networkidle' })
       assert.equal(await page.locator('.account-avatar-editor__photo').count(), 0,
         'Removed avatar should not reappear after reload')
+      // Exercise the camera control itself, not only a hand-built API request.
+      const realImageBase64 = await page.evaluate(() => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 48
+        canvas.height = 48
+        const context = canvas.getContext('2d')
+        if (!context) throw new Error('Missing canvas')
+        context.fillStyle = '#a57f5b'
+        context.fillRect(0, 0, canvas.width, canvas.height)
+        return canvas.toDataURL('image/png').split(',')[1]
+      })
+      const chosen = page.waitForEvent('filechooser')
+      await page.locator('.account-avatar-editor__camera').click()
+      const chooser = await chosen
+      await chooser.setFiles({
+        name: 'avatar.png', mimeType: 'image/png', buffer: Buffer.from(realImageBase64, 'base64'),
+      })
+      await page.locator('.account-avatar-editor__photo').waitFor()
+      await page.waitForFunction(() => {
+        const src = document.querySelector('.auth-nav__avatar-image')?.getAttribute('src') ?? ''
+        return src.includes('avatar-') && !src.includes('no-avatar')
+      })
+      await page.reload({ waitUntil: 'networkidle' })
+      assert.ok(await page.locator('.account-avatar-editor__photo').isVisible(),
+        'Camera button upload must survive reload')
       assert.ok(await page.locator('.account-filters a').count() === 3)
       const newName = 'Updated Cabinet ' + locale
       const newPhone = '+380 67 123 45 67'
