@@ -57,14 +57,18 @@ async function run() {
       assert.equal(await page.locator('#customer-password').getAttribute('type'), 'password')
       await page.locator('.customer-auth__submit').click()
       await page.waitForURL('**/' + locale + '/account', { timeout: 20_000 })
-      await page.locator('.account-identity--summary').waitFor()
-      assert.ok(await page.locator('.account-identity--summary').getByText(email, { exact: true }).isVisible(), 'Email must come from real account')
-      assert.equal(await page.locator('.account-summary-details h3').textContent(), 'Cabinet Test')
+      const mobileAccount = viewport.width < 621
+      const identity = page.locator(mobileAccount ? '.account-editor-view' : '.account-identity--summary')
+      await identity.waitFor()
+      assert.ok(await identity.getByText(email, { exact: true }).isVisible(),
+        'Email must come from real account')
+      assert.equal(await identity.locator(mobileAccount ? '.account-profile-name h2' : '.account-summary-details h3')
+        .textContent(), 'Cabinet Test')
       const cookies = await context.cookies(origin)
       assert.ok(cookies.some(cookie => cookie.name === 'payload-token' && cookie.value),
         'Real login must set a Payload session cookie')
       assert.ok(await page.locator('.account-next').isVisible())
-      const avatar = page.locator('.account-identity--summary .account-avatar-editor')
+      const avatar = identity.locator('.account-avatar-editor')
       assert.ok(await avatar.getByRole('button', { name: locale === 'uk' ? 'Змінити аватар' : 'Change avatar' }).isVisible())
       const invalidPhoto = await page.evaluate(async () => {
         const data = new FormData()
@@ -96,8 +100,9 @@ async function run() {
       assert.equal(avatarResponse.status(), 200, 'Uploaded image must be publicly renderable')
       // The dashboard profile is intentionally compact; destructive avatar
       // management remains in the full profile editor.
-      assert.equal(await avatar.getByRole('button', { name: locale === 'uk' ? 'Прибрати' : 'Remove' }).count(), 0,
-        'Compact profile must not expose destructive controls')
+      assert.equal(await avatar.getByRole('button',
+        { name: locale === 'uk' ? 'Прибрати' : 'Remove' }).count(), mobileAccount ? 1 : 0,
+        'Only the expanded editor should expose removal controls')
       await page.goto(origin + '/' + locale + '/account#profile-editor', { waitUntil: 'networkidle' })
       const fullAvatar = page.locator('.account-editor-view .account-avatar-editor')
       await fullAvatar.getByRole('button', { name: locale === 'uk' ? 'Прибрати' : 'Remove' }).click()
