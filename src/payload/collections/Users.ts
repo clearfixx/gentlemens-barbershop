@@ -39,6 +39,14 @@ export const Users: CollectionConfig = {
     { name: 'displayName', type: 'text', maxLength: 100 },
     { name: 'phone', type: 'text', maxLength: 32, validate: validateProfilePhone },
     {
+      name: 'avatar', type: 'relationship', relationTo: 'media',
+      admin: { description: 'Profile picture. Customers change it through the guarded account endpoint.' },
+      access: {
+        create: ({ req }) => req.user?.role === 'admin',
+        update: ({ req }) => req.user?.role === 'admin',
+      },
+    },
+    {
       name: 'role', type: 'select', required: true, defaultValue: 'customer',
       options: ['customer', 'barber', 'admin'],
       access: {

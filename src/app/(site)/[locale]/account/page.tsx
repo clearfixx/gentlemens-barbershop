@@ -10,6 +10,7 @@ import { isLocale } from '@/i18n/config'
 import { SiteHeader } from '@/components/site-header'
 import { getOwnBookingHistory, type BookingHistoryFilter } from '@/lib/booking/get-own-booking-history'
 import { AccountProfileName } from '@/components/account-profile-name'
+import { AccountAvatar } from '@/components/account-avatar'
 import { AccountBookingCancel } from '@/components/account-booking-cancel'
 import { bookingWritesEnabled } from '@/lib/booking/booking-write-guard'
 import './account.css'
@@ -64,6 +65,13 @@ export default async function AccountPage({ params, searchParams }: {
   const displayName = typeof user.displayName === 'string' && user.displayName.trim()
     ? user.displayName.trim()
     : (typeof user.email === 'string' ? user.email : '')
+  const avatarRelation = 'avatar' in user ? user.avatar : null
+  let avatarUrl: string | null = avatarRelation && typeof avatarRelation === 'object' && 'url' in avatarRelation && typeof avatarRelation.url === 'string'
+    ? avatarRelation.url : null
+  if (!avatarUrl && (typeof avatarRelation === 'number' || typeof avatarRelation === 'string')) {
+    const media = await payload.findByID({ collection: 'media', id: avatarRelation, depth: 0 })
+    avatarUrl = typeof media.url === 'string' ? media.url : null
+  }
   const canCancel = bookingWritesEnabled(process.env)
   const upcoming = await getOwnBookingHistory(payload, { id: Number(user.id), role: user.role }, {
     filter: 'upcoming', activeOnly: true, ascending: true, limit: 1,
@@ -114,11 +122,11 @@ export default async function AccountPage({ params, searchParams }: {
               <Link href={`/${locale}/booking`}>{uk ? 'Обрати час' : 'Choose a time'} <ChevronRight size={15} /></Link>
             </>}
           </section>
-          <section id="profile" className="account-panel" aria-labelledby="account-profile-heading">
+          <section id="profile" className="account-panel account-panel--profile" aria-labelledby="account-profile-heading">
             <p className="account-kicker">{uk ? 'ОСОБИСТИЙ КАБІНЕТ' : 'MY ACCOUNT'}</p>
-            <h1 id="account-profile-heading">{uk ? 'Профіль' : 'Profile'}</h1>
+            <h2 id="account-profile-heading">{uk ? 'Мій профіль' : 'My profile'}</h2>
             <div className="account-identity">
-              <span className="account-identity__avatar" aria-hidden="true"><CircleUserRound size={42} strokeWidth={1.1} /></span>
+              <AccountAvatar initialUrl={avatarUrl} locale={locale} />
               <AccountProfileName initialName={displayName} initialPhone={'phone' in user && typeof user.phone === 'string' ? user.phone : ''} email={typeof user.email === 'string' ? user.email : ''} userId={Number(user.id)} locale={locale} />
             </div>
           </section>

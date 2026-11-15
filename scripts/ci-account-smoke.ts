@@ -74,6 +74,19 @@ const stored = profile.doc && typeof profile.doc === 'object' ? profile.doc as J
 assert.equal(stored.displayName, 'Updated smoke customer')
 assert.equal(stored.phone, newPhone)
 assert.equal(stored.role, 'customer', 'Self-update must not elevate role')
+const unauthorizedMedia = await post('/api/media', { alt: 'Unauthorized upload' }, first.token)
+assert.ok([400,401,403,415].includes(unauthorizedMedia.status), 'Customers cannot create general media')
+const unauthorizedAvatar = await patch('/api/users/' + first.id,
+  { avatar: 1 }, first.token)
+assert.ok([200,400,403].includes(unauthorizedAvatar.status),
+  'Customer avatar cannot be reassigned through the general user endpoint')
+const afterAvatarPatch = await request('/api/users/' + first.id, {
+  headers: { authorization: 'JWT ' + first.token },
+})
+const profileAfterAvatar = afterAvatarPatch.json.doc && typeof afterAvatarPatch.json.doc === 'object'
+  ? afterAvatarPatch.json.doc as Json : afterAvatarPatch.json
+assert.ok(!profileAfterAvatar.avatar,
+  'Customer cannot set an arbitrary avatar relationship by PATCH')
 const rejected = await patch('/api/users/' + first.id,
   { displayName: 'Attempted invalid edit', phone: 'invalid-phone' }, first.token)
 assert.ok([400, 422].includes(rejected.status), 'Server must reject invalid phone')

@@ -100,7 +100,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
   }
 
   const name = user.displayName || user.email || (uk ? 'Користувач' : 'Account')
-  const avatar = typeof user.avatar === 'object' ? user.avatar?.url : null
+  const avatar = user.avatar && typeof user.avatar === 'object' ? user.avatar.url : null
 
   return <div ref={root} className="auth-nav">
     <button

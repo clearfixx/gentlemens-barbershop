@@ -15,6 +15,8 @@ import * as migration_20261113_150000_booking_guest_cancellation_challenge from 
 
 import * as migration_20261114_130000_customer_phone from './20261114_130000_customer_phone';
 
+import * as migration_20261115_030000_customer_avatar from './20261115_030000_customer_avatar';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -60,5 +62,10 @@ export const migrations = [
     up: migration_20261114_130000_customer_phone.up,
     down: migration_20261114_130000_customer_phone.down,
     name: '20261114_130000_customer_phone',
+  },
+  {
+    up: migration_20261115_030000_customer_avatar.up,
+    down: migration_20261115_030000_customer_avatar.down,
+    name: '20261115_030000_customer_avatar',
   },
 ];

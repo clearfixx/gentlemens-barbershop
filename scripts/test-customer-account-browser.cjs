@@ -64,6 +64,40 @@ async function run() {
       assert.ok(cookies.some(cookie => cookie.name === 'payload-token' && cookie.value),
         'Real login must set a Payload session cookie')
       assert.ok(await page.locator('.account-next').isVisible())
+      const avatar = page.locator('.account-avatar-editor')
+      assert.ok(await avatar.getByRole('button', { name: locale === 'uk' ? 'Змінити аватар' : 'Change avatar' }).isVisible())
+      const invalidPhoto = await page.evaluate(async () => {
+        const data = new FormData()
+        data.set('avatar', new File(['<svg>not an image</svg>'], 'fake.png', { type: 'image/png' }))
+        return (await fetch('/api/account/avatar', { method: 'POST', body: data })).status
+      })
+      assert.equal(invalidPhoto, 415, 'Fake PNG bytes must be rejected')
+      const uploadedPhoto = await page.evaluate(async () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 64
+        canvas.height = 64
+        const context = canvas.getContext('2d')
+        if (!context) throw new Error('Missing canvas')
+        context.fillStyle = '#654321'
+        context.fillRect(0, 0, 64, 64)
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+        if (!blob) throw new Error('Cannot create test PNG')
+        const data = new FormData()
+        data.set('avatar', new File([blob], 'profile.png', { type: 'image/png' }))
+        const response = await fetch('/api/account/avatar', { method: 'POST', body: data })
+        return { status: response.status, body: await response.json() }
+      })
+      assert.equal(uploadedPhoto.status, 200, 'Valid account avatar upload must succeed')
+      assert.ok(uploadedPhoto.body.avatarUrl, 'Uploaded avatar must have a URL')
+      await page.reload({ waitUntil: 'networkidle' })
+      assert.ok(await page.locator('.account-avatar-editor__photo').isVisible(),
+        'Stored avatar should render after reload')
+      const avatarResponse = await page.request.get(origin + uploadedPhoto.body.avatarUrl)
+      assert.equal(avatarResponse.status(), 200, 'Uploaded image must be publicly renderable')
+      await avatar.getByRole('button', { name: locale === 'uk' ? 'Прибрати' : 'Remove' }).click()
+      await page.reload({ waitUntil: 'networkidle' })
+      assert.equal(await page.locator('.account-avatar-editor__photo').count(), 0,
+        'Removed avatar should not reappear after reload')
       assert.ok(await page.locator('.account-filters a').count() === 3)
       const newName = 'Updated Cabinet ' + locale
       const newPhone = '+380 67 123 45 67'
