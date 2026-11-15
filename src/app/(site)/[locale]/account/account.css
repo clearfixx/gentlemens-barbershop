@@ -417,3 +417,9 @@
   .account-page { scroll-behavior: auto; }
   .account-sidebar__nav { transition: none; }
 }
+
+/* Native document scrolling is on the root, not the dashboard <main>. */
+html:has(.account-page) { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html:has(.account-page) { scroll-behavior: auto; }
+}
