@@ -202,7 +202,7 @@ async function run() {
         name: locale === 'uk' ? 'Майбутні' : 'Upcoming',
       })
       await upcoming.click()
-      await page.waitForURL('**/account?filter=all&historyFilter=upcoming&page=1#history')
+      await page.waitForURL('**/account?filter=past&historyFilter=upcoming&page=1#history')
       assert.ok(await page.locator('.account-filters .is-active').isVisible())
       assert.equal(await page.locator('.account-booking-list li').count(), 0)
       await page.goto(origin + '/' + locale + '/auth/forgot-password', { waitUntil: 'networkidle' })
