@@ -58,11 +58,11 @@ export default async function AccountPage({ params, searchParams }: {
     ? Number(query.page) : 1
   const actor = { id: Number(user.id), role: user.role }
   const history = view === 'bookings' ? await getOwnBookingHistory(payload, actor, {
-    limit: 10, page: requestedPage, filter,
+    limit: 10, page: requestedPage, filter, ascending: filter === 'upcoming',
   }) : null
   const pageNumber = Math.min(requestedPage, Math.max(1, history?.totalPages ?? 1))
   const page = history && pageNumber !== requestedPage
-    ? await getOwnBookingHistory(payload, actor, { limit: 10, page: pageNumber, filter })
+    ? await getOwnBookingHistory(payload, actor, { limit: 10, page: pageNumber, filter, ascending: filter === 'upcoming' })
     : history
   const accountUrl = (nextFilter: BookingHistoryFilter, nextPage = 1) =>
     '/' + locale + '/account?view=bookings&filter=' + nextFilter + '&page=' + nextPage + '#appointments'
@@ -181,7 +181,7 @@ export default async function AccountPage({ params, searchParams }: {
             <div className="account-activity-grid">
               <section id="visits" className="account-panel account-activity-card" aria-labelledby="account-history-heading">
                 <div className="account-card-heading">
-                  <h2 id="account-history-heading">{uk ? 'ІСТОРІЯ ВІДВІДУВАНЬ' : 'VISIT HISTORY'}</h2>
+                  <h2 id="account-history-heading">{uk ? 'ІСТОРІЯ ЗАПИСІВ' : 'BOOKING HISTORY'}</h2>
                   <Link href={accountUrl(previewFilter)}>{uk ? 'Усі записи' : 'All bookings'} <ChevronRight size={15}/></Link>
                 </div>
                 <nav className="account-overview-filters" aria-label={uk ? 'Фільтр записів' : 'Booking filter'}>

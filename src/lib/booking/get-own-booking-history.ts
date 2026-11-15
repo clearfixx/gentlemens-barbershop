@@ -100,7 +100,11 @@ export async function getOwnBookingHistory(
   const now = options.now ?? new Date()
   if (!Number.isFinite(now.getTime())) throw new RangeError('Invalid booking history clock')
   const and: Where[] = [{ customer: { equals: customerId } }]
-  if (options.activeOnly) and.push({ status: { in: ['pending', 'confirmed'] } })
+  // A future date alone does not make a cancelled/no-show booking upcoming.
+  // Keep inactive future records available under "All" for audit/history.
+  if (options.activeOnly || filter === 'upcoming') {
+    and.push({ status: { in: ['pending', 'confirmed'] } })
+  }
   if (options.completedOnly) and.push({ status: { equals: 'completed' } })
   if (filter === 'upcoming') and.push({ startsAt: { greater_than_equal: now.toISOString() } })
   if (filter === 'past') and.push({ startsAt: { less_than: now.toISOString() } })
