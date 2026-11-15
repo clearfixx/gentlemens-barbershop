@@ -423,3 +423,15 @@ html:has(.account-page) { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   html:has(.account-page) { scroll-behavior: auto; }
 }
+
+/* Keep the mobile drawer toggle inside its header strip while the drawer is open.
+   Otherwise the document-positioned button can overlap the first anchor. */
+@media (max-width: 620px) {
+  .account-sidebar__mobile-toggle[aria-expanded="true"] {
+    position: fixed;
+    top: 13px;
+    left: 15px;
+    width: calc(min(82vw, 320px) - 30px);
+    z-index: 82;
+  }
+}
