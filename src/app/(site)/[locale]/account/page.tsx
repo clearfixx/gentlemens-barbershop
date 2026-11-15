@@ -15,6 +15,7 @@ import { SiteHeader } from '@/components/site-header'
 import { getOwnBookingHistory, type BookingHistoryFilter } from '@/lib/booking/get-own-booking-history'
 import { AccountProfileName } from '@/components/account-profile-name'
 import { AccountAvatar } from '@/components/account-avatar'
+import { AccountReviews } from '@/components/account-reviews'
 import { AccountBookingCancel } from '@/components/account-booking-cancel'
 import { AccountSidebarNavigation } from '@/components/account-sidebar-navigation'
 import { bookingWritesEnabled } from '@/lib/booking/booking-write-guard'
@@ -88,6 +89,29 @@ export default async function AccountPage({ params, searchParams }: {
   const recent = await getOwnBookingHistory(payload, actor, {
     filter: previewFilter, limit: 2, ascending: previewFilter === 'upcoming',
   })
+  // Reviews belong exclusively to the authenticated customer. We never
+  // trust a browser-supplied owner/barber or include another customer's drafts.
+  const [completedVisits, ownReviews] = await Promise.all([
+    getOwnBookingHistory(payload, actor, {
+      filter: 'past', completedOnly: true, limit: 20,
+    }),
+    payload.find({
+      collection: 'reviews', overrideAccess: true, depth: 0,
+      where: { customer: { equals: Number(user.id) } },
+      sort: '-createdAt', limit: 20,
+    }),
+  ])
+  const reviewedBookingIds = new Set(ownReviews.docs.map(item =>
+    typeof item.booking === 'number' ? item.booking : Number(item.booking?.id)))
+  const eligibleVisits = user.role === 'customer'
+    ? completedVisits.bookings.filter(item => !reviewedBookingIds.has(item.id)).map(item => ({
+        id: item.id, startsAt: item.startsAt,
+      }))
+    : []
+  const reviews = ownReviews.docs.map(item => ({
+    id: Number(item.id), rating: item.rating, comment: item.comment,
+    status: item.status, createdAt: item.createdAt,
+  }))
   const recentDetails = await Promise.all((recent?.bookings ?? []).map(async booking => {
     const [person, visitServices] = await Promise.all([
       payload.findByID({ collection: 'barbers', id: booking.barberId, depth: 1, overrideAccess: true }),
@@ -220,12 +244,9 @@ export default async function AccountPage({ params, searchParams }: {
               <section id="reviews" className="account-panel account-activity-card" aria-labelledby="account-reviews-heading">
                 <div className="account-card-heading">
                   <h2 id="account-reviews-heading">{uk ? 'МОЇ ВІДГУКИ' : 'MY REVIEWS'}</h2>
-                  <span className="account-card-heading__disabled">{uk ? 'Невдовзі' : 'Coming soon'}</span>
+                  <span className="account-card-heading__disabled">{uk ? 'Перевірені візити' : 'Verified visits'}</span>
                 </div>
-                <div className="account-card-empty">
-                  <Star size={25}/>
-                  <p>{uk ? 'Тут з’являться відгуки про завершені візити, коли функція стане доступною.' : 'Reviews of completed visits will appear here when the feature launches.'}</p>
-                </div>
+                <AccountReviews locale={locale} eligibleVisits={eligibleVisits} reviews={reviews}/>
               </section>
             </div>
           </>

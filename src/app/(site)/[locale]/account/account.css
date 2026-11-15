@@ -435,3 +435,31 @@ html:has(.account-page) { scroll-behavior: smooth; }
     z-index: 82;
   }
 }
+
+/* Verified customer reviews: compact, accessible form within the approved card. */
+.account-reviews {display:grid;gap:14px;margin-top:15px;min-width:0}
+.account-reviews__list{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.account-reviews__item{padding:12px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+.account-reviews__meta{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:11px}
+.account-reviews__stars{display:inline-flex;gap:2px;color:var(--gold)}
+.account-reviews__item p{margin:9px 0;font-size:12px;line-height:1.6}
+.account-reviews__item time{color:var(--muted);font-size:10px}
+.account-reviews__form{display:grid;gap:10px}
+.account-reviews__form h3{margin:0 0 3px;font-size:14px}
+.account-reviews__form>label,.account-reviews__rating legend{font-size:11px;color:var(--muted)}
+.account-reviews__form select,.account-reviews__form textarea{width:100%;min-width:0;padding:10px 12px;
+  border:1px solid var(--border);border-radius:6px;background:var(--paper);color:var(--ink);font:inherit;font-size:12px}
+.account-reviews__rating{display:flex;flex-wrap:wrap;gap:5px;margin:0;padding:0;border:0}
+.account-reviews__rating legend{margin-bottom:8px}
+.account-reviews__rating label{position:relative;cursor:pointer}
+.account-reviews__rating input{position:absolute;opacity:0;width:1px;height:1px}
+.account-reviews__rating span{display:inline-flex;align-items:center;gap:3px;min-width:38px;justify-content:center;
+  padding:7px 6px;border:1px solid var(--border);border-radius:5px;color:var(--ink);font-size:11px}
+.account-reviews__rating input:checked+span{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.account-reviews__rating input:focus-visible+span{outline:2px solid var(--gold);outline-offset:2px}
+.account-reviews__form button[type=submit]{min-height:39px;padding:10px 15px;border:0;border-radius:7px;
+  background:var(--ink);color:var(--paper);font:inherit;font-size:12px;cursor:pointer}
+.account-reviews__form button:disabled{opacity:.55;cursor:not-allowed}
+.account-reviews__error{margin:0;color:#bc563f;font-size:11px}
+.account-reviews__success{margin:0;color:#598346;font-size:11px}
+.account-reviews__empty{color:var(--muted);font-size:12px;line-height:1.65}
