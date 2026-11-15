@@ -34,6 +34,7 @@ export default async function BookingPage({ params }: { params: Promise<{ locale
       name: 'displayName' in verifiedUser && typeof verifiedUser.displayName === 'string'
         ? verifiedUser.displayName : '',
       email: verifiedUser.email,
+      phone: 'phone' in verifiedUser && typeof verifiedUser.phone === 'string' ? verifiedUser.phone : '',
     } : undefined
   const locations = catalog.locations.map(item => ({ id: Number(item.id), name: String(item.name), city: String(item.city), timeZone: String(item.timeZone) }))
   const services = catalog.services.map(item => ({ id: Number(item.id), name: String(item.name) }))

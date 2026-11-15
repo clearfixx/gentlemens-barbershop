@@ -1,0 +1,437 @@
+/* Customer dashboard v2: reference-driven three-column layout.
+   Tokens inherit the existing cream/chocolate theme and its dark inverse. */
+.account-page{min-height:100svh;padding-top:108px;background:var(--paper);color:var(--ink)}
+.account-shell{
+  display:grid;grid-template-columns:250px minmax(0,1fr) 340px;
+  gap:22px;align-items:start;max-width:1740px;margin:0 auto;
+  padding:20px clamp(16px,2.3vw,38px) 70px;
+}
+.account-sidebar,.account-aside,.account-content{min-width:0}
+.account-sidebar{
+  position:sticky;top:118px;align-self:start;display:flex;flex-direction:column;
+  min-height:min(690px,calc(100svh - 146px));padding:20px 12px;
+  border:1px solid var(--border);border-radius:13px;background:var(--surface);
+}
+.account-sidebar__title{margin:0;padding:4px 14px 20px;color:var(--gold);
+  font-size:12px;font-weight:750;letter-spacing:.18em}
+.account-sidebar__nav{display:grid;gap:4px}
+.account-sidebar__item{
+  display:flex;align-items:center;gap:13px;min-height:46px;width:100%;
+  padding:10px 13px;border:0;border-radius:7px;background:transparent;color:var(--ink);
+  font:inherit;font-size:14px;text-decoration:none;text-align:start;cursor:pointer;
+  transition:background-color .2s ease,color .2s ease;
+}
+.account-sidebar__item:hover{background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.account-sidebar__item.is-current{background:var(--ink);color:var(--paper)}
+.account-sidebar__item svg{flex-shrink:0}
+.account-sidebar__logout:disabled{opacity:.6;cursor:wait}
+.account-sidebar__error{padding:8px;color:#b75240;font-size:12px}
+.account-sidebar__booking{display:flex;align-items:center;justify-content:space-between;
+  gap:10px;margin:auto 5px 0;padding:14px;border:1px solid var(--border);
+  border-radius:7px;color:var(--ink);font-size:13px;text-decoration:none}
+.account-sidebar__booking:hover{border-color:var(--gold)}
+
+.account-content{display:grid;align-content:start;gap:19px}
+.account-aside{display:grid;align-content:start;gap:19px}
+.account-welcome{display:flex;align-items:center;justify-content:space-between;gap:20px;
+  min-height:174px;padding:10px 6px 12px}
+.account-welcome h1{margin:0;font-size:clamp(28px,2.5vw,40px);line-height:1.14;
+  font-weight:750;letter-spacing:-.045em;overflow-wrap:anywhere}
+.account-welcome__accent{display:block;width:38px;height:3px;margin:14px 0;
+  border-radius:2px;background:var(--gold)}
+.account-welcome p{margin:5px 0;color:var(--muted);font-size:13px;line-height:1.6}
+.account-welcome .account-welcome__lead{color:var(--ink);font-weight:600}
+.account-primary-action{display:inline-flex;justify-content:center;align-items:center;gap:10px;
+  min-height:54px;min-width:173px;padding:13px 18px;border-radius:9px;
+  background:var(--ink);color:var(--paper);text-decoration:none;font-weight:650;
+  font-size:13px;white-space:nowrap;transition:background-color .2s ease}
+.account-primary-action:hover{background:color-mix(in srgb,var(--ink) 80%,var(--gold))}
+.account-kicker{margin:0 0 12px;color:var(--gold);font-size:11px;
+  letter-spacing:.13em;font-weight:750}
+
+.account-next{display:flex;gap:24px;min-height:278px;padding:22px;
+  border-radius:13px;border:1px solid color-mix(in srgb,var(--gold) 22%,#281a13);
+  background:#291c14;color:#f8eee2}
+.account-next__portrait{flex:0 0 32%;align-self:stretch;min-height:226px;
+  overflow:hidden;border-radius:9px;background:#413022}
+.account-next__portrait img{display:block;width:100%;height:100%;object-fit:cover}
+.account-next__body{display:flex;flex-direction:column;justify-content:center;min-width:0;flex:1}
+.account-next .account-kicker{color:#e4be7f}
+.account-next h2{margin:7px 0 10px;font-size:clamp(20px,1.8vw,29px);
+  font-weight:750;letter-spacing:-.03em;line-height:1.3}
+.account-next__time{display:flex;align-items:center;gap:8px;margin:0 0 14px;
+  color:#e2b866;font-size:22px;font-weight:700}
+.account-next__facts{display:grid;gap:8px}
+.account-next__facts p{display:flex;align-items:flex-start;gap:9px;margin:0;
+  color:#e6d5c4;font-size:12px;line-height:1.5}
+.account-next__facts svg{flex:none;color:#cba45d}
+.account-next__facts strong{color:#fff4e8;font-weight:600}
+.account-next__body>p:not(.account-kicker):not(.account-next__time){margin:6px 0 14px;
+  color:#e7d4bf;font-size:14px;line-height:1.5}
+.account-next a{display:inline-flex;align-items:center;gap:4px;color:#e6bf7a;
+  font-size:13px;text-underline-offset:4px}
+.account-next__actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:19px}
+.account-next .account-status{background:#dbe5bf;color:#27351e}
+.account-next .account-status--pending{background:#f2d49b;color:#39291a}
+.account-next .account-cancel button{padding:8px 10px;border:1px solid #a99a8a;
+  border-radius:6px;background:transparent;color:#f8eee2;font:inherit;font-size:12px;cursor:pointer}
+.account-cancel{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.account-cancel__confirm{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.account-cancel button:disabled{opacity:.6;cursor:wait}
+.account-cancel__error{margin:4px 0;font-size:12px;color:#ffcb9f}
+
+.account-activity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;align-items:stretch}
+.account-panel{min-width:0;padding:22px;border:1px solid var(--border);
+  border-radius:12px;background:var(--surface)}
+.account-activity-card{min-height:240px;padding:19px}
+.account-card-heading{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.account-card-heading h2{margin:0;color:var(--ink);font-size:14px;
+  font-weight:750;letter-spacing:-.015em;line-height:1.4}
+.account-card-heading a{display:inline-flex;align-items:center;gap:3px;flex:none;
+  color:var(--ink);font-size:11px;text-decoration:none}
+.account-card-heading a:hover{text-decoration:underline;text-underline-offset:3px}
+.account-card-heading__disabled{font-size:11px;color:var(--muted)}
+.account-card-empty{display:grid;justify-items:center;align-content:center;gap:10px;
+  padding:25px 10px;min-height:130px;color:var(--muted);text-align:center}
+.account-card-empty svg{color:var(--gold)}
+.account-card-empty p{max-width:250px;margin:0;font-size:12px;line-height:1.6}
+.account-recent-list{list-style:none;margin:0;padding:0}
+.account-recent-list li{display:flex;align-items:center;gap:9px;min-width:0;padding:13px 0;
+  border-bottom:1px solid var(--border)}
+.account-recent-list li:last-child{border-bottom:0}
+.account-recent-list__date{flex:0 0 66px;font-size:11px;font-weight:650;color:var(--gold)}
+.account-recent-list__text{display:grid;gap:4px;min-width:0;flex:1}
+.account-recent-list__text strong{font-size:12px;font-weight:650}
+.account-recent-list__text small{color:var(--muted);font-size:11px}
+.account-status{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  padding:7px 9px;border-radius:6px;background:color-mix(in srgb,var(--gold) 15%,var(--paper));
+  color:var(--ink);font-size:11px;line-height:1.2;white-space:nowrap}
+.account-status--completed,.account-status--confirmed{background:#dce7cf;color:#344b2e}
+.account-status--cancelled,.account-status--no_show{background:#edd8d0;color:#7c382a}
+.account-status--pending{background:#f4e2b9;color:#6b4a12}
+
+.account-panel--profile{display:block;padding:20px 18px}
+.account-panel--profile .account-card-heading{margin-bottom:18px}
+.account-identity{display:flex;align-items:flex-start;gap:15px;min-width:0}
+.account-identity--summary{align-items:center}
+.account-summary-details{flex:1;min-width:0}
+.account-summary-details h3{margin:0 0 12px;font-size:16px;font-weight:750;
+  line-height:1.35;overflow-wrap:anywhere}
+.account-summary-details p{display:flex;align-items:flex-start;gap:9px;margin:9px 0;
+  font-size:11px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.account-summary-details p span{min-width:0;overflow-wrap:anywhere}
+.account-summary-details svg{flex:none;color:var(--gold)}
+.account-avatar-editor{display:flex;flex:0 0 95px;align-items:center;flex-direction:column;gap:6px;
+  width:95px;min-width:0}
+.account-identity__avatar{position:relative;display:grid;place-items:center;
+  width:87px;height:87px;flex:none;overflow:visible;border-radius:50%;
+  border:1px solid var(--border);
+  background:color-mix(in srgb,var(--gold) 24%,var(--paper));color:var(--ink)}
+.account-avatar-editor__photo{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
+.account-avatar-editor__camera{position:absolute;right:-5px;bottom:-4px;
+  display:grid;place-items:center;width:31px;height:31px;padding:0;
+  border:2px solid var(--surface);border-radius:50%;background:var(--ink);color:var(--paper);cursor:pointer}
+.account-avatar-editor__camera:hover{background:var(--gold);color:#241910}
+.account-avatar-editor__input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.account-avatar-editor__hint{margin:0;color:var(--muted);text-align:center;font-size:9px;line-height:1.4}
+.account-avatar-editor__remove{display:flex;align-items:center;gap:4px;padding:0;border:0;
+  background:transparent;color:var(--muted);font-size:10px;text-decoration:underline;cursor:pointer}
+.account-avatar-editor__error{margin:0;font-size:11px;color:#b75441;text-align:center}
+.account-avatar-editor button:disabled{opacity:.6;cursor:wait}
+
+.account-loyalty{background:#291c14;color:#f4e7d6;border-color:#58412b}
+.account-loyalty .account-card-heading{border-color:#554131}
+.account-loyalty .account-card-heading h2,.account-loyalty .account-card-heading svg{color:#f4e7d6}
+.account-loyalty__pending{display:flex;align-items:center;gap:12px;padding-top:22px}
+.account-loyalty__pending svg{flex:none;color:#dcb05e}
+.account-loyalty__pending strong{font-size:13px;font-weight:650}
+.account-loyalty>p{margin:16px 0 0;color:#d6c5ae;font-size:12px;line-height:1.7}
+.account-notifications .account-card-heading svg{color:var(--gold)}
+
+.account-bookings-view h1,.account-editor-view h1,.account-placeholder-view h1{
+  margin:0;color:var(--ink);font-size:clamp(25px,2.3vw,34px);letter-spacing:-.035em}
+.account-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+.account-text-link{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
+  color:var(--ink);font-size:12px;text-decoration:underline;text-underline-offset:4px}
+.account-filters{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 20px}
+.account-filters a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;
+  padding:9px 16px;border:1px solid var(--border);border-radius:7px;
+  font-size:13px;text-decoration:none;color:var(--ink)}
+.account-filters a:hover{border-color:var(--gold)}
+.account-filters a.is-active{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.account-booking-list{list-style:none;display:grid;gap:10px;margin:0;padding:0}
+.account-booking{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--border);border-radius:8px}
+.account-booking__date{display:grid;gap:5px;min-width:0;flex:0 1 180px;font-size:12px}
+.account-booking__date strong{color:var(--gold)}
+.account-booking__info{display:grid;gap:5px;min-width:0;flex:1;font-size:12px}
+.account-booking__info span{font-size:11px;color:var(--muted)}
+.account-booking__actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.account-booking__actions .account-cancel button{padding:8px;border:1px solid var(--border);
+  border-radius:6px;background:transparent;color:var(--ink);font-size:11px;cursor:pointer}
+.account-empty{display:grid;justify-items:center;gap:12px;padding:40px 12px;
+  border:1px dashed var(--border);border-radius:8px;text-align:center;color:var(--muted)}
+.account-empty p{margin:0;font-size:13px}
+.account-empty a{color:var(--ink);font-size:13px}
+.account-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:20px;font-size:12px;color:var(--muted)}
+.account-pagination a{color:var(--ink)}
+.account-pagination [aria-disabled="true"]{opacity:.5}
+.account-placeholder-view{display:grid;justify-items:start;gap:15px;align-content:start;min-height:330px}
+.account-placeholder-view>svg{color:var(--gold)}
+.account-placeholder-view>p{font-size:14px;line-height:1.6;color:var(--muted)}
+.account-placeholder-view>a{display:inline-flex;align-items:center;gap:5px;color:var(--ink);font-size:13px}
+.account-editor-view .account-identity{margin-top:12px}
+.account-profile-fields{flex:1;min-width:0}
+.account-profile-name{display:flex;align-items:center;gap:10px;min-width:0}
+.account-profile-name h2{margin:0;font-size:21px;overflow-wrap:anywhere}
+.account-profile-pencil,.account-profile-edit__controls button{display:grid;place-items:center;
+  flex:0 0 38px;width:38px;height:38px;border:1px solid var(--border);
+  border-radius:7px;background:transparent;color:var(--ink);cursor:pointer}
+.account-profile-pencil:hover,.account-profile-edit__controls button:hover{border-color:var(--gold)}
+.account-profile-email,.account-profile-phone{margin:8px 0;font-size:13px;overflow-wrap:anywhere}
+.account-profile-phone,.account-subtle{color:var(--muted);font-size:12px;line-height:1.5}
+.account-profile-edit{display:grid;gap:8px;max-width:480px}
+.account-profile-edit label{font-size:12px;color:var(--muted)}
+.account-profile-edit>input{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--border);
+  border-radius:6px;background:var(--paper);color:var(--ink);font:inherit}
+.account-profile-edit__controls{display:flex;gap:8px}
+.account-profile-edit__controls button:disabled{opacity:.6;cursor:wait}
+.account-profile-error{color:#b75441;font-size:12px}
+.account-privacy-note{display:flex;align-items:center;gap:7px;margin:0 4px;color:var(--muted);font-size:11px}
+.account-page a:focus-visible,.account-page button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){
+ .account-sidebar__item,.account-primary-action{transition:none}
+}
+@media(max-width:1350px){
+ .account-shell{grid-template-columns:212px minmax(0,1fr) 294px;gap:15px;padding-inline:18px}
+ .account-next{padding:17px;gap:14px}
+ .account-next__portrait{flex-basis:30%}
+ .account-next__facts p{font-size:11px}
+ .account-panel--profile{padding:16px 12px}
+ .account-avatar-editor{flex-basis:75px;width:75px}
+ .account-identity__avatar{width:70px;height:70px}
+ .account-summary-details h3{font-size:14px}
+ .account-activity-card{padding:15px}
+}
+@media(max-width:1199px){
+ .account-shell{grid-template-columns:210px minmax(0,1fr);max-width:1020px}
+ .account-aside{grid-column:2;grid-row:2;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .account-notifications{grid-column:1/-1}
+ .account-panel--profile{padding:20px}
+}
+@media(max-width:850px){
+ .account-shell{grid-template-columns:1fr}
+ .account-sidebar{position:static;min-height:0;padding:12px}
+ .account-sidebar__title{padding:4px 10px 12px}
+ .account-sidebar__nav{display:flex;flex-wrap:wrap;gap:4px}
+ .account-sidebar__item{width:auto;min-height:42px;padding:9px 12px}
+ .account-sidebar__booking{margin:12px 0 0}
+ .account-aside{grid-column:1;grid-row:auto}
+}
+@media(max-width:620px){
+ .account-page{padding-top:80px}
+ .account-shell{padding:12px 12px 48px;gap:14px}
+ .account-welcome{flex-direction:column;align-items:stretch;min-height:0;padding:10px 2px;gap:13px}
+ .account-primary-action{width:100%}
+ .account-next{min-height:0;flex-direction:column}
+ .account-next__portrait{flex:none;max-height:195px;width:100%}
+ .account-next__portrait img{height:195px;object-position:center 30%}
+ .account-next__actions{align-items:flex-start}
+ .account-activity-grid,.account-aside{grid-template-columns:1fr}
+ .account-notifications{grid-column:auto}
+ .account-activity-card{min-height:190px}
+ .account-identity{gap:12px}
+ .account-panel--profile{padding:19px}
+ .account-booking{align-items:flex-start;flex-wrap:wrap}
+ .account-booking__date{flex-basis:100%}
+ .account-booking__actions{justify-content:flex-start}
+ .account-pagination{flex-wrap:wrap}
+}
+
+/* Visit thumbnails and responsive account navigation. */
+.account-recent-list__thumb{display:grid;place-items:center;flex:0 0 43px;height:50px;
+  overflow:hidden;border-radius:6px;background:color-mix(in srgb,var(--gold) 20%,var(--paper));color:var(--ink)}
+.account-recent-list__thumb img{width:100%;height:100%;object-fit:cover}
+.account-recent-list__date{flex:0 0 51px;font-size:10px;line-height:1.45}
+.account-recent-list__text{overflow-wrap:anywhere}
+.account-recent-list__text strong{font-size:11px;line-height:1.45}
+.account-recent-list__text small{font-size:10px;line-height:1.5}
+.account-recent-list .account-status{font-size:10px;padding:6px}
+.account-sidebar__mobile-toggle{display:none}
+@media(max-width:620px){
+ .account-sidebar__mobile-toggle{display:flex;align-items:center;gap:9px;
+  min-height:44px;width:100%;padding:8px 12px;border:1px solid var(--border);
+  border-radius:7px;background:transparent;color:var(--ink);font:inherit;
+  font-size:13px;font-weight:650;text-align:start;cursor:pointer}
+ .account-sidebar__mobile-toggle svg:last-child{margin-inline-start:auto}
+ .account-sidebar__nav{display:none}
+ .account-sidebar__nav[data-expanded="true"]{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px}
+ .account-sidebar__item{min-width:0;width:100%;font-size:12px}
+ .account-sidebar__booking{margin:9px 0 0}
+}
+@media(max-width:420px){
+ .account-recent-list li{gap:6px}
+ .account-recent-list__thumb{flex-basis:38px}
+ .account-recent-list__date{flex-basis:46px}
+ .account-recent-list .account-status{padding:5px;font-size:9px}
+}
+
+/* Compact dashboard history filter; full history retains the larger controls. */
+.account-overview-filters{
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  padding:13px 0 5px;
+}
+.account-overview-filters a{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:36px;padding:7px 11px;
+  border:1px solid var(--border);border-radius:7px;
+  color:var(--ink);font-size:11px;text-decoration:none;
+  transition:border-color .2s ease,background-color .2s ease;
+}
+.account-overview-filters a:hover{border-color:var(--gold)}
+.account-overview-filters a.is-active{
+  background:var(--ink);border-color:var(--ink);color:var(--paper)
+}
+@media(max-width:420px){
+ .account-overview-filters{gap:5px}
+ .account-overview-filters a{min-height:34px;padding:7px 9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .account-overview-filters a{transition:none}
+}
+
+/* Final review: keep dashboard identity concise, reserve editing help for Profile. */
+.account-identity--summary .account-avatar-editor--compact {
+  flex: 0 0 86px;
+  width: 86px;
+}
+.account-identity--summary .account-avatar-editor--compact .account-identity__avatar {
+  width: 82px;
+  height: 82px;
+}
+.account-identity--summary .account-summary-details p {
+  margin: 7px 0;
+  line-height: 1.55;
+}
+.account-identity--summary .account-summary-details h3 {
+  line-height: 1.35;
+}
+/* Each visit is compact but legible: status gets its own row on narrow cards. */
+.account-recent-list li {
+  display: grid;
+  grid-template-columns: 43px minmax(54px, .48fr) minmax(0, 1.52fr);
+  column-gap: 9px;
+  row-gap: 6px;
+  align-items: center;
+}
+.account-recent-list__thumb {grid-row: 1 / 3;align-self:center}
+.account-recent-list__date {grid-column:2;grid-row:1 / 3;font-size:11px}
+.account-recent-list__text {grid-column:3;grid-row:1;min-width:0}
+.account-recent-list__text strong {font-size:12px}
+.account-recent-list__text small {font-size:11px}
+.account-recent-list .account-status {
+  grid-column:3;grid-row:2;justify-self:start;
+  white-space:normal;font-size:10px;
+}
+@media(max-width:420px) {
+  .account-recent-list li {column-gap:6px;grid-template-columns:38px 49px minmax(0,1fr)}
+  .account-recent-list__date {font-size:10px}
+  .account-identity--summary .account-avatar-editor--compact {flex-basis:76px;width:76px}
+  .account-identity--summary .account-avatar-editor--compact .account-identity__avatar {width:72px;height:72px}
+}
+
+/* Single page: anchors account for sticky site header. */
+.account-page { scroll-behavior: smooth; }
+.account-content > [id], .account-activity-grid [id] { scroll-margin-top: 132px; }
+.account-content { align-content: start; }
+.account-content > section.account-editor-view,
+.account-content > section.account-placeholder-view,
+.account-content > section.account-bookings-view { min-width: 0; }
+.account-content > section.account-placeholder-view { min-height: 200px; }
+.account-content > section.account-placeholder-view h2 { margin: 0; font-size: 23px; }
+.account-content > section.account-editor-view h2,
+.account-content > section.account-bookings-view h2 { margin: 0; font-size: clamp(25px,2.3vw,34px); }
+.account-sidebar__backdrop { display: none; }
+@media (max-width: 620px) {
+  .account-aside { display: none; }
+  .account-sidebar {
+    position: static;
+    z-index: 80;
+    border: 0;
+    padding: 0;
+    background: transparent;
+  }
+  .account-sidebar__title, .account-sidebar__booking { display: none; }
+  .account-sidebar__mobile-toggle {
+    position: relative;
+    z-index: 82;
+    display: flex;
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+  .account-sidebar__backdrop[data-open], .account-sidebar__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 79;
+    width: 100%;
+    border: 0;
+    background: rgba(0,0,0,.55);
+    cursor: pointer;
+  }
+  .account-sidebar__nav, .account-sidebar__nav[data-expanded="true"] {
+    display: flex;
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 81;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 4px;
+    width: min(82vw, 320px);
+    padding: 76px 17px 30px;
+    overflow-y: auto;
+    background: var(--surface);
+    border-inline-end: 1px solid var(--border);
+    box-shadow: none;
+    transform: translateX(-110%);
+    visibility: hidden;
+    transition: transform .28s ease, visibility .28s ease;
+  }
+  .account-sidebar__nav[data-expanded="true"] {
+    transform: translateX(0);
+    visibility: visible;
+  }
+  .account-sidebar__nav .account-sidebar__item {
+    display: flex;
+    width: 100%;
+    min-height: 47px;
+    font-size: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .account-page { scroll-behavior: auto; }
+  .account-sidebar__nav { transition: none; }
+}
+
+/* Native document scrolling is on the root, not the dashboard <main>. */
+html:has(.account-page) { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html:has(.account-page) { scroll-behavior: auto; }
+}
+
+/* Keep the mobile drawer toggle inside its header strip while the drawer is open.
+   Otherwise the document-positioned button can overlap the first anchor. */
+@media (max-width: 620px) {
+  .account-sidebar__mobile-toggle[aria-expanded="true"] {
+    position: fixed;
+    top: 13px;
+    left: 15px;
+    width: calc(min(82vw, 320px) - 30px);
+    z-index: 82;
+  }
+}

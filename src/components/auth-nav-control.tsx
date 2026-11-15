@@ -48,6 +48,17 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
   }, [])
 
   useEffect(() => {
+    function refreshAvatar(event: Event) {
+      const detail = (event as CustomEvent<{ url: string | null }>).detail
+      if (detail && (detail.url === null || typeof detail.url === 'string')) {
+        setUser(current => current ? { ...current, avatar: detail.url ? { url: detail.url } : null } : current)
+      }
+    }
+    window.addEventListener('account-avatar-updated', refreshAvatar)
+    return () => window.removeEventListener('account-avatar-updated', refreshAvatar)
+  }, [])
+
+  useEffect(() => {
     if (!open) return
     const onOutside = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as Node)) setOpen(false)
@@ -100,7 +111,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
   }
 
   const name = user.displayName || user.email || (uk ? 'Користувач' : 'Account')
-  const avatar = typeof user.avatar === 'object' ? user.avatar?.url : null
+  const avatar = user.avatar && typeof user.avatar === 'object' ? user.avatar.url : null
 
   return <div ref={root} className="auth-nav">
     <button
@@ -122,6 +133,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
     </button>
     <div className="auth-nav__panel" role="menu" aria-label={uk ? 'Меню профілю' : 'Account menu'} data-state={open ? 'open' : 'closed'} aria-hidden={!open} inert={!open}>
       <p className="auth-nav__identity">{name}</p>
+      <Link role="menuitem" href={`/${locale}/account`} onClick={() => setOpen(false)}>{uk ? 'Особистий кабінет' : 'My account'}</Link>
       <Link role="menuitem" href={`/${locale}/booking`} onClick={() => setOpen(false)}>{uk ? 'Новий запис' : 'Book a visit'}</Link>
       <Link role="menuitem" href={`/${locale}/catalog`} onClick={() => setOpen(false)}>{uk ? 'Каталог' : 'Catalog'}</Link>
       {user.role === 'admin' && <Link role="menuitem" href="/admin">{uk ? 'Адміністрування' : 'Admin'}</Link>}

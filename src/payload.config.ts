@@ -4,6 +4,7 @@ import { buildConfig } from 'payload'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Users } from './payload/collections/Users.ts'
+import { accountEmailAdapter } from './lib/account/account-email.ts'
 import { Media } from './payload/collections/Media.ts'
 import { Locations } from './payload/collections/Locations.ts'
 import { Services } from './payload/collections/Services.ts'
@@ -35,6 +36,7 @@ export default buildConfig({
     fallback: true,
   },
   secret: process.env.PAYLOAD_SECRET || '',
+  email: accountEmailAdapter,
   db: postgresAdapter({
     pool: { connectionString: process.env.DATABASE_URL || '' },
     // Never let a production process auto-alter the database schema.
