@@ -35,12 +35,9 @@ const statusLabels = {
   en: { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No show' },
 } as const
 
-type AccountView = 'overview' | 'bookings' | 'profile' | 'favorites' | 'settings'
-const views: AccountView[] = ['overview', 'bookings', 'profile', 'favorites', 'settings']
-
 export default async function AccountPage({ params, searchParams }: {
   params: Promise<{ locale: string }>
-  searchParams: Promise<{ view?: string; filter?: string; page?: string }>
+  searchParams: Promise<{ filter?: string; historyFilter?: string; page?: string }>
 }) {
   const { locale } = await params
   if (!isLocale(locale)) notFound()
@@ -52,20 +49,20 @@ export default async function AccountPage({ params, searchParams }: {
   if (user.role !== 'customer' && user.role !== 'admin') notFound()
 
   const query = await searchParams
-  const view: AccountView = views.includes(query.view as AccountView) ? query.view as AccountView : 'overview'
   const filter: BookingHistoryFilter = query.filter === 'upcoming' || query.filter === 'past' ? query.filter : 'all'
   const requestedPage = typeof query.page === 'string' && /^[1-9][0-9]{0,2}$/.test(query.page)
     ? Number(query.page) : 1
+  const historyFilter: BookingHistoryFilter = query.historyFilter === 'upcoming' || query.historyFilter === 'past' ? query.historyFilter : 'all'
   const actor = { id: Number(user.id), role: user.role }
-  const history = view === 'bookings' ? await getOwnBookingHistory(payload, actor, {
-    limit: 10, page: requestedPage, filter, ascending: filter === 'upcoming',
-  }) : null
+  const history = await getOwnBookingHistory(payload, actor, {
+    limit: 10, page: requestedPage, filter: historyFilter, ascending: historyFilter === 'upcoming',
+  })
   const pageNumber = Math.min(requestedPage, Math.max(1, history?.totalPages ?? 1))
   const page = history && pageNumber !== requestedPage
-    ? await getOwnBookingHistory(payload, actor, { limit: 10, page: pageNumber, filter, ascending: filter === 'upcoming' })
+    ? await getOwnBookingHistory(payload, actor, { limit: 10, page: pageNumber, filter: historyFilter, ascending: historyFilter === 'upcoming' })
     : history
   const accountUrl = (nextFilter: BookingHistoryFilter, nextPage = 1) =>
-    '/' + locale + '/account?view=bookings&filter=' + nextFilter + '&page=' + nextPage + '#appointments'
+    '/' + locale + '/account?filter=' + filter + '&historyFilter=' + nextFilter + '&page=' + nextPage + '#history'
 
   const displayName = typeof user.displayName === 'string' && user.displayName.trim()
     ? user.displayName.trim()
@@ -88,9 +85,9 @@ export default async function AccountPage({ params, searchParams }: {
   // The dashboard preview uses the same booking filters as the full history.
   // Keep the preview bounded to two records; the full view retains pagination.
   const previewFilter: BookingHistoryFilter = filter
-  const recent = view === 'overview' ? await getOwnBookingHistory(payload, actor, {
+  const recent = await getOwnBookingHistory(payload, actor, {
     filter: previewFilter, limit: 2, ascending: previewFilter === 'upcoming',
-  }) : null
+  })
   const recentDetails = await Promise.all((recent?.bookings ?? []).map(async booking => {
     const [person, visitServices] = await Promise.all([
       payload.findByID({ collection: 'barbers', id: booking.barberId, depth: 1, overrideAccess: true }),
@@ -122,11 +119,9 @@ export default async function AccountPage({ params, searchParams }: {
   const timeFormat = new Intl.DateTimeFormat(dateLocale, {
     hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv',
   })
-  const overviewLink = '/' + locale + '/account#overview'
-  const profileLink = '/' + locale + '/account?view=profile#profile-editor'
-  const bookingsLink = accountUrl('all')
-  const favoriteLink = '/' + locale + '/account?view=favorites#favorites'
-  const settingsLink = '/' + locale + '/account?view=settings#settings'
+  const overviewLink = '#' + 'overview'
+  const profileLink = '#profile-editor'
+  const bookingsLink = '#history'
 
   return (
     <main className="landing account-page">
@@ -134,14 +129,14 @@ export default async function AccountPage({ params, searchParams }: {
       <div className="account-shell">
         <aside className="account-sidebar" aria-label={uk ? 'Навігація кабінету' : 'Account navigation'}>
           <p className="account-sidebar__title">GENTLEMEN’S</p>
-          <AccountSidebarNavigation locale={locale} view={view} />
+          <AccountSidebarNavigation locale={locale} />
           <Link className="account-sidebar__booking" href={'/' + locale + '/booking'}>
             {uk ? 'Записатися' : 'Book a visit'} <ChevronRight size={16} />
           </Link>
         </aside>
 
         <div className="account-content">
-          {view === 'overview' ? <>
+          <>
             <header id="overview" className="account-welcome">
               <div>
                 <h1>{uk ? 'Вітаємо, ' : 'Welcome, '}{firstName}!</h1>
@@ -153,7 +148,7 @@ export default async function AccountPage({ params, searchParams }: {
                 <CalendarDays size={19} />{uk ? 'Новий запис' : 'New booking'}
               </Link>
             </header>
-            <section className="account-next" aria-labelledby="next-visit-heading">
+            <section id="bookings" className="account-next" aria-labelledby="next-visit-heading">
               {portrait && <div className="account-next__portrait"><Image src={portrait}
                 alt={uk ? 'Фото барбера' : 'Barber portrait'} width={320} height={380} unoptimized /></div>}
               <div className="account-next__body">
@@ -182,7 +177,7 @@ export default async function AccountPage({ params, searchParams }: {
               <section id="visits" className="account-panel account-activity-card" aria-labelledby="account-history-heading">
                 <div className="account-card-heading">
                   <h2 id="account-history-heading">{uk ? 'ІСТОРІЯ ЗАПИСІВ' : 'BOOKING HISTORY'}</h2>
-                  <Link href={accountUrl(previewFilter)}>{uk ? 'Усі записи' : 'All bookings'} <ChevronRight size={15}/></Link>
+                  <Link href="#history">{uk ? 'Усі записи' : 'All bookings'} <ChevronRight size={15}/></Link>
                 </div>
                 <nav className="account-overview-filters" aria-label={uk ? 'Фільтр записів' : 'Booking filter'}>
                   {(['all','upcoming','past'] as const).map(option =>
@@ -233,21 +228,21 @@ export default async function AccountPage({ params, searchParams }: {
                 </div>
               </section>
             </div>
-          </> : view === 'bookings' ? (
-            <section id="appointments" className="account-panel account-bookings-view" aria-labelledby="account-bookings-heading">
+          </>
+            <section id="history" className="account-panel account-bookings-view" aria-labelledby="account-bookings-heading">
               <div className="account-heading">
                 <div><p className="account-kicker">{uk ? 'ВАШІ ВІЗИТИ' : 'YOUR VISITS'}</p>
-                  <h1 id="account-bookings-heading">{uk ? 'Мої записи' : 'My bookings'}</h1></div>
+                  <h2 id="account-bookings-heading">{uk ? 'Мої записи' : 'My bookings'}</h1></div>
                 <Link href={'/' + locale + '/booking'} className="account-text-link">{uk ? 'Новий запис' : 'New booking'} <ChevronRight size={16}/></Link>
               </div>
               <nav className="account-filters" aria-label={uk ? 'Фільтр записів' : 'Booking filter'}>
                 {(['all','upcoming','past'] as const).map(option => <Link key={option} href={accountUrl(option)}
-                  aria-current={filter === option ? 'page' : undefined} className={filter === option ? 'is-active' : undefined}>
+                  aria-current={historyFilter === option ? 'page' : undefined} className={historyFilter === option ? 'is-active' : undefined}>
                   {option === 'all' ? (uk ? 'Усі' : 'All') : option === 'upcoming'
                     ? (uk ? 'Майбутні' : 'Upcoming') : (uk ? 'Минулі' : 'Past')}
                 </Link>)}
               </nav>
-              {page && page.bookings.length ? <ul className="account-booking-list">
+              {page.bookings.length ? <ul className="account-booking-list">
                 {page.bookings.map(booking => <li key={booking.id} className="account-booking">
                   <div className="account-booking__date"><CalendarDays size={19}/>
                     <time dateTime={booking.startsAt}>{dateFormat.format(new Date(booking.startsAt))}</time>
@@ -263,19 +258,18 @@ export default async function AccountPage({ params, searchParams }: {
               </ul> : <div className="account-empty"><CalendarDays size={30}/>
                 <p>{uk ? 'Записів за вибраним фільтром немає.' : 'No bookings match this filter.'}</p>
                 <Link href={'/' + locale + '/booking'}>{uk ? 'Обрати час' : 'Choose a time'}</Link></div>}
-              {page && page.totalPages > 1 && <nav className="account-pagination" aria-label={uk ? 'Сторінки історії' : 'Booking history pages'}>
-                {pageNumber > 1 ? <Link href={accountUrl(filter, pageNumber - 1)}>{uk ? '← Назад' : '← Previous'}</Link>
+              {page.totalPages > 1 && <nav className="account-pagination" aria-label={uk ? 'Сторінки історії' : 'Booking history pages'}>
+                {pageNumber > 1 ? <Link href={accountUrl(historyFilter, pageNumber - 1)}>{uk ? '← Назад' : '← Previous'}</Link>
                   : <span aria-disabled="true">{uk ? '← Назад' : '← Previous'}</span>}
                 <span>{uk ? 'Сторінка ' : 'Page '}{pageNumber}{uk ? ' із ' : ' of '}{page.totalPages}</span>
-                {page.hasNextPage ? <Link href={accountUrl(filter, pageNumber + 1)}>{uk ? 'Далі →' : 'Next →'}</Link>
+                {page.hasNextPage ? <Link href={accountUrl(historyFilter, pageNumber + 1)}>{uk ? 'Далі →' : 'Next →'}</Link>
                   : <span aria-disabled="true">{uk ? 'Далі →' : 'Next →'}</span>}
               </nav>}
             </section>
-          ) : view === 'profile' ? (
             <section id="profile-editor" className="account-panel account-editor-view">
               <div className="account-heading">
                 <div><p className="account-kicker">{uk ? 'ОСОБИСТІ ДАНІ' : 'PERSONAL DETAILS'}</p>
-                  <h1>{uk ? 'Редагувати профіль' : 'Edit profile'}</h1></div>
+                  <h2>{uk ? 'Редагувати профіль' : 'Edit profile'}</h2></div>
                 <Link className="account-text-link" href={overviewLink}>{uk ? 'До огляду' : 'Back to overview'} <ChevronRight size={16}/></Link>
               </div>
               <div className="account-identity">
@@ -284,24 +278,40 @@ export default async function AccountPage({ params, searchParams }: {
                   email={email} userId={Number(user.id)} locale={locale}/>
               </div>
             </section>
-          ) : (
-            <section id={view} className="account-panel account-placeholder-view">
-              {view === 'favorites' ? <Heart size={32}/> : <Settings2 size={32}/>}
-              <h1>{view === 'favorites' ? (uk ? 'Обране' : 'Favorites') : (uk ? 'Налаштування' : 'Settings')}</h1>
-              <p>{view === 'favorites'
-                ? (uk ? 'Збережені товари й послуги з’являться тут після запуску функції.' : 'Saved products and services will appear here when this feature launches.')
-                : (uk ? 'Мова та тема змінюються через перемикачі у верхній панелі. Інші параметри з’являться пізніше.' : 'Use the header controls for language and theme. More preferences are coming later.')}</p>
-              {view === 'settings' && <Link href={'/' + locale + '/auth/forgot-password'}>
-                {uk ? 'Відновлення пароля' : 'Password recovery'} <ChevronRight size={16}/></Link>}
+            <section id="favorites" className="account-panel account-placeholder-view">
+              <Heart size={32} aria-hidden="true"/>
+              <h2>{uk ? 'Обране' : 'Favorites'}</h2>
+              <p>{uk ? 'Збережені товари й послуги з’являться тут після запуску функції.' :
+                'Saved products and services will appear here when this feature launches.'}</p>
             </section>
-          )}
+            <section id="loyalty" className="account-panel account-placeholder-view account-section--loyalty">
+              <Gift size={32} aria-hidden="true"/>
+              <h2>{uk ? 'Програма лояльності' : 'Loyalty program'}</h2>
+              <p>{uk ? 'Ваші бали та рівень з’являться тут після запуску програми. Зараз бонуси не нараховуються.' :
+                'Your points and tier will appear here after launch. Points are not being awarded yet.'}</p>
+            </section>
+            <section id="settings" className="account-panel account-placeholder-view">
+              <Settings2 size={32} aria-hidden="true"/>
+              <h2>{uk ? 'Налаштування' : 'Settings'}</h2>
+              <p>{uk ? 'Мову та тему можна змінити у верхній панелі. Інші налаштування з’являться пізніше.' :
+                'You can change language and theme in the header. More settings are coming later.'}</p>
+              <Link href={'/' + locale + '/auth/forgot-password'}>
+                {uk ? 'Відновлення пароля' : 'Password recovery'} <ChevronRight size={16}/>
+              </Link>
+            </section>
+            <section id="notifications-content" className="account-panel account-placeholder-view">
+              <Bell size={32} aria-hidden="true"/>
+              <h2>{uk ? 'Сповіщення' : 'Notifications'}</h2>
+              <p>{uk ? 'Сповіщення про записи та бонуси будуть доступні після запуску модуля.' :
+                'Booking and loyalty notifications will be available after the module launches.'}</p>
+            </section>
           <p className="account-privacy-note"><ShieldCheck size={16}/>
             {uk ? 'Дані кабінету доступні лише у вашій авторизованій сесії.' :
               'Your account data is available only in your authenticated session.'}</p>
         </div>
 
         <aside className="account-aside" aria-label={uk ? 'Персональні віджети' : 'Personal widgets'}>
-          <section id="profile" className="account-panel account-panel--profile" aria-labelledby="profile-card-title">
+          <section className="account-panel account-panel--profile" aria-labelledby="profile-card-title">
             <div className="account-card-heading">
               <h2 id="profile-card-title">{uk ? 'МІЙ ПРОФІЛЬ' : 'MY PROFILE'}</h2>
               <Link href={profileLink}>{uk ? 'Редагувати' : 'Edit'} <ChevronRight size={15}/></Link>
@@ -315,7 +325,7 @@ export default async function AccountPage({ params, searchParams }: {
               </div>
             </div>
           </section>
-          <section id="loyalty" className="account-panel account-loyalty" aria-labelledby="loyalty-card-title">
+          <section className="account-panel account-loyalty" aria-labelledby="loyalty-card-title">
             <div className="account-card-heading"><h2 id="loyalty-card-title">
               {uk ? 'ПРОГРАМА ЛОЯЛЬНОСТІ' : 'LOYALTY PROGRAM'}</h2><Crown size={21}/></div>
             <div className="account-loyalty__pending"><Gift size={29}/>
