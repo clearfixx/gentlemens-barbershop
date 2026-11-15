@@ -209,15 +209,22 @@ async function run() {
         assert.equal(await page.locator('.account-aside').isVisible(), false,
           'Right-hand widgets should be hidden on phones')
       }
-      // Regression: a lower section can be visible below the 180px header
-      // offset when the document runs out of scroll room. The active menu
-      // entry must follow that section rather than the preceding one.
+      // Regression: some anchors cannot reach the sticky-header offset near
+      // the bottom of the document; the corresponding menu item still wins.
       for (const section of ['favorites', 'loyalty', 'settings', 'reviews', 'profile-editor', 'overview']) {
         if (viewport.width < 621) {
           await page.locator('.account-sidebar__mobile-toggle').click()
         }
         await page.locator('.account-sidebar__nav a[href="#' + section + '"]').click()
-        await page.waitForURL(new RegExp('#' + section + '
+        await page.waitForURL(url => url.hash === '#' + section)
+        await page.waitForFunction(id => {
+          const node = document.querySelector('.account-sidebar__nav a[href="#' + id + '"]')
+          return node?.getAttribute('aria-current') === 'location' && node.classList.contains('is-current')
+        }, section, { timeout: 5000 })
+        assert.equal(await page.locator('.account-sidebar__nav .is-current').count(), 1,
+          'Exactly one nav entry should be active at #' + section)
+      }
+      await page.locator('#history').scrollIntoViewIfNeeded()
       assert.equal(await page.locator('.account-filters a').count(), 3)
       const upcoming = page.locator('.account-filters').getByRole('link', {
         name: locale === 'uk' ? 'Майбутні' : 'Upcoming',
