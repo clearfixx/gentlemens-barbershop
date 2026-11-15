@@ -48,6 +48,17 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
   }, [])
 
   useEffect(() => {
+    function refreshAvatar(event: Event) {
+      const detail = (event as CustomEvent<{ url: string | null }>).detail
+      if (detail && (detail.url === null || typeof detail.url === 'string')) {
+        setUser(current => current ? { ...current, avatar: detail.url ? { url: detail.url } : null } : current)
+      }
+    }
+    window.addEventListener('account-avatar-updated', refreshAvatar)
+    return () => window.removeEventListener('account-avatar-updated', refreshAvatar)
+  }, [])
+
+  useEffect(() => {
     if (!open) return
     const onOutside = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as Node)) setOpen(false)

@@ -34,6 +34,7 @@ export function AccountAvatar({ initialUrl, locale }: { initialUrl: string | nul
       const body: { avatarUrl?: string | null } = await res.json()
       if (!body.avatarUrl) throw new Error('Missing avatar URL')
       setUrl(body.avatarUrl)
+      window.dispatchEvent(new CustomEvent('account-avatar-updated', { detail: { url: body.avatarUrl } }))
       router.refresh()
     } catch {
       setError(uk ? 'Не вдалося завантажити фото.' : 'Could not upload photo.')
@@ -48,6 +49,7 @@ export function AccountAvatar({ initialUrl, locale }: { initialUrl: string | nul
       if (res.status === 401 || res.status === 403) { router.replace(`/${locale}/auth`); return }
       if (!res.ok) throw new Error('Delete failed')
       setUrl(null)
+      window.dispatchEvent(new CustomEvent('account-avatar-updated', { detail: { url: null } }))
       router.refresh()
     } catch { setError(uk ? 'Не вдалося прибрати фото.' : 'Could not remove photo.') }
     finally { setBusy(false) }
