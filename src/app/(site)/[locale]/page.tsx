@@ -2,6 +2,7 @@ import './home-page.css'
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { Star } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getPayload } from 'payload'
 import { notFound } from 'next/navigation'
@@ -35,10 +36,13 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   if (!isLocale(locale)) notFound()
   const t = await loadPublicMessages(locale)
   const payload = await getPayload({ config })
-  const [services, barbers, locations] = await Promise.all([
+  const [services, barbers, locations, publishedReviews] = await Promise.all([
     payload.find({ collection: 'services', locale, depth: 0, limit: 8, sort: 'name', overrideAccess: false }),
     payload.find({ collection: 'barbers', locale, depth: 1, limit: 8, sort: 'name', overrideAccess: false }),
     payload.find({ collection: 'locations', locale, depth: 0, limit: 8, sort: 'name', overrideAccess: false }),
+    payload.find({ collection: 'reviews', depth: 1, limit: 6, sort: '-publishedAt', overrideAccess: false,
+      where: { status: { equals: 'published' } },
+    }),
   ])
 
   const uk = locale === 'uk'
@@ -57,6 +61,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     moreServices: 'Переглянути послуги',
     moreProducts: 'Усі товари',
     emptyReviews: 'Відгуки з’являться тут після публікації.',
+    verifiedVisit: 'Відгук після підтвердженого візиту',
+    ratingLabel: 'Оцінка',
     emptyProducts: 'Каталог товарів наразі наповнюється.',
     questionCopy: 'Зв’яжись із нами, і ми допоможемо обрати зручний час та послугу.',
     socialCopy: 'Слідкуй за новинами, акціями та життям барбершопу.',
@@ -81,6 +87,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     moreServices: 'Explore services',
     moreProducts: 'All products',
     emptyReviews: 'Customer reviews will appear once published.',
+    verifiedVisit: 'Verified appointment review',
+    ratingLabel: 'Rating',
     emptyProducts: 'The product catalog is being prepared.',
     questionCopy: 'Contact us and we will help you choose a service and time.',
     socialCopy: 'Follow our news, offers and barbershop life.',
@@ -135,14 +143,23 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     <section id="reviews" className="home-section home-section--muted" aria-labelledby="reviews-title">
       <div className="home-container">
         <h2 id="reviews-title" className="home-section__heading">{labels.reviews}</h2>
-        <div className="home-review-previews" aria-hidden="true">
-          {Array.from({ length: 3 }, (_, index) => <div className="home-review-preview" key={index}>
-            <span className="home-review-preview__avatar" />
-            <div><span className="home-review-preview__line" /><span className="home-review-preview__rating" /></div>
-            <span className="home-review-preview__body" /><span className="home-review-preview__body home-review-preview__body--short" />
-          </div>)}
-        </div>
-        <p className="home-section__note">{labels.emptyReviews}</p>
+        {publishedReviews.docs.length ? <div className="home-review-previews">
+          {publishedReviews.docs.map(review => <article className="home-review-preview home-review-preview--published" key={review.id}>
+            <div className="home-review-preview__top">
+              <span className="home-review-preview__verified">{labels.verifiedVisit}</span>
+              <span className="home-review-preview__stars" role="img" aria-label={`${labels.ratingLabel}: ${review.rating}/5`}>
+                {Array.from({ length: 5 }, (_, index) => <Star key={index} size={14}
+                  fill={index < review.rating ? 'currentColor' : 'none'} aria-hidden="true" />)}
+              </span>
+            </div>
+            <p className="home-review-preview__comment">{review.comment}</p>
+            {review.publishedAt && <time dateTime={review.publishedAt} className="home-review-preview__date">
+              {new Intl.DateTimeFormat(uk ? 'uk-UA' : 'en-GB', {
+                day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Kyiv',
+              }).format(new Date(review.publishedAt))}
+            </time>}
+          </article>)}
+        </div> : <p className="home-section__note">{labels.emptyReviews}</p>}
       </div>
     </section>
 
