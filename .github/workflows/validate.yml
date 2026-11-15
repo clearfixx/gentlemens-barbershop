@@ -914,6 +914,11 @@ jobs:
           npm install --silent --no-save --ignore-scripts --prefix /tmp/barbershop-playwright playwright@1.56.1
           timeout 120s node scripts/test-booking-wizard-browser.cjs
           timeout 120s node scripts/test-customer-account-browser.cjs
+          # Seed isolated customer bookings through trusted Local API only;
+          # then render a populated dashboard in Chrome with production writes disabled.
+          CI=true NODE_ENV=production timeout 60s \
+            node --experimental-strip-types scripts/ci-account-populated-fixture.ts
+          CI=true timeout 120s node scripts/test-customer-account-populated-browser.cjs
 
           # A customer must not be able to enumerate the administrator or other users.
           customer_list_status=$(curl --silent --show-error --output /tmp/barbershop-customer-list.json --write-out '%{http_code}' \
