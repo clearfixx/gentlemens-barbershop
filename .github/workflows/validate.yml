@@ -919,6 +919,7 @@ jobs:
           CI=true NODE_ENV=production timeout 60s \
             node --experimental-strip-types scripts/ci-account-populated-fixture.ts
           CI=true timeout 120s node scripts/test-customer-account-populated-browser.cjs
+          CI=true NODE_ENV=production timeout 60s node --experimental-strip-types scripts/ci-review-moderation.ts
 
           # A customer must not be able to enumerate the administrator or other users.
           customer_list_status=$(curl --silent --show-error --output /tmp/barbershop-customer-list.json --write-out '%{http_code}' \
