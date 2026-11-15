@@ -24,15 +24,19 @@ export function AccountSidebarNavigation({ locale }: { locale: Locale }) {
   ] as const
 
   useEffect(() => {
-    // Choose the last section crossing the header offset. Hash changes and
-    // browser Back/Forward are naturally reflected by the scroll position.
+    // Follow the section the visitor is reading, not only sections whose
+    // heading reaches the sticky-navbar offset. Near the bottom of the page
+    // the browser can clamp anchor scrolling, leaving the target heading much
+    // lower than 180px (e.g. Loyalty while Favorites stays highlighted).
+    // A viewport-relative reading line handles this and short sections.
     let frame = 0
     function sync() {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
+        const readingLine = Math.max(180, Math.min(window.innerHeight * 0.34, 360))
         const current = ids.reduce<SectionId>((last, id) => {
           const element = document.getElementById(id)
-          return element && element.getBoundingClientRect().top <= 180 ? id : last
+          return element && element.getBoundingClientRect().top <= readingLine ? id : last
         }, 'overview')
         setActive(current)
       })
