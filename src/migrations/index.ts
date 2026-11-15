@@ -17,6 +17,8 @@ import * as migration_20261114_130000_customer_phone from './20261114_130000_cus
 
 import * as migration_20261115_030000_customer_avatar from './20261115_030000_customer_avatar';
 
+import * as migration_20261115_110000_verified_reviews from './20261115_110000_verified_reviews';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -67,5 +69,10 @@ export const migrations = [
     up: migration_20261115_030000_customer_avatar.up,
     down: migration_20261115_030000_customer_avatar.down,
     name: '20261115_030000_customer_avatar',
+  },
+  {
+    up: migration_20261115_110000_verified_reviews.up,
+    down: migration_20261115_110000_verified_reviews.down,
+    name: '20261115_110000_verified_reviews',
   },
 ];

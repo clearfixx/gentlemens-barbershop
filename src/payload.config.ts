@@ -4,6 +4,7 @@ import { buildConfig } from 'payload'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Users } from './payload/collections/Users.ts'
+import { Reviews } from './payload/collections/Reviews.ts'
 import { accountEmailAdapter } from './lib/account/account-email.ts'
 import { Media } from './payload/collections/Media.ts'
 import { Locations } from './payload/collections/Locations.ts'
@@ -25,7 +26,7 @@ export default buildConfig({
     // Customer and barber accounts never enter the CMS administration UI.
     // First administrator must be provisioned by a trusted server-side bootstrap.
   },
-  collections: [Users, Media, Locations, Services, Barbers, Bookings, BookingEvents, BarberSchedules, BarberTimeOff, Translations],
+  collections: [Users, Media, Locations, Services, Barbers, Bookings, Reviews, BookingEvents, BarberSchedules, BarberTimeOff, Translations],
   editor: lexicalEditor(),
   localization: {
     locales: [
