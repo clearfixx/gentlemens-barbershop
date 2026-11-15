@@ -59,7 +59,7 @@ async function run() {
       await page.waitForURL('**/' + locale + '/account', { timeout: 20_000 })
       await page.locator('.account-identity').waitFor()
       assert.ok(await page.getByText(email, { exact: true }).isVisible(), 'Email must come from real account')
-      assert.equal(await page.locator('.account-profile-name h2').textContent(), 'Cabinet Test')
+      assert.equal(await page.locator('.account-summary-details h3').textContent(), 'Cabinet Test')
       const cookies = await context.cookies(origin)
       assert.ok(cookies.some(cookie => cookie.name === 'payload-token' && cookie.value),
         'Real login must set a Payload session cookie')
@@ -124,7 +124,15 @@ async function run() {
       await page.reload({ waitUntil: 'networkidle' })
       assert.ok(await page.locator('.account-avatar-editor__photo').isVisible(),
         'Camera button upload must survive reload')
-      assert.ok(await page.locator('.account-filters a').count() === 3)
+      assert.equal(await page.locator('.account-sidebar__nav > .account-sidebar__item').count(), 8,
+        'All eight approved sidebar entries must be present')
+      assert.equal(await page.locator('.account-aside > section').count(), 3,
+        'Profile, loyalty and notifications must be in the right column')
+      assert.equal(await page.locator('.account-activity-grid > section').count(), 2,
+        'History and reviews must be separate adjacent cards')
+      await page.locator('.account-card-heading').getByRole('link',
+        { name: locale === 'uk' ? 'Редагувати' : 'Edit' }).click()
+      await page.waitForURL('**/account?view=profile#profile-editor')
       const newName = 'Updated Cabinet ' + locale
       const newPhone = '+380 67 123 45 67'
       await page.locator('.account-profile-pencil').click()
@@ -141,11 +149,16 @@ async function run() {
       assert.equal(await page.locator('.account-profile-name h2').textContent(), newName)
       assert.ok(await page.getByText(newPhone, { exact: true }).isVisible(),
         'Profile phone must survive reload')
+      await page.locator('.account-sidebar__nav').getByRole('link', {
+        name: locale === 'uk' ? 'Мої записи' : 'My bookings',
+      }).click()
+      await page.waitForURL('**/account?view=bookings&filter=all&page=1#appointments')
+      assert.equal(await page.locator('.account-filters a').count(), 3)
       const upcoming = page.locator('.account-filters').getByRole('link', {
         name: locale === 'uk' ? 'Майбутні' : 'Upcoming',
       })
       await upcoming.click()
-      await page.waitForURL('**/account?filter=upcoming&page=1#appointments')
+      await page.waitForURL('**/account?view=bookings&filter=upcoming&page=1#appointments')
       assert.ok(await page.locator('.account-filters .is-active').isVisible())
       assert.equal(await page.locator('.account-booking-list li').count(), 0)
       await page.goto(origin + '/' + locale + '/auth/forgot-password', { waitUntil: 'networkidle' })
@@ -182,10 +195,33 @@ async function run() {
       const overflow = await page.evaluate(() =>
         document.documentElement.scrollWidth - document.documentElement.clientWidth)
       assert.ok(overflow <= 1, 'Account must not overflow viewport at ' + viewport.width + 'px')
-      await page.screenshot({
-        path: '/tmp/barbershop-browser-artifacts/customer-account-' + locale + '-' + viewport.width + '.png',
-        fullPage: true,
-      })
+      const viewports = locale === 'uk'
+        ? [1440, 1920, 1024]
+        : [375, 430]
+      for (const width of viewports) {
+        await page.setViewportSize({ width, height: width < 600 ? 812 : 900 })
+        await page.evaluate(() => document.fonts.ready)
+        const dimensions = await page.evaluate(() => ({
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          columns: getComputedStyle(document.querySelector('.account-shell')).gridTemplateColumns
+            .split(' ').length,
+        }))
+        assert.ok(dimensions.overflow <= 1, 'Account must not overflow at ' + width + 'px')
+        if (width >= 1280) {
+          assert.equal(dimensions.columns, 3, 'Reference desktop layout must use three columns')
+          const [sidebar, center, aside] = await Promise.all([
+            page.locator('.account-sidebar').boundingBox(),
+            page.locator('.account-content').boundingBox(),
+            page.locator('.account-aside').boundingBox(),
+          ])
+          assert.ok(sidebar && center && aside && sidebar.x < center.x && center.x < aside.x,
+            'Desktop sidebar, main and aside must be in the correct order')
+        }
+        await page.screenshot({
+          path: '/tmp/barbershop-browser-artifacts/customer-account-' + locale + '-' + width + '.png',
+          fullPage: true,
+        })
+      }
       const menu = page.locator('.auth-nav__avatar')
       await menu.waitFor()
       await menu.click()
@@ -198,7 +234,7 @@ async function run() {
       assert.ok(!logoutBody.user, 'Sign-out must clear the authenticated session')
       assert.deepEqual(exceptions, [], 'No React exceptions during account auth and editing')
       console.log('CUSTOMER CABINET BROWSER OK:', locale, viewport.width,
-        'login, profile edit, reload, history, recovery routes, logout, overflow')
+        'three-column dashboard, widgets, signup, avatar, profile, bookings, recovery, logout')
       await context.close()
     }
   } finally {
