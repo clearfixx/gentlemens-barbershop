@@ -58,7 +58,7 @@ async function run() {
       await page.locator('.customer-auth__submit').click()
       await page.waitForURL('**/' + locale + '/account', { timeout: 20_000 })
       await page.locator('.account-identity--summary').waitFor()
-      assert.ok(await page.getByText(email, { exact: true }).isVisible(), 'Email must come from real account')
+      assert.ok(await page.locator('.account-identity--summary').getByText(email, { exact: true }).isVisible(), 'Email must come from real account')
       assert.equal(await page.locator('.account-summary-details h3').textContent(), 'Cabinet Test')
       const cookies = await context.cookies(origin)
       assert.ok(cookies.some(cookie => cookie.name === 'payload-token' && cookie.value),
