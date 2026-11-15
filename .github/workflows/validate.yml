@@ -406,7 +406,7 @@ jobs:
           set -euo pipefail
           pnpm start > /tmp/barbershop-server.log 2>&1 &
           server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          trap 'status=$?; if [ "$status" -ne 0 ]; then echo "Production server log (last 100 lines):"; tail -100 /tmp/barbershop-server.log || true; fi; kill "$server_pid" 2>/dev/null || true' EXIT
           ready=0
           for attempt in {1..40}; do
             if curl --fail --silent --output /dev/null http://localhost:3000/; then

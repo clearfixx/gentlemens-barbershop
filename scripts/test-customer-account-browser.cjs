@@ -225,7 +225,7 @@ async function run() {
         }
         await page.screenshot({
           path: '/tmp/barbershop-browser-artifacts/customer-account-' + locale + '-' + width + '.png',
-          fullPage: true,
+          fullPage: width === 1440 || width === 375,
         })
       }
       const menu = page.locator('.auth-nav__avatar')
@@ -235,7 +235,19 @@ async function run() {
       await page.waitForURL('**/' + locale, { timeout: 20_000 })
       await page.goto(origin + '/' + locale + '/account', { waitUntil: 'domcontentloaded' })
       await page.waitForURL('**/' + locale + '/auth', { timeout: 20_000 })
-      const anonymousAfterLogout = await context.request.get(origin + '/api/users/me')
+      // A short-lived socket reset during test teardown is not an auth failure.
+      // Require an actual HTTP response; never treat a network error as success.
+      let anonymousAfterLogout
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          anonymousAfterLogout = await context.request.get(origin + '/api/users/me', { timeout: 10_000 })
+          break
+        } catch (error) {
+          if (attempt === 3) throw error
+          await new Promise(resolve => setTimeout(resolve, 250 * attempt))
+        }
+      }
+      assert.ok(anonymousAfterLogout, 'Logout request must return a response')
       const logoutBody = await anonymousAfterLogout.json()
       assert.ok(!logoutBody.user, 'Sign-out must clear the authenticated session')
       assert.deepEqual(exceptions, [], 'No React exceptions during account auth and editing')
