@@ -1,4 +1,4 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, Where } from 'payload'
 
 /** Booking-verified customer reviews: public published, private own, admin moderation. */
 export const Reviews: CollectionConfig = {
@@ -8,11 +8,14 @@ export const Reviews: CollectionConfig = {
     defaultColumns: ['rating', 'status', 'barber', 'booking', 'createdAt'],
   },
   access: {
-    read: ({ req }) => req.user?.role === 'admin'
-      ? true
-      : req.user?.role === 'customer'
-        ? { or: [{ status: { equals: 'published' } }, { customer: { equals: req.user.id } }] }
-        : { status: { equals: 'published' } },
+    read: ({ req }) => {
+      if (req.user?.role === 'admin') return true
+      const published: Where = { status: { equals: 'published' } }
+      if (req.user?.role === 'customer') {
+        return { or: [published, { customer: { equals: req.user.id } }] }
+      }
+      return published
+    },
     create: () => false, // Only trusted owner-verified account endpoint can create.
     update: ({ req }) => req.user?.role === 'admin',
     delete: () => false,
