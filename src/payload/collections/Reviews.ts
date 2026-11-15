@@ -37,9 +37,14 @@ export const Reviews: CollectionConfig = {
         if (data.status && !['pending', 'published', 'rejected'].includes(data.status)) {
           throw new RangeError('Invalid moderation status')
         }
-        if (data.status === 'published' && originalDoc?.status !== 'published') {
+        // Publication time is server-controlled, including when an admin uses the API.
+        // A status-neutral update must never rewrite the original publication time.
+        const nextStatus = data.status ?? originalDoc?.status
+        if (nextStatus === 'published' && originalDoc?.status !== 'published') {
           data.publishedAt = new Date().toISOString()
-        } else if (data.status && data.status !== 'published') {
+        } else if (nextStatus === 'published') {
+          data.publishedAt = originalDoc?.publishedAt ?? null
+        } else {
           data.publishedAt = null
         }
       }
