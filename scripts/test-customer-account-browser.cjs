@@ -135,7 +135,7 @@ async function run() {
         'All eight approved sidebar entries must be present')
       assert.equal(await page.locator('.account-aside > section').count(), 3,
         'Profile, loyalty and notifications must be in the right column')
-      assert.equal(await page.locator('.account-content > section[id]').count(), 6,
+      assert.equal(await page.locator('.account-content > section[id]').count(), 7,
         'Account main content must contain full history, profile, favorites, loyalty, settings and notifications')
       for (const anchor of ['overview', 'bookings', 'reviews', 'history', 'profile-editor',
         'favorites', 'loyalty', 'settings']) {
@@ -161,7 +161,7 @@ async function run() {
         locale === 'uk' ? /Минулі/ : /Past/)
       await page.locator('.account-panel--profile .account-card-heading').getByRole('link',
         { name: locale === 'uk' ? 'Редагувати' : 'Edit' }).click()
-      await page.waitForURL('**/account#profile-editor')
+      await page.waitForURL(/\/account(?:\?.*)?#profile-editor$/)
       const newName = 'Updated Cabinet ' + locale
       const newPhone = '+380 67 123 45 67'
       await page.locator('.account-profile-pencil').click()
@@ -187,7 +187,7 @@ async function run() {
       await page.locator('.account-sidebar__nav').getByRole('link', {
         name: locale === 'uk' ? 'Мої записи' : 'My bookings',
       }).click()
-      await page.waitForURL('**/account#bookings')
+      await page.waitForURL(/\/account(?:\?.*)?#bookings$/)
       assert.ok(await page.locator('#bookings').isVisible(),
         'Booking anchor should lead to the next visit card')
       if (viewport.width < 621) {
