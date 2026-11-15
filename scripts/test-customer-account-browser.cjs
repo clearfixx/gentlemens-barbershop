@@ -95,6 +95,7 @@ async function run() {
       const avatarResponse = await page.request.get(origin + uploadedPhoto.body.avatarUrl)
       assert.equal(avatarResponse.status(), 200, 'Uploaded image must be publicly renderable')
       await avatar.getByRole('button', { name: locale === 'uk' ? 'Прибрати' : 'Remove' }).click()
+      await page.locator('.account-avatar-editor__photo').waitFor({ state: 'detached' })
       await page.reload({ waitUntil: 'networkidle' })
       assert.equal(await page.locator('.account-avatar-editor__photo').count(), 0,
         'Removed avatar should not reappear after reload')
