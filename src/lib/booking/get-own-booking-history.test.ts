@@ -58,6 +58,7 @@ test('filters upcoming and past bookings with a fixed injected clock', async () 
   await getOwnBookingHistory(payload, { id: 7, role: 'customer' }, { ...options, filter: 'past' })
   assert.deepEqual(queries[0].where, { and: [
     { customer: { equals: 7 } },
+    { status: { in: ['pending', 'confirmed'] } },
     { startsAt: { greater_than_equal: '2036-01-01T12:00:00.000Z' } },
   ] })
   assert.deepEqual(queries[1].where, { and: [
