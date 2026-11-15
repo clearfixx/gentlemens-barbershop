@@ -2,8 +2,10 @@
 export type NewReviewInput = { bookingId: number; rating: number; comment: string }
 
 export class ReviewAccessError extends Error {
-  constructor(message: string, readonly status: number) {
+  readonly status: number
+  constructor(message: string, status: number) {
     super(message)
+    this.status = status
     this.name = 'ReviewAccessError'
   }
 }
