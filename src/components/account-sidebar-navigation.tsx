@@ -33,7 +33,7 @@ export function AccountSidebarNavigation({ locale, view }: { locale: Locale; vie
     <nav id="account-navigation" className="account-sidebar__nav" data-expanded={open}>
       {links.map(link => {
         const Icon = link.icon
-        const current = link.view === view && link.view !== ''
+        const current = link.view === view
         return <Link key={link.href} href={link.href}
           onClick={() => setOpen(false)}
           aria-current={current ? 'page' : undefined}
