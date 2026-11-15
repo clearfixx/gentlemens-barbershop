@@ -57,14 +57,14 @@ async function run() {
       assert.equal(await page.locator('#customer-password').getAttribute('type'), 'password')
       await page.locator('.customer-auth__submit').click()
       await page.waitForURL('**/' + locale + '/account', { timeout: 20_000 })
-      await page.locator('.account-identity').waitFor()
+      await page.locator('.account-identity--summary').waitFor()
       assert.ok(await page.getByText(email, { exact: true }).isVisible(), 'Email must come from real account')
       assert.equal(await page.locator('.account-summary-details h3').textContent(), 'Cabinet Test')
       const cookies = await context.cookies(origin)
       assert.ok(cookies.some(cookie => cookie.name === 'payload-token' && cookie.value),
         'Real login must set a Payload session cookie')
       assert.ok(await page.locator('.account-next').isVisible())
-      const avatar = page.locator('.account-avatar-editor')
+      const avatar = page.locator('.account-identity--summary .account-avatar-editor')
       assert.ok(await avatar.getByRole('button', { name: locale === 'uk' ? 'Змінити аватар' : 'Change avatar' }).isVisible())
       const invalidPhoto = await page.evaluate(async () => {
         const data = new FormData()
@@ -90,7 +90,7 @@ async function run() {
       assert.equal(uploadedPhoto.status, 200, 'Valid account avatar upload must succeed')
       assert.ok(uploadedPhoto.body.avatarUrl, 'Uploaded avatar must have a URL')
       await page.reload({ waitUntil: 'networkidle' })
-      assert.ok(await page.locator('.account-avatar-editor__photo').isVisible(),
+      assert.ok(await avatar.locator('.account-avatar-editor__photo').isVisible(),
         'Stored avatar should render after reload')
       const avatarResponse = await page.request.get(origin + uploadedPhoto.body.avatarUrl)
       assert.equal(avatarResponse.status(), 200, 'Uploaded image must be publicly renderable')
@@ -118,18 +118,18 @@ async function run() {
         return canvas.toDataURL('image/png').split(',')[1]
       })
       const chosen = page.waitForEvent('filechooser')
-      await page.locator('.account-avatar-editor__camera').click()
+      await avatar.locator('.account-avatar-editor__camera').click()
       const chooser = await chosen
       await chooser.setFiles({
         name: 'avatar.png', mimeType: 'image/png', buffer: Buffer.from(realImageBase64, 'base64'),
       })
-      await page.locator('.account-avatar-editor__photo').waitFor()
+      await avatar.locator('.account-avatar-editor__photo').waitFor()
       await page.waitForFunction(() => {
         const src = document.querySelector('.auth-nav__avatar-image')?.getAttribute('src') ?? ''
         return src.includes('avatar-') && !src.includes('no-avatar')
       })
       await page.reload({ waitUntil: 'networkidle' })
-      assert.ok(await page.locator('.account-avatar-editor__photo').isVisible(),
+      assert.ok(await avatar.locator('.account-avatar-editor__photo').isVisible(),
         'Camera button upload must survive reload')
       assert.equal(await page.locator('.account-sidebar__nav > .account-sidebar__item').count(), 8,
         'All eight approved sidebar entries must be present')
