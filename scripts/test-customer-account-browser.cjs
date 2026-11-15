@@ -144,10 +144,10 @@ async function run() {
         'Invalid profile edits must remain in edit mode')
       await page.locator('#account-phone').fill(newPhone)
       await page.locator('.account-profile-edit button[type="submit"]').click()
-      await page.getByRole('heading', { name: newName, exact: true }).waitFor()
+      await page.locator('.account-profile-name h2').filter({ hasText: newName }).waitFor()
       await page.reload({ waitUntil: 'networkidle' })
       assert.equal(await page.locator('.account-profile-name h2').textContent(), newName)
-      assert.ok(await page.getByText(newPhone, { exact: true }).isVisible(),
+      assert.ok(await page.locator('.account-profile-fields').getByText(newPhone, { exact: true }).isVisible(),
         'Profile phone must survive reload')
       await page.locator('.account-sidebar__nav').getByRole('link', {
         name: locale === 'uk' ? 'Мої записи' : 'My bookings',
