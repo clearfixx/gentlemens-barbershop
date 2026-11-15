@@ -232,7 +232,7 @@ export default async function AccountPage({ params, searchParams }: {
             <section id="history" className="account-panel account-bookings-view" aria-labelledby="account-bookings-heading">
               <div className="account-heading">
                 <div><p className="account-kicker">{uk ? 'ВАШІ ВІЗИТИ' : 'YOUR VISITS'}</p>
-                  <h2 id="account-bookings-heading">{uk ? 'Мої записи' : 'My bookings'}</h1></div>
+                  <h2 id="account-bookings-heading">{uk ? 'Мої записи' : 'My bookings'}</h2></div>
                 <Link href={'/' + locale + '/booking'} className="account-text-link">{uk ? 'Новий запис' : 'New booking'} <ChevronRight size={16}/></Link>
               </div>
               <nav className="account-filters" aria-label={uk ? 'Фільтр записів' : 'Booking filter'}>
