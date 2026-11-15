@@ -98,7 +98,7 @@ async function run() {
       // management remains in the full profile editor.
       assert.equal(await avatar.getByRole('button', { name: locale === 'uk' ? 'Прибрати' : 'Remove' }).count(), 0,
         'Compact profile must not expose destructive controls')
-      await page.goto(origin + '/' + locale + '/account?view=profile', { waitUntil: 'networkidle' })
+      await page.goto(origin + '/' + locale + '/account#profile-editor', { waitUntil: 'networkidle' })
       const fullAvatar = page.locator('.account-editor-view .account-avatar-editor')
       await fullAvatar.getByRole('button', { name: locale === 'uk' ? 'Прибрати' : 'Remove' }).click()
       await fullAvatar.locator('.account-avatar-editor__photo').waitFor({ state: 'detached' })
@@ -135,6 +135,13 @@ async function run() {
         'All eight approved sidebar entries must be present')
       assert.equal(await page.locator('.account-aside > section').count(), 3,
         'Profile, loyalty and notifications must be in the right column')
+      assert.equal(await page.locator('.account-content > section[id]').count(), 6,
+        'Account main content must contain full history, profile, favorites, loyalty, settings and notifications')
+      for (const anchor of ['overview', 'bookings', 'reviews', 'history', 'profile-editor',
+        'favorites', 'loyalty', 'settings']) {
+        assert.equal(await page.locator('#' + anchor).count(), 1,
+          'Account anchor must exist: ' + anchor)
+      }
       assert.equal(await page.locator('.account-activity-grid > section').count(), 2,
         'History and reviews must be separate adjacent cards')
       const quickFilters = page.locator('.account-overview-filters')
@@ -152,9 +159,9 @@ async function run() {
       await page.waitForURL('**/account?filter=past#visits')
       assert.match(await quickFilters.locator('.is-active').innerText(),
         locale === 'uk' ? /Минулі/ : /Past/)
-      await page.locator('.account-card-heading').getByRole('link',
+      await page.locator('.account-panel--profile .account-card-heading').getByRole('link',
         { name: locale === 'uk' ? 'Редагувати' : 'Edit' }).click()
-      await page.waitForURL('**/account?view=profile#profile-editor')
+      await page.waitForURL('**/account#profile-editor')
       const newName = 'Updated Cabinet ' + locale
       const newPhone = '+380 67 123 45 67'
       await page.locator('.account-profile-pencil').click()
@@ -180,13 +187,22 @@ async function run() {
       await page.locator('.account-sidebar__nav').getByRole('link', {
         name: locale === 'uk' ? 'Мої записи' : 'My bookings',
       }).click()
-      await page.waitForURL('**/account?view=bookings&filter=all&page=1#appointments')
+      await page.waitForURL('**/account#bookings')
+      assert.ok(await page.locator('#bookings').isVisible(),
+        'Booking anchor should lead to the next visit card')
+      if (viewport.width < 621) {
+        assert.equal(await page.locator('.account-sidebar__mobile-toggle').getAttribute('aria-expanded'), 'false',
+          'Mobile drawer should close after selecting a section')
+        assert.equal(await page.locator('.account-aside').isVisible(), false,
+          'Right-hand widgets should be hidden on phones')
+      }
+      await page.locator('#history').scrollIntoViewIfNeeded()
       assert.equal(await page.locator('.account-filters a').count(), 3)
       const upcoming = page.locator('.account-filters').getByRole('link', {
         name: locale === 'uk' ? 'Майбутні' : 'Upcoming',
       })
       await upcoming.click()
-      await page.waitForURL('**/account?view=bookings&filter=upcoming&page=1#appointments')
+      await page.waitForURL('**/account?filter=all&historyFilter=upcoming&page=1#history')
       assert.ok(await page.locator('.account-filters .is-active').isVisible())
       assert.equal(await page.locator('.account-booking-list li').count(), 0)
       await page.goto(origin + '/' + locale + '/auth/forgot-password', { waitUntil: 'networkidle' })

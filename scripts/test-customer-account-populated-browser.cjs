@@ -71,11 +71,15 @@ async function run() {
 
       // Continue from selected preview filter into the complete list.
       await page.locator('#visits .account-card-heading a').click()
-      await page.waitForURL('**/account?view=bookings&filter=past&page=1#appointments')
+      await page.waitForURL('**/account#history')
+      assert.equal(await page.locator('.account-booking-list li').count(), 5)
+      await page.locator('.account-filters').getByRole('link',
+        { name: locale === 'uk' ? 'Минулі' : 'Past' }).click()
+      await page.waitForURL('**/account?filter=all&historyFilter=past&page=1#history')
       assert.equal(await page.locator('.account-booking-list li').count(), 2)
       await page.locator('.account-filters').getByRole('link',
         { name: locale === 'uk' ? 'Усі' : 'All', exact: true }).click()
-      await page.waitForURL('**/account?view=bookings&filter=all&page=1#appointments')
+      await page.waitForURL('**/account?filter=all&historyFilter=all&page=1#history')
       assert.equal(await page.locator('.account-booking-list li').count(), 5,
         'Only five owner bookings; foreign account must be excluded')
       assert.ok(!(await page.locator('.account-booking-list').innerText()).includes(

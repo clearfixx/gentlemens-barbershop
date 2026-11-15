@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Bell, CalendarDays, Gift, Heart, LayoutDashboard, Menu, Settings2, Star, UserRound, X } from 'lucide-react'
+import { CalendarDays, Gift, Heart, LayoutDashboard, Menu, Settings2, Star, UserRound, X } from 'lucide-react'
 import type { Locale } from '@/i18n/config'
 import { AccountSidebarLogout } from '@/components/account-sidebar-logout'
 
-const ids = ['overview', 'bookings', 'profile-editor', 'reviews', 'favorites', 'loyalty', 'settings'] as const
+const ids = ['overview', 'bookings', 'reviews', 'profile-editor', 'favorites', 'loyalty', 'settings'] as const
 type SectionId = (typeof ids)[number]
 
 /** One-page anchor navigation, scroll spy, and a mobile off-canvas drawer. */
