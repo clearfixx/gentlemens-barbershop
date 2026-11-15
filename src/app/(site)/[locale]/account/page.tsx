@@ -85,8 +85,11 @@ export default async function AccountPage({ params, searchParams }: {
     filter: 'upcoming', activeOnly: true, ascending: true, limit: 1,
   })
   const nextBooking = upcoming.bookings[0]
+  // The dashboard preview uses the same booking filters as the full history.
+  // Keep the preview bounded to two records; the full view retains pagination.
+  const previewFilter: BookingHistoryFilter = filter
   const recent = view === 'overview' ? await getOwnBookingHistory(payload, actor, {
-    filter: 'past', completedOnly: true, limit: 2,
+    filter: previewFilter, limit: 2, ascending: previewFilter === 'upcoming',
   }) : null
   const recentDetails = await Promise.all((recent?.bookings ?? []).map(async booking => {
     const [person, visitServices] = await Promise.all([
@@ -176,11 +179,21 @@ export default async function AccountPage({ params, searchParams }: {
               </div>
             </section>
             <div className="account-activity-grid">
-              <section className="account-panel account-activity-card" aria-labelledby="account-history-heading">
+              <section id="visits" className="account-panel account-activity-card" aria-labelledby="account-history-heading">
                 <div className="account-card-heading">
                   <h2 id="account-history-heading">{uk ? 'ІСТОРІЯ ВІДВІДУВАНЬ' : 'VISIT HISTORY'}</h2>
-                  <Link href={bookingsLink}>{uk ? 'Усі записи' : 'All bookings'} <ChevronRight size={15}/></Link>
+                  <Link href={accountUrl(previewFilter)}>{uk ? 'Усі записи' : 'All bookings'} <ChevronRight size={15}/></Link>
                 </div>
+                <nav className="account-overview-filters" aria-label={uk ? 'Фільтр записів' : 'Booking filter'}>
+                  {(['all','upcoming','past'] as const).map(option =>
+                    <Link key={option} href={`/${locale}/account?filter=${option}#visits`}
+                      aria-current={previewFilter === option ? 'page' : undefined}
+                      className={previewFilter === option ? 'is-active' : undefined}>
+                      {option === 'all' ? (uk ? 'Усі' : 'All') : option === 'upcoming'
+                        ? (uk ? 'Майбутні' : 'Upcoming') : (uk ? 'Минулі' : 'Past')}
+                    </Link>
+                  )}
+                </nav>
                 {recentDetails.length ? (
                   <ul className="account-recent-list">
                     {recentDetails.map(booking => <li key={booking.id}>
@@ -196,11 +209,17 @@ export default async function AccountPage({ params, searchParams }: {
                         <strong>{booking.serviceNames || (uk ? 'Візит №' : 'Visit #') + booking.id}</strong>
                         <small>{uk ? 'Барбер: ' : 'Barber: '}{booking.barberName}</small>
                       </span>
-                      <span className="account-status account-status--completed">{statusLabels[locale].completed}</span>
+                      <span className={`account-status account-status--${booking.status}`}>
+                        {statusLabels[locale][booking.status]}
+                      </span>
                     </li>)}
                   </ul>
                 ) : <div className="account-card-empty">
-                  <CalendarDays size={25}/><p>{uk ? 'Завершених візитів поки немає.' : 'No completed visits yet.'}</p>
+                  <CalendarDays size={25}/><p>{
+                    previewFilter === 'upcoming' ? (uk ? 'Майбутніх записів поки немає.' : 'No upcoming bookings yet.') :
+                    previewFilter === 'past' ? (uk ? 'Минулих записів поки немає.' : 'No past bookings yet.') :
+                    (uk ? 'Записів поки немає.' : 'No bookings yet.')
+                  }</p>
                 </div>}
               </section>
               <section id="reviews" className="account-panel account-activity-card" aria-labelledby="account-reviews-heading">

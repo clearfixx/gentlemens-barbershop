@@ -130,6 +130,21 @@ async function run() {
         'Profile, loyalty and notifications must be in the right column')
       assert.equal(await page.locator('.account-activity-grid > section').count(), 2,
         'History and reviews must be separate adjacent cards')
+      const quickFilters = page.locator('.account-overview-filters')
+      assert.equal(await quickFilters.locator('a').count(), 3,
+        'Dashboard history needs all three quick filters')
+      await quickFilters.getByRole('link', { name: locale === 'uk' ? 'Майбутні' : 'Upcoming' }).click()
+      await page.waitForURL('**/account?filter=upcoming#visits')
+      assert.match(await quickFilters.locator('.is-active').innerText(),
+        locale === 'uk' ? /Майбутні/ : /Upcoming/)
+      await quickFilters.getByRole('link', { name: locale === 'uk' ? 'Усі' : 'All', exact: true }).click()
+      await page.waitForURL('**/account?filter=all#visits')
+      assert.match(await quickFilters.locator('.is-active').innerText(),
+        locale === 'uk' ? /Усі/ : /^All$/)
+      await quickFilters.getByRole('link', { name: locale === 'uk' ? 'Минулі' : 'Past' }).click()
+      await page.waitForURL('**/account?filter=past#visits')
+      assert.match(await quickFilters.locator('.is-active').innerText(),
+        locale === 'uk' ? /Минулі/ : /Past/)
       await page.locator('.account-card-heading').getByRole('link',
         { name: locale === 'uk' ? 'Редагувати' : 'Edit' }).click()
       await page.waitForURL('**/account?view=profile#profile-editor')

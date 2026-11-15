@@ -276,3 +276,27 @@
  .account-recent-list__date{flex-basis:46px}
  .account-recent-list .account-status{padding:5px;font-size:9px}
 }
+
+/* Compact dashboard history filter; full history retains the larger controls. */
+.account-overview-filters{
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  padding:13px 0 5px;
+}
+.account-overview-filters a{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:36px;padding:7px 11px;
+  border:1px solid var(--border);border-radius:7px;
+  color:var(--ink);font-size:11px;text-decoration:none;
+  transition:border-color .2s ease,background-color .2s ease;
+}
+.account-overview-filters a:hover{border-color:var(--gold)}
+.account-overview-filters a.is-active{
+  background:var(--ink);border-color:var(--ink);color:var(--paper)
+}
+@media(max-width:420px){
+ .account-overview-filters{gap:5px}
+ .account-overview-filters a{min-height:34px;padding:7px 9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .account-overview-filters a{transition:none}
+}
