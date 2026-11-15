@@ -94,11 +94,18 @@ async function run() {
         'Stored avatar should render after reload')
       const avatarResponse = await page.request.get(origin + uploadedPhoto.body.avatarUrl)
       assert.equal(avatarResponse.status(), 200, 'Uploaded image must be publicly renderable')
-      await avatar.getByRole('button', { name: locale === 'uk' ? 'Прибрати' : 'Remove' }).click()
-      await page.locator('.account-avatar-editor__photo').waitFor({ state: 'detached' })
+      // The dashboard profile is intentionally compact; destructive avatar
+      // management remains in the full profile editor.
+      assert.equal(await avatar.getByRole('button', { name: locale === 'uk' ? 'Прибрати' : 'Remove' }).count(), 0,
+        'Compact profile must not expose destructive controls')
+      await page.goto(origin + '/' + locale + '/account?view=profile', { waitUntil: 'networkidle' })
+      const fullAvatar = page.locator('.account-editor-view .account-avatar-editor')
+      await fullAvatar.getByRole('button', { name: locale === 'uk' ? 'Прибрати' : 'Remove' }).click()
+      await fullAvatar.locator('.account-avatar-editor__photo').waitFor({ state: 'detached' })
       await page.reload({ waitUntil: 'networkidle' })
-      assert.equal(await page.locator('.account-avatar-editor__photo').count(), 0,
-        'Removed avatar should not reappear after reload')
+      assert.equal(await fullAvatar.locator('.account-avatar-editor__photo').count(), 0,
+        'Removed avatar should not reappear in the editor after reload')
+      await page.goto(origin + '/' + locale + '/account', { waitUntil: 'networkidle' })
       // Exercise the camera control itself, not only a hand-built API request.
       const realImageBase64 = await page.evaluate(() => {
         const canvas = document.createElement('canvas')
