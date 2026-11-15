@@ -340,3 +340,80 @@
   .account-identity--summary .account-avatar-editor--compact {flex-basis:76px;width:76px}
   .account-identity--summary .account-avatar-editor--compact .account-identity__avatar {width:72px;height:72px}
 }
+
+/* Single page: anchors account for sticky site header. */
+.account-page { scroll-behavior: smooth; }
+.account-content > [id], .account-activity-grid [id] { scroll-margin-top: 132px; }
+.account-content { align-content: start; }
+.account-content > section.account-editor-view,
+.account-content > section.account-placeholder-view,
+.account-content > section.account-bookings-view { min-width: 0; }
+.account-content > section.account-placeholder-view { min-height: 200px; }
+.account-content > section.account-placeholder-view h2 { margin: 0; font-size: 23px; }
+.account-content > section.account-editor-view h2,
+.account-content > section.account-bookings-view h2 { margin: 0; font-size: clamp(25px,2.3vw,34px); }
+.account-sidebar__backdrop { display: none; }
+@media (max-width: 620px) {
+  .account-aside { display: none; }
+  .account-sidebar {
+    position: static;
+    z-index: 80;
+    border: 0;
+    padding: 0;
+    background: transparent;
+  }
+  .account-sidebar__title, .account-sidebar__booking { display: none; }
+  .account-sidebar__mobile-toggle {
+    position: relative;
+    z-index: 82;
+    display: flex;
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+  .account-sidebar__backdrop[data-open], .account-sidebar__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 79;
+    width: 100%;
+    border: 0;
+    background: rgba(0,0,0,.55);
+    cursor: pointer;
+  }
+  .account-sidebar__nav, .account-sidebar__nav[data-expanded="true"] {
+    display: flex;
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 81;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 4px;
+    width: min(82vw, 320px);
+    padding: 76px 17px 30px;
+    overflow-y: auto;
+    background: var(--surface);
+    border-inline-end: 1px solid var(--border);
+    box-shadow: none;
+    transform: translateX(-110%);
+    visibility: hidden;
+    transition: transform .28s ease, visibility .28s ease;
+  }
+  .account-sidebar__nav[data-expanded="true"] {
+    transform: translateX(0);
+    visibility: visible;
+  }
+  .account-sidebar__nav .account-sidebar__item {
+    display: flex;
+    width: 100%;
+    min-height: 47px;
+    font-size: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .account-page { scroll-behavior: auto; }
+  .account-sidebar__nav { transition: none; }
+}
