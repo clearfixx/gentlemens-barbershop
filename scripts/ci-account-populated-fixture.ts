@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { getPayload } from 'payload'
 import config from '../src/payload.config.ts'
 
@@ -42,6 +42,22 @@ const barber = await payload.create({
   collection: 'barbers', overrideAccess: true,
   data: { name: 'CI Barber Leon', slug: 'ci-leon-' + nonce, location: location.id,
     isActive: true, serviceOfferings: [{ service: service.id }] },
+})
+// Give the CI barber a real uploaded image to exercise Payload Media -> barber
+// portrait -> dashboard <Image> rendering, not just the text-only fallback.
+const image = readFileSync('public/images/hero/barbershop-interior.webp')
+const portrait = await payload.create({
+  collection: 'media',
+  overrideAccess: true,
+  data: { alt: 'CI barber photograph fixture' },
+  file: {
+    data: image, size: image.length,
+    name: 'ci-dashboard-portrait-' + nonce + '.webp', mimetype: 'image/webp',
+  },
+})
+await payload.update({
+  collection: 'barbers', id: barber.id, overrideAccess: true,
+  data: { portrait: portrait.id },
 })
 const now = Date.now()
 function day(offset: number): string {

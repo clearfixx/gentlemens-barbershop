@@ -300,3 +300,43 @@
 @media(prefers-reduced-motion:reduce){
  .account-overview-filters a{transition:none}
 }
+
+/* Final review: keep dashboard identity concise, reserve editing help for Profile. */
+.account-identity--summary .account-avatar-editor--compact {
+  flex: 0 0 86px;
+  width: 86px;
+}
+.account-identity--summary .account-avatar-editor--compact .account-identity__avatar {
+  width: 82px;
+  height: 82px;
+}
+.account-identity--summary .account-summary-details p {
+  margin: 7px 0;
+  line-height: 1.55;
+}
+.account-identity--summary .account-summary-details h3 {
+  line-height: 1.35;
+}
+/* Each visit is compact but legible: status gets its own row on narrow cards. */
+.account-recent-list li {
+  display: grid;
+  grid-template-columns: 43px minmax(54px, .48fr) minmax(0, 1.52fr);
+  column-gap: 9px;
+  row-gap: 6px;
+  align-items: center;
+}
+.account-recent-list__thumb {grid-row: 1 / 3;align-self:center}
+.account-recent-list__date {grid-column:2;grid-row:1 / 3;font-size:11px}
+.account-recent-list__text {grid-column:3;grid-row:1;min-width:0}
+.account-recent-list__text strong {font-size:12px}
+.account-recent-list__text small {font-size:11px}
+.account-recent-list .account-status {
+  grid-column:3;grid-row:2;justify-self:start;
+  white-space:normal;font-size:10px;
+}
+@media(max-width:420px) {
+  .account-recent-list li {column-gap:6px;grid-template-columns:38px 49px minmax(0,1fr)}
+  .account-recent-list__date {font-size:10px}
+  .account-identity--summary .account-avatar-editor--compact {flex-basis:76px;width:76px}
+  .account-identity--summary .account-avatar-editor--compact .account-identity__avatar {width:72px;height:72px}
+}

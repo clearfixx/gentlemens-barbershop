@@ -307,7 +307,7 @@ export default async function AccountPage({ params, searchParams }: {
               <Link href={profileLink}>{uk ? 'Редагувати' : 'Edit'} <ChevronRight size={15}/></Link>
             </div>
             <div className="account-identity account-identity--summary">
-              <AccountAvatar initialUrl={avatarUrl} locale={locale}/>
+              <AccountAvatar initialUrl={avatarUrl} locale={locale} compact />
               <div className="account-summary-details">
                 <h3>{displayName}</h3>
                 <p><Mail size={16} aria-hidden="true"/><span>{email}</span></p>

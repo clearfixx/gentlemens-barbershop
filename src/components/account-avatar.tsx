@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import type { Locale } from '@/i18n/config'
 import { AVATAR_MAX_BYTES } from '@/lib/account/avatar-image'
 
-export function AccountAvatar({ initialUrl, locale }: { initialUrl: string | null; locale: Locale }) {
+export function AccountAvatar({ initialUrl, locale, compact = false }: { initialUrl: string | null; locale: Locale; compact?: boolean }) {
   const uk = locale === 'uk'
   const router = useRouter()
   const picker = useRef<HTMLInputElement>(null)
@@ -55,7 +55,7 @@ export function AccountAvatar({ initialUrl, locale }: { initialUrl: string | nul
     finally { setBusy(false) }
   }
 
-  return <div className="account-avatar-editor">
+  return <div className={"account-avatar-editor" + (compact ? " account-avatar-editor--compact" : "")}>
     <div className="account-identity__avatar">
       {url ? <Image src={url} alt={uk ? 'Ваш аватар' : 'Your avatar'}
         width={104} height={104} unoptimized className="account-avatar-editor__photo" />
@@ -69,9 +69,9 @@ export function AccountAvatar({ initialUrl, locale }: { initialUrl: string | nul
     <input ref={picker} type="file" className="account-avatar-editor__input"
       accept="image/jpeg,image/png,image/webp" onChange={event => void upload(event)}
       aria-label={uk ? 'Виберіть фото профілю' : 'Choose profile picture'} />
-    <p className="account-avatar-editor__hint">{busy ? (uk ? 'Збереження…' : 'Saving…')
-      : (uk ? 'JPG, PNG, WebP · до 2 МБ' : 'JPG, PNG, WebP · up to 2 MB')}</p>
-    {url && <button type="button" className="account-avatar-editor__remove" disabled={busy}
+    {(!compact || busy) && <p className="account-avatar-editor__hint">{busy ? (uk ? 'Збереження…' : 'Saving…')
+      : (uk ? 'JPG, PNG, WebP · до 2 МБ' : 'JPG, PNG, WebP · up to 2 MB')}</p>}
+    {url && !compact && <button type="button" className="account-avatar-editor__remove" disabled={busy}
       onClick={() => void remove()}><Trash2 size={13} />{uk ? 'Прибрати' : 'Remove'}</button>}
     {error && <p className="account-avatar-editor__error" role="alert">{error}</p>}
   </div>

@@ -33,6 +33,12 @@ async function run() {
       assert.match(await next.innerText(), /CI Barber Leon/)
       assert.match(await next.innerText(), /CI Gentlemen Studio/)
       assert.match(await next.innerText(), /CI Classic Haircut/)
+      const portrait = next.locator('.account-next__portrait img')
+      assert.ok(await portrait.isVisible(), 'Populated visit must show a genuine stored portrait')
+      assert.ok(await portrait.evaluate(img => img.complete && img.naturalWidth > 0),
+        'Portrait URL must render image bytes, not just a placeholder')
+      assert.equal(await page.locator('.account-identity--summary .account-avatar-editor__hint').count(), 0,
+        'Profile summary must not display the upload instructions')
       assert.ok((await next.innerText()).includes(
         dateText(fixture.bookings.first.startsAt, locale)),
         'Next visit must be the earliest active booking')
