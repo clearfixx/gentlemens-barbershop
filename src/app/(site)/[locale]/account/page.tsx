@@ -6,8 +6,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import {
   Bell, CalendarDays, ChevronRight, CircleUserRound, Clock3, Crown,
-  Gift, Heart, LayoutDashboard, Mail, MapPin, Scissors, Settings2,
-  ShieldCheck, Star, UserRound, BookOpen, CheckCircle2,
+  Gift, Heart, Mail, MapPin, Scissors, Settings2, ShieldCheck, Star,
 } from 'lucide-react'
 
 import config from '@/payload.config'
@@ -17,7 +16,7 @@ import { getOwnBookingHistory, type BookingHistoryFilter } from '@/lib/booking/g
 import { AccountProfileName } from '@/components/account-profile-name'
 import { AccountAvatar } from '@/components/account-avatar'
 import { AccountBookingCancel } from '@/components/account-booking-cancel'
-import { AccountSidebarLogout } from '@/components/account-sidebar-logout'
+import { AccountSidebarNavigation } from '@/components/account-sidebar-navigation'
 import { bookingWritesEnabled } from '@/lib/booking/booking-write-guard'
 import './account.css'
 
@@ -89,6 +88,17 @@ export default async function AccountPage({ params, searchParams }: {
   const recent = view === 'overview' ? await getOwnBookingHistory(payload, actor, {
     filter: 'past', completedOnly: true, limit: 2,
   }) : null
+  const recentDetails = await Promise.all((recent?.bookings ?? []).map(async booking => {
+    const [person, visitServices] = await Promise.all([
+      payload.findByID({ collection: 'barbers', id: booking.barberId, depth: 1, overrideAccess: true }),
+      payload.find({ collection: 'services', where: { id: { in: booking.serviceIds } },
+        depth: 0, limit: 10, overrideAccess: true }),
+    ])
+    const portraitUrl = person.portrait && typeof person.portrait === 'object' &&
+      typeof person.portrait.url === 'string' ? person.portrait.url : null
+    return { ...booking, portraitUrl, barberName: person.name,
+      serviceNames: visitServices.docs.map(service => service.name).join(' + ') }
+  }))
 
   const [barber, location, services] = nextBooking
     ? await Promise.all([
@@ -121,21 +131,7 @@ export default async function AccountPage({ params, searchParams }: {
       <div className="account-shell">
         <aside className="account-sidebar" aria-label={uk ? 'Навігація кабінету' : 'Account navigation'}>
           <p className="account-sidebar__title">GENTLEMEN’S</p>
-          <nav className="account-sidebar__nav">
-            <Link href={overviewLink} className={'account-sidebar__item' + (view === 'overview' ? ' is-current' : '')}
-              aria-current={view === 'overview' ? 'page' : undefined}><LayoutDashboard size={19} />{uk ? 'Огляд' : 'Overview'}</Link>
-            <Link href={bookingsLink} className={'account-sidebar__item' + (view === 'bookings' ? ' is-current' : '')}
-              aria-current={view === 'bookings' ? 'page' : undefined}><CalendarDays size={19} />{uk ? 'Мої записи' : 'My bookings'}</Link>
-            <Link href={profileLink} className={'account-sidebar__item' + (view === 'profile' ? ' is-current' : '')}
-              aria-current={view === 'profile' ? 'page' : undefined}><UserRound size={19} />{uk ? 'Профіль' : 'Profile'}</Link>
-            <a href={'/' + locale + '/account#reviews'} className="account-sidebar__item"><Star size={19} />{uk ? 'Відгуки' : 'Reviews'}</a>
-            <Link href={favoriteLink} className={'account-sidebar__item' + (view === 'favorites' ? ' is-current' : '')}
-              aria-current={view === 'favorites' ? 'page' : undefined}><Heart size={19} />{uk ? 'Обране' : 'Favorites'}</Link>
-            <a href={'/' + locale + '/account#loyalty'} className="account-sidebar__item"><Gift size={19} />{uk ? 'Лояльність' : 'Loyalty'}</a>
-            <Link href={settingsLink} className={'account-sidebar__item' + (view === 'settings' ? ' is-current' : '')}
-              aria-current={view === 'settings' ? 'page' : undefined}><Settings2 size={19} />{uk ? 'Налаштування' : 'Settings'}</Link>
-            <AccountSidebarLogout locale={locale} />
-          </nav>
+          <AccountSidebarNavigation locale={locale} view={view} />
           <Link className="account-sidebar__booking" href={'/' + locale + '/booking'}>
             {uk ? 'Записатися' : 'Book a visit'} <ChevronRight size={16} />
           </Link>
@@ -185,13 +181,20 @@ export default async function AccountPage({ params, searchParams }: {
                   <h2 id="account-history-heading">{uk ? 'ІСТОРІЯ ВІДВІДУВАНЬ' : 'VISIT HISTORY'}</h2>
                   <Link href={bookingsLink}>{uk ? 'Усі записи' : 'All bookings'} <ChevronRight size={15}/></Link>
                 </div>
-                {recent?.bookings.length ? (
+                {recentDetails.length ? (
                   <ul className="account-recent-list">
-                    {recent.bookings.map(booking => <li key={booking.id}>
-                      <span className="account-recent-list__date">{shortDate.format(new Date(booking.startsAt))}</span>
+                    {recentDetails.map(booking => <li key={booking.id}>
+                      <div className="account-recent-list__thumb">
+                        {booking.portraitUrl
+                          ? <Image src={booking.portraitUrl} alt="" width={48} height={54} unoptimized />
+                          : <Scissors size={22} aria-hidden="true" />}
+                      </div>
+                      <time className="account-recent-list__date" dateTime={booking.startsAt}>
+                        {shortDate.format(new Date(booking.startsAt))}
+                      </time>
                       <span className="account-recent-list__text">
-                        <strong>{uk ? 'Візит №' : 'Visit #'}{booking.id}</strong>
-                        <small>{uk ? 'Послуг: ' : 'Services: '}{booking.serviceIds.length}</small>
+                        <strong>{booking.serviceNames || (uk ? 'Візит №' : 'Visit #') + booking.id}</strong>
+                        <small>{uk ? 'Барбер: ' : 'Barber: '}{booking.barberName}</small>
                       </span>
                       <span className="account-status account-status--completed">{statusLabels[locale].completed}</span>
                     </li>)}

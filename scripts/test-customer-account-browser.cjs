@@ -149,6 +149,12 @@ async function run() {
       assert.equal(await page.locator('.account-profile-name h2').textContent(), newName)
       assert.ok(await page.locator('.account-profile-fields').getByText(newPhone, { exact: true }).isVisible(),
         'Profile phone must survive reload')
+      if (viewport.width < 621) {
+        const toggle = page.locator('.account-sidebar__mobile-toggle')
+        assert.ok(await toggle.isVisible(), 'Mobile account navigation must be collapsible')
+        await toggle.click()
+        assert.equal(await toggle.getAttribute('aria-expanded'), 'true')
+      }
       await page.locator('.account-sidebar__nav').getByRole('link', {
         name: locale === 'uk' ? 'Мої записи' : 'My bookings',
       }).click()
