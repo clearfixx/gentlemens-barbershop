@@ -159,8 +159,16 @@ async function run() {
       await page.waitForURL('**/account?filter=past#visits')
       assert.match(await quickFilters.locator('.is-active').innerText(),
         locale === 'uk' ? /Минулі/ : /Past/)
-      await page.locator('.account-panel--profile .account-card-heading').getByRole('link',
-        { name: locale === 'uk' ? 'Редагувати' : 'Edit' }).click()
+      if (viewport.width < 621) {
+        assert.equal(await page.locator('.account-aside').isVisible(), false,
+          'Mobile should hide the desktop right column')
+        await page.locator('.account-sidebar__mobile-toggle').click()
+        await page.locator('.account-sidebar__nav').getByRole('link',
+          { name: locale === 'uk' ? 'Профіль' : 'Profile' }).click()
+      } else {
+        await page.locator('.account-panel--profile .account-card-heading').getByRole('link',
+          { name: locale === 'uk' ? 'Редагувати' : 'Edit' }).click()
+      }
       await page.waitForURL(/\/account(?:\?.*)?#profile-editor$/)
       const newName = 'Updated Cabinet ' + locale
       const newPhone = '+380 67 123 45 67'
