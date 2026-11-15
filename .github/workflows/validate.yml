@@ -1271,6 +1271,7 @@ jobs:
           mkdir -p /tmp/booking-migrations-outside-historical-rehearsal
           mv src/migrations/*booking*.ts src/migrations/*barber_account_binding.ts \
             src/migrations/*customer_phone.ts src/migrations/*customer_avatar.ts \
+            src/migrations/*verified_reviews.ts \
             /tmp/booking-migrations-outside-historical-rehearsal/
           # Rehearse the committed, previously normalized localization files unchanged.
           mkdir -p /tmp/incremental-migration
