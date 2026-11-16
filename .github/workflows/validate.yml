@@ -1267,13 +1267,15 @@ jobs:
         run: |
           set -euo pipefail
           # This job tests the historical localization upgrade, not later
-          # Booking Management schema additions. Keep those migrations out of
-          # this isolated rehearsal; the main checks job applies all of them.
-          # The customer profile migration is also post-localization.
+          # Booking Management and Admin Management schema additions are newer
+          # than the historical localization baseline. The main checks job
+          # validates them on a current versioned production-mode database.
+          # Customer profile migrations are also post-localization.
           mkdir -p /tmp/booking-migrations-outside-historical-rehearsal
           mv src/migrations/*booking*.ts src/migrations/*barber_account_binding.ts \
             src/migrations/*customer_phone.ts src/migrations/*customer_avatar.ts \
             src/migrations/*verified_reviews.ts \
+            src/migrations/*admin_management_foundation.ts \
             /tmp/booking-migrations-outside-historical-rehearsal/
           # Rehearse the committed, previously normalized localization files unchanged.
           mkdir -p /tmp/incremental-migration
