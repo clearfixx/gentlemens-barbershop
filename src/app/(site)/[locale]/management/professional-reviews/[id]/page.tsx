@@ -7,6 +7,7 @@ import config from '@/payload.config'
 import { isLocale } from '@/i18n/config'
 import { resolveLocationScope } from '@/lib/admin/location-access'
 import { loadProfessionalReviewDetail } from '@/lib/admin/professional-review-detail'
+import { ProfessionalRejectForm } from '@/components/admin/professional-reject-form'
 import '../../approvals/management.css'
 
 export const dynamic = 'force-dynamic'
@@ -100,6 +101,8 @@ export default async function ProfessionalReviewDetailPage({
           <h2>{uk ? 'Причина відхилення' : 'Rejection reason'}</h2>
           <p>{detail.rejectionReason}</p>
         </section>}
+        {scope.role === 'admin' && detail.status === 'pending' &&
+          <ProfessionalRejectForm id={detail.id} locale={locale}/>}
         <p className="management-booking-note">{uk
           ? 'Це попередній перегляд для адміністратора. Публікація та схвалення залишаються недоступними, доки не завершено транзакційний workflow.'
           : 'This is a staff review preview. Publication and approvals are disabled until the transactional workflow is complete.'}</p>
