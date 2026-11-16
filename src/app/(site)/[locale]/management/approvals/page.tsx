@@ -77,7 +77,8 @@ export default async function ApprovalsPage({ params, searchParams }: {
   const offeringOptions: TariffOfferingOption[] = barbers.docs.flatMap(barber => {
     const locationId = refId(barber.location)
     if (!locationId || (scope.role !== 'admin' && !scope.locationIds.includes(locationId))) return []
-    return (barber.serviceOfferings ?? []).flatMap(offering => {
+    const offerings = (barber.serviceOfferings ?? []) as Array<{ service: number | { id: number } }>
+    return offerings.flatMap(offering => {
       const serviceId = refId(offering.service)
       if (!serviceId || !serviceNames.has(serviceId)) return []
       return [{
