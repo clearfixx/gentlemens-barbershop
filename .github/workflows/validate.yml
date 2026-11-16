@@ -1294,7 +1294,6 @@ jobs:
             src/migrations/*customer_phone.ts src/migrations/*customer_avatar.ts \
             src/migrations/*verified_reviews.ts \
             src/migrations/*admin_management_foundation.ts \
-            src/migrations/*location_booking_audit_role.ts \
             /tmp/booking-migrations-outside-historical-rehearsal/
           # Rehearse the committed, previously normalized localization files unchanged.
           mkdir -p /tmp/incremental-migration
