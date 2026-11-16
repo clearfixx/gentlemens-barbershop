@@ -15,7 +15,7 @@ export type BookingAuditEvent = {
   action: Exclude<BookingStatus, 'pending'>
   previousStatus: BookingStatus
   actorId: number | null
-  actorRole: 'customer' | 'assigned_barber' | 'admin' | 'guest'
+  actorRole: 'customer' | 'assigned_barber' | 'admin' | 'location_admin' | 'guest'
   reason: string | null
   createdAt: string
 }
@@ -44,7 +44,7 @@ function eventOf(value: unknown, bookingId: number): BookingAuditEvent {
   assertBookingStatus(item.action)
   assertBookingStatus(item.previousStatus)
   if (item.action === 'pending' ||
-      (item.actorRole !== 'customer' && item.actorRole !== 'assigned_barber' && item.actorRole !== 'admin' && item.actorRole !== 'guest') ||
+      (item.actorRole !== 'customer' && item.actorRole !== 'assigned_barber' && item.actorRole !== 'admin' && item.actorRole !== 'location_admin' && item.actorRole !== 'guest') ||
       typeof item.createdAt !== 'string' || !Number.isFinite(Date.parse(item.createdAt)) ||
       (item.reason != null && typeof item.reason !== 'string')) {
     throw new Error('Invalid booking audit row')
