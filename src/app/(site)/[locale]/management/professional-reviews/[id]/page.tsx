@@ -99,6 +99,26 @@ export default async function ProfessionalReviewDetailPage({
               : `${detail.unsupportedChangeCount} other changes are hidden pending media and schema validation.`}
           </p>}
         </section>
+        {detail.portfolioAssessment && <section className="management-panel management-booking-results"
+          aria-labelledby="portfolio-review-assessment-heading">
+          <h2 id="portfolio-review-assessment-heading">{uk ? 'Перевірка портфоліо' : 'Portfolio review readiness'}</h2>
+          <p className="management-booking-note">{uk
+            ? 'Показано лише перевірку структури та наявність декларацій. Це не підтвердження авторських прав чи згоди клієнта.'
+            : 'Only structure and declarations are assessed. This does not verify copyright ownership or client consent.'}</p>
+          <div className="management-portfolio-assessment">
+            <p><strong>{detail.portfolioAssessment.itemCount}</strong> {uk ? 'робіт у заявці' : 'submitted items'}</p>
+            <p><strong>{detail.portfolioAssessment.evidence.rightsDeclarations}</strong> {uk ? 'декларацій прав' : 'rights declarations'}</p>
+            <p><strong>{detail.portfolioAssessment.evidence.clientConsentDeclarations}</strong> {uk ? 'декларацій згоди' : 'consent declarations'}</p>
+          </div>
+          <p className="management-review-warning">{detail.portfolioAssessment.structurallyValid
+            ? (uk ? 'Структура відповідає попередньому контракту. Незалежна перевірка медіа ще потрібна.'
+              : 'Structure matches the preliminary contract. Independent media verification is still required.')
+            : (uk ? 'У заявці відсутні потрібні декларації або є помилки структури.'
+              : 'The proposal is missing declarations or has structural issues.')}</p>
+          <p className="management-booking-note">{uk
+            ? 'Перегляд файлів, завантаження та схвалення портфоліо поки недоступні.'
+            : 'Media preview, uploads and portfolio approval remain disabled.'}</p>
+        </section>}
         {detail.status === 'rejected' && detail.rejectionReason && <section className="management-panel management-booking-results">
           <h2>{uk ? 'Причина відхилення' : 'Rejection reason'}</h2>
           <p>{detail.rejectionReason}</p>
