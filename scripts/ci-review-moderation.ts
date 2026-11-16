@@ -19,6 +19,11 @@ assert.equal(pending.docs.length, 1, 'Only one submitted review should exist')
 const review = pending.docs[0]
 assert.equal(review.rating, 5)
 assert.match(review.comment, /стрижка/)
+const hiddenPending = await payload.find({
+  collection: 'reviews', overrideAccess: false, depth: 0,
+  where: { id: { equals: review.id } }, limit: 1,
+})
+assert.equal(hiddenPending.docs.length, 0, 'Pending reviews must never be visible to anonymous readers')
 const published = await payload.update({
   collection: 'reviews', id: review.id, overrideAccess: true,
   data: { status: 'published' },
