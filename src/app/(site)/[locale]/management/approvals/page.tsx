@@ -9,6 +9,7 @@ import config from '@/payload.config'
 import { isLocale } from '@/i18n/config'
 import { resolveLocationScope } from '@/lib/admin/location-access'
 import { ApprovalDecisionActions } from '@/components/admin/approval-decision-actions'
+import { TariffProposalForm, type TariffOfferingOption } from '@/components/admin/tariff-proposal-form'
 import './management.css'
 
 export const dynamic = 'force-dynamic'
@@ -73,6 +74,18 @@ export default async function ApprovalsPage({ params, searchParams }: {
   const locationNames = new Map(locations.docs.map(item => [Number(item.id), item.name]))
   const serviceNames = new Map(services.docs.map(item => [Number(item.id), item.name]))
   const barberNames = new Map(barbers.docs.map(item => [Number(item.id), item.name]))
+  const offeringOptions: TariffOfferingOption[] = barbers.docs.flatMap(barber => {
+    const locationId = refId(barber.location)
+    if (!locationId || (scope.role !== 'admin' && !scope.locationIds.includes(locationId))) return []
+    return (barber.serviceOfferings ?? []).flatMap(offering => {
+      const serviceId = refId(offering.service)
+      if (!serviceId || !serviceNames.has(serviceId)) return []
+      return [{
+        locationId, barberId: Number(barber.id), serviceId,
+        label: `${barber.name} · ${serviceNames.get(serviceId)} · ${locationNames.get(locationId) ?? ''}`,
+      }]
+    })
+  })
   const labels = {
     pending: uk ? 'Очікують' : 'Pending',
     approved: uk ? 'Схвалені' : 'Approved',
@@ -119,6 +132,7 @@ export default async function ApprovalsPage({ params, searchParams }: {
             ? (uk ? 'Уся мережа' : 'All locations')
             : (uk ? `Закладів: ${scope.locationIds.length}` : `Locations: ${scope.locationIds.length}`)}</span>
         </div>
+        {scope.role === 'location_admin' && <TariffProposalForm locale={locale} offerings={offeringOptions}/>}
         <nav className="management-tabs" aria-label={uk ? 'Фільтр статусу' : 'Status filter'}>
           {allowedStatuses.map(status => <Link key={status}
             href={`/${locale}/management/approvals?status=${status}`}
