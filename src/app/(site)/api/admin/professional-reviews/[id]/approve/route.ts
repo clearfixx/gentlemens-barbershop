@@ -28,10 +28,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Invalid proposal identifier' },
         { status: 400, headers: noStore })
     }
-    // No JSON request body or editable revision/price/location parameters.
-    // Content-length is not trusted: consume a bounded body to reject payloads.
-    const body = await request.text()
-    if (body.length !== 0) {
+    // Reject any request stream before reading it. Browser action sends no body,
+    // so the client cannot inject proposed content or unbounded JSON.
+    if (request.body !== null) {
       return NextResponse.json({ error: 'Approval request body must be empty' },
         { status: 400, headers: noStore })
     }
