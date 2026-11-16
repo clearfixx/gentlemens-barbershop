@@ -21,6 +21,8 @@ import * as migration_20261115_110000_verified_reviews from './20261115_110000_v
 
 import * as migration_20261116_160000_admin_management_foundation from './20261116_160000_admin_management_foundation';
 
+import * as migration_20261116_180000_location_booking_audit_role from './20261116_180000_location_booking_audit_role';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -81,5 +83,10 @@ export const migrations = [
     up: migration_20261116_160000_admin_management_foundation.up,
     down: migration_20261116_160000_admin_management_foundation.down,
     name: '20261116_160000_admin_management_foundation',
+  },
+  {
+    up: migration_20261116_180000_location_booking_audit_role.up,
+    down: migration_20261116_180000_location_booking_audit_role.down,
+    name: '20261116_180000_location_booking_audit_role',
   },
 ];
