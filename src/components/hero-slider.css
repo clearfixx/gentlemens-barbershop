@@ -100,3 +100,54 @@
   .barber-hero__mouse-wheel,.barber-hero__down .barber-hero__mouse-arrow{animation:none}
   .barber-hero__pause,.barber-hero__down,.barber-hero__slide-button{transition:none}
 }
+
+/* Light Hero: retain interior depth and increase legibility on standard IPS displays. */
+:root:not([data-theme=dark]) .barber-hero{
+  background:#e8ddcd;
+  border-bottom-color:rgba(68,46,30,.27);
+}
+:root:not([data-theme=dark]) .barber-hero__wash{
+  background:linear-gradient(90deg,
+    #e8ddcd 0%,
+    rgba(232,221,205,.97) 17%,
+    rgba(232,221,205,.85) 32%,
+    rgba(232,221,205,.53) 48%,
+    rgba(232,221,205,.06) 70%,
+    transparent 100%);
+}
+:root:not([data-theme=dark]) .barber-hero__eyebrow{
+  color:#8a602b;
+}
+:root:not([data-theme=dark]) .barber-hero__headline,
+:root:not([data-theme=dark]) .barber-hero__description{
+  color:#281b14;
+}
+:root:not([data-theme=dark]) .barber-hero__slide-button{
+  color:#776554;
+}
+:root:not([data-theme=dark]) .barber-hero__slide-button--active,
+:root:not([data-theme=dark]) .barber-hero__slide-button:hover{
+  color:#2d2016;
+}
+:root:not([data-theme=dark]) .barber-hero__slide-button .barber-hero__track{
+  background:rgba(62,43,30,.34);
+}
+:root:not([data-theme=dark]) .barber-hero__secondary{
+  background:rgba(229,214,192,.43);
+  border-color:rgba(65,44,29,.58);
+  color:#2d2016;
+}
+:root:not([data-theme=dark]) .barber-hero__pause{
+  background:rgba(232,221,205,.46);
+  border-color:rgba(65,44,29,.5);
+  color:#8a602b;
+}
+@media(max-width:767px){
+  :root:not([data-theme=dark]) .barber-hero__wash{
+    background:linear-gradient(180deg,
+      rgba(232,221,205,.99) 0%,
+      rgba(232,221,205,.94) 43%,
+      rgba(232,221,205,.44) 76%,
+      rgba(232,221,205,.12) 100%);
+  }
+}
