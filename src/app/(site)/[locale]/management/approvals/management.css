@@ -60,3 +60,26 @@
 .management-error{color:#a54336;font-size:13px}
 @media(max-width:1200px){.management-proposal form{grid-template-columns:repeat(2,minmax(0,1fr))}.management-proposal form label:first-child{grid-column:1/-1}}
 @media(max-width:600px){.management-proposal form{grid-template-columns:1fr}.management-proposal form label:first-child{grid-column:auto}}
+
+.management-location-filter{display:flex;align-items:end;gap:9px;flex-wrap:wrap}
+.management-location-filter label{display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--m-muted)}
+.management-location-filter select{background:var(--m-card);border:1px solid var(--m-border);border-radius:4px;color:var(--m-ink);padding:11px;min-width:180px;min-height:44px}
+.management-location-filter button{background:var(--m-ink);color:var(--m-paper);border:0;border-radius:4px;padding:11px 17px;min-height:44px;cursor:pointer}
+.management-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:24px}
+.management-kpi{min-width:0;padding:24px;background:var(--m-card);border:1px solid var(--m-border);border-radius:5px}
+.management-kpi__icon{display:grid;place-items:center;width:38px;height:38px;border-radius:4px;background:#f0e5d6;color:#86613a}
+.management-kpi p{margin:22px 0 10px;font-size:12px;color:var(--m-muted);line-height:1.5}
+.management-kpi strong{font-size:clamp(23px,2.5vw,34px);letter-spacing:-.035em;font-weight:700;overflow-wrap:anywhere}
+.management-dashboard-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(250px,1fr);gap:20px;align-items:start}
+.management-booking-table-wrap{width:100%;overflow-x:auto}
+.management-booking-table{width:100%;border-collapse:collapse;text-align:left;font-size:12px;white-space:nowrap}
+.management-booking-table th{font-weight:600;color:var(--m-muted);font-size:11px;padding:12px 10px;border-bottom:1px solid var(--m-border)}
+.management-booking-table td{padding:15px 10px;border-bottom:1px solid var(--m-border)}
+.management-booking-table td:first-child{font-weight:600}
+.management-attention-item{display:flex;align-items:center;gap:12px;padding:17px 0;border-bottom:1px solid var(--m-border);font-size:12px}
+.management-attention-item svg{flex:none;color:var(--m-gold)}
+.management-attention-item span{flex:1}
+.management-attention-item strong{font-size:16px}
+.management-attention-link{display:inline-block;margin-top:24px;text-decoration-color:var(--m-gold);text-underline-offset:4px;font-size:12px}
+@media(max-width:1150px){.management-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.management-dashboard-grid{grid-template-columns:1fr}}
+@media(max-width:550px){.management-kpi-grid{gap:10px}.management-kpi{padding:16px}.management-location-filter{width:100%}.management-location-filter label{flex:1}.management-location-filter select{min-width:0;width:100%}}
