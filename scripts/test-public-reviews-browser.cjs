@@ -9,6 +9,7 @@ async function main() {
   try {
     for (const [locale, width] of [['uk', 1440], ['en', 375]]) {
       const page = await browser.newPage({ viewport: { width, height: 850 } })
+      await page.addInitScript(() => window.localStorage.setItem('gentlemens-theme', 'light'))
       const errors = []
       page.on('pageerror', error => errors.push(error.message))
       const response = await page.goto('http://localhost:3000/' + locale, { waitUntil: 'networkidle' })
