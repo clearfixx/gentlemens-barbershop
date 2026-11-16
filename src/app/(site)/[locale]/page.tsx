@@ -2,7 +2,7 @@ import './home-page.css'
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Star } from 'lucide-react'
+import { Armchair, Crown, Gem, Scissors, SprayCan, Star } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getPayload } from 'payload'
 import { notFound } from 'next/navigation'
@@ -22,14 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export const dynamic = 'force-dynamic'
 
-function BenefitIcon({ index }: { index: number }) {
-  const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-  if (index === 0) return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><circle cx="12" cy="34" r="5"/><circle cx="28" cy="34" r="5"/><path d="M15 30 38 9M30 30 9 9M23 24 39 39M36 10l3-3"/></svg>
-  if (index === 1) return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><path d="m6 17 8 7 10-14 10 14 8-7-4 22H10L6 17Z"/><circle cx="6" cy="15" r="2"/><circle cx="24" cy="8" r="2"/><circle cx="42" cy="15" r="2"/></svg>
-  if (index === 2) return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><path d="M10 16h13v24H10zM13 10h7v6h-7zM12 7h9M29 21h11v19H29zM32 16h5v5h-5zM32 12h5M13 25h7M32 29h5"/></svg>
-  if (index === 3) return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><rect x="9" y="9" width="30" height="23" rx="7"/><rect x="15" y="20" width="18" height="8" rx="3"/><path d="M12 32v8M36 32v8M5 24h6M37 24h6M18 13h12"/></svg>
-  return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><path d="M13 9h22l9 12-20 20L4 21 13 9Zm-9 12h40M13 9l5 12 6 20 6-20 5-12"/></svg>
-}
+const benefitIcons = [Scissors, Crown, SprayCan, Armchair, Gem] as const
 
 export default async function HomePage({ params, searchParams }: {
   params: Promise<{ locale: string }>
@@ -131,11 +124,19 @@ export default async function HomePage({ params, searchParams }: {
         <h2 id="benefits-title" className="home-section__heading">{labels.benefits}</h2>
         <p className="home-section__intro">{labels.intro}</p>
         <div className="home-benefits">
-          {labels.benefitNames.map((name, index) => <article className="home-benefit" key={name}>
-            <BenefitIcon index={index} />
-            <h3>{name}</h3>
-            <p>{labels.benefitDetails[index]}</p>
-          </article>)}
+          {labels.benefitNames.map((name, index) => {
+            const Icon = benefitIcons[index]
+            return <article className={`home-benefit${index === 0 ? ' home-benefit--featured' : ''}`} key={name}>
+              <div className="home-benefit__top">
+                <Icon size={34} strokeWidth={1.5} aria-hidden="true" />
+                <span className="home-benefit__index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+              </div>
+              <div className="home-benefit__copy">
+                <h3>{name}</h3>
+                <p>{labels.benefitDetails[index]}</p>
+              </div>
+            </article>
+          })}
         </div>
       </div>
     </section>
