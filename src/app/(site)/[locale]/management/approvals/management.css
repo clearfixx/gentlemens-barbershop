@@ -106,3 +106,14 @@
 .management-booking-action p[role=alert]{width:100%;font-size:11px;white-space:normal;color:#9d4a3e;margin:0}
 
 .management-directory-slug{display:block;margin-top:5px;color:var(--m-muted);font-size:11px;font-weight:400;letter-spacing:.015em}
+
+.management-review-link,.management-back-link{color:var(--m-ink);text-underline-offset:4px;text-decoration-color:var(--m-gold)}
+.management-back-link{display:inline-block;margin-bottom:23px;font-size:13px}
+.management-review-field{padding:21px 0;border-bottom:1px solid var(--m-border)}
+.management-review-field h3{font-size:15px;margin:0 0 14px}
+.management-review-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.management-review-comparison>div{min-width:0;background:var(--m-paper);border:1px solid var(--m-border);border-radius:4px;padding:17px}
+.management-review-comparison strong{font-size:12px;color:var(--m-muted)}
+.management-review-comparison p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65}
+.management-review-warning{color:var(--m-muted);font-size:12px;line-height:1.6;margin-top:22px}
+@media(max-width:550px){.management-review-comparison{grid-template-columns:1fr}}
