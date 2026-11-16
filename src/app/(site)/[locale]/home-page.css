@@ -340,3 +340,91 @@
 @media(prefers-reduced-motion:reduce){
   .home-landing .home-benefit{transition:none}
 }
+
+/* Bento photography: image / theme-tinted mask / readable content.
+   Keep assets local, subdued, and identical across both themes. */
+.home-landing .home-benefits .home-benefit:nth-child(1){--benefit-photo:url('/images/benefits/experienced-barbers.png');--benefit-photo-position:57% 50%}
+.home-landing .home-benefits .home-benefit:nth-child(2){--benefit-photo:url('/images/benefits/premium-service.png');--benefit-photo-position:67% 50%}
+.home-landing .home-benefits .home-benefit:nth-child(3){--benefit-photo:url('/images/benefits/quality-grooming.png');--benefit-photo-position:70% 50%}
+.home-landing .home-benefits .home-benefit:nth-child(4){--benefit-photo:url('/images/benefits/atmosphere.png');--benefit-photo-position:69% 50%}
+.home-landing .home-benefits .home-benefit:nth-child(5){--benefit-photo:url('/images/benefits/personal-approach.png');--benefit-photo-position:65% 50%}
+.home-landing .home-benefits .home-benefit,
+.home-landing .home-benefits .home-benefit:nth-child(n){
+  --benefit-tint:rgba(241,230,212,.88);
+  --benefit-tint-hover:rgba(241,230,212,.81);
+  --benefit-copy:#30231a;
+  --benefit-subcopy:#594638;
+  --benefit-accent:#8e6633;
+  isolation:isolate;
+  overflow:hidden;
+  background:#e9dfd1;
+  border-color:rgba(88,67,48,.22);
+  color:var(--benefit-copy);
+}
+.home-landing .home-benefits .home-benefit::before,
+.home-landing .home-benefits .home-benefit::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+.home-landing .home-benefits .home-benefit::before{
+  z-index:-2;
+  background-image:var(--benefit-photo);
+  background-position:var(--benefit-photo-position,center);
+  background-size:cover;
+  background-repeat:no-repeat;
+  filter:saturate(.68);
+  transform:scale(1);
+  transition:transform .65s ease;
+}
+.home-landing .home-benefits .home-benefit::after{
+  z-index:-1;
+  background:var(--benefit-tint);
+  transition:background-color .35s ease;
+}
+.home-landing .home-benefits .home-benefit:hover{
+  background:#e9dfd1;
+  border-color:rgba(142,102,51,.55);
+}
+.home-landing .home-benefits .home-benefit:hover::before{transform:scale(1.035)}
+.home-landing .home-benefits .home-benefit:hover::after{background:var(--benefit-tint-hover)}
+.home-landing .home-benefits .home-benefit h3{color:var(--benefit-copy)}
+.home-landing .home-benefits .home-benefit p{color:var(--benefit-subcopy)}
+.home-landing .home-benefits .home-benefit .home-benefit__top svg{color:var(--benefit-accent)}
+.home-landing .home-benefits .home-benefit .home-benefit__index{color:var(--benefit-accent)}
+.home-landing .home-benefits .home-benefit--featured,
+.home-landing .home-benefits .home-benefit--featured:nth-child(n){
+  --benefit-tint:rgba(234,220,199,.81);
+  --benefit-tint-hover:rgba(234,220,199,.73);
+  background:#e4d6c1;
+}
+.home-landing .home-benefits .home-benefit--featured:hover{background:#e4d6c1}
+:root[data-theme=dark] .home-landing .home-benefits .home-benefit,
+:root[data-theme=dark] .home-landing .home-benefits .home-benefit:nth-child(n){
+  --benefit-tint:rgba(29,21,16,.82);
+  --benefit-tint-hover:rgba(29,21,16,.73);
+  --benefit-copy:#f3e7d6;
+  --benefit-subcopy:#dfcdb8;
+  --benefit-accent:#cfa96f;
+  background:#241a15;
+  border-color:rgba(205,169,114,.25);
+}
+:root[data-theme=dark] .home-landing .home-benefits .home-benefit--featured,
+:root[data-theme=dark] .home-landing .home-benefits .home-benefit--featured:nth-child(n){
+  --benefit-tint:rgba(28,20,15,.73);
+  --benefit-tint-hover:rgba(28,20,15,.65);
+}
+:root[data-theme=dark] .home-landing .home-benefits .home-benefit:hover{
+  background:#241a15;
+  border-color:rgba(205,169,114,.63);
+}
+@media(max-width:600px){
+  .home-landing .home-benefits .home-benefit:nth-child(n){--benefit-photo-position:70% 50%}
+  .home-landing .home-benefits .home-benefit:nth-child(1){--benefit-photo-position:62% 50%}
+}
+@media(prefers-reduced-motion:reduce){
+  .home-landing .home-benefits .home-benefit::before,
+  .home-landing .home-benefits .home-benefit::after{transition:none}
+  .home-landing .home-benefits .home-benefit:hover::before{transform:none}
+}
