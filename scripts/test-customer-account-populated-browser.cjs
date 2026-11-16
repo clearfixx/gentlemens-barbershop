@@ -73,6 +73,15 @@ async function run() {
           data: { ...validReview, bookingId: fixture.bookings.first.id, status: 'published' },
         })
         assert.equal(forged.status(), 400, 'Customer must not set moderation status')
+        const oversized = await context.request.post(origin + '/api/account/reviews', {
+          data: { ...validReview, comment: 'x'.repeat(6000) },
+        })
+        assert.equal(oversized.status(), 413, 'Review JSON must be rejected before buffering beyond 4 KiB')
+        const malformed = await context.request.post(origin + '/api/account/reviews', {
+          headers: { 'Content-Type': 'application/json' },
+          data: '{"bookingId":',
+        })
+        assert.equal(malformed.status(), 400, 'Malformed JSON must not be reported as server failure')
       } else {
         assert.ok((await page.locator('.account-reviews__list').innerText()).includes('Excellent') === false,
           'Original submitted Ukrainian review must not be replaced by fabricated English text')
