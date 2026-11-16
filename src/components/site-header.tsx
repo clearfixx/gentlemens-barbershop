@@ -4,6 +4,7 @@ import { Bell } from 'lucide-react'
 
 import { AuthNavControl } from './auth-nav-control'
 import { FloatingHeaderShell } from './floating-header-shell'
+import { HeaderBookingCta } from './header-booking-cta'
 import { InternalNavMenu } from './internal-nav-menu'
 import { LocaleSwitcher } from './locale-switcher'
 import { SectionNav } from './section-nav'
@@ -51,6 +52,7 @@ export function SiteHeader({
       </nav>
 
       <div className="site-header__actions">
+        <HeaderBookingCta locale={locale} />
         <span
           className="header-notification"
           role="img"
