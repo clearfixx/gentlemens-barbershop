@@ -15,7 +15,7 @@ test('queue filters cannot expand manager scope', () => {
   for (const location of ['0', '-2', 'abc', '8']) {
     assert.throws(() => parseProfessionalReviewFilters(manager, { location }))
   }
-  for (const status of ['', 'published', 'invalid']) {
+  for (const status of ['', 'published', 'draft', 'invalid']) {
     assert.throws(() => parseProfessionalReviewFilters(manager, { status }), RangeError)
   }
 })
