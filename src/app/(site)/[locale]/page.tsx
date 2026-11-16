@@ -39,16 +39,17 @@ export default async function HomePage({ params, searchParams }: {
   if (!isLocale(locale)) notFound()
   const t = await loadPublicMessages(locale)
   const payload = await getPayload({ config })
-  const [services, barbers, locations] = await Promise.all([
+  const [services, barbers, locations, reviewBarbers] = await Promise.all([
     payload.find({ collection: 'services', locale, depth: 0, limit: 8, sort: 'name', overrideAccess: false }),
-    payload.find({ collection: 'barbers', locale, depth: 1, limit: 100, sort: 'name', overrideAccess: false }),
+    payload.find({ collection: 'barbers', locale, depth: 1, limit: 8, sort: 'name', overrideAccess: false }),
     payload.find({ collection: 'locations', locale, depth: 0, limit: 8, sort: 'name', overrideAccess: false }),
+    payload.find({ collection: 'barbers', locale, depth: 0, limit: 100, sort: 'name', overrideAccess: false }),
   ])
   // The submitted filter is advisory only. Validate it against the public barber
   // catalog, and ALWAYS enforce published-only access at the database query.
   const rawReviewBarber = (await searchParams).reviewBarber
   const selectedBarber = typeof rawReviewBarber === 'string' && /^\d+$/.test(rawReviewBarber)
-    ? barbers.docs.find(barber => String(barber.id) === rawReviewBarber)
+    ? reviewBarbers.docs.find(barber => String(barber.id) === rawReviewBarber)
     : undefined
   const publishedReviews = await payload.find({
     collection: 'reviews', depth: 0, limit: 6, sort: '-publishedAt', overrideAccess: false,
@@ -168,7 +169,7 @@ export default async function HomePage({ params, searchParams }: {
           <label htmlFor="home-reviews-barber">{labels.barberFilter}</label>
           <select id="home-reviews-barber" name="reviewBarber" defaultValue={selectedBarber ? String(selectedBarber.id) : ''}>
             <option value="">{labels.allBarbers}</option>
-            {barbers.docs.map(barber => <option value={barber.id} key={barber.id}>{barber.name}</option>)}
+            {reviewBarbers.docs.map(barber => <option value={barber.id} key={barber.id}>{barber.name}</option>)}
           </select>
           <button type="submit">{labels.filterReviews}</button>
         </form>
