@@ -11,6 +11,8 @@ import config from '@/payload.config'
 import { isLocale } from '@/i18n/config'
 import { resolveLocationScope } from '@/lib/admin/location-access'
 import { getOperationalBookings } from '@/lib/admin/operational-bookings'
+import { bookingWritesEnabled } from '@/lib/booking/booking-write-guard'
+import { BookingStatusActions } from '@/components/admin/booking-status-actions'
 import '../approvals/management.css'
 
 export const dynamic = 'force-dynamic'
@@ -40,6 +42,7 @@ export default async function ManagementBookingsPage({ params, searchParams }: {
     id: Number(user.id), role: user.role,
   }).catch(() => null)
   if (!scope) notFound()
+  const mutationsEnabled = bookingWritesEnabled(process.env)
   const filters = await searchParams
   let bookings: Awaited<ReturnType<typeof getOperationalBookings>>
   try {
@@ -157,6 +160,7 @@ export default async function ManagementBookingsPage({ params, searchParams }: {
                 <th scope="col">{uk ? 'Майстер' : 'Barber'}</th>
                 <th scope="col">{uk ? 'Статус' : 'Status'}</th>
                 <th scope="col">{uk ? 'Сума' : 'Amount'}</th>
+                {mutationsEnabled && <th scope="col">{uk ? 'Дія' : 'Action'}</th>}
               </tr></thead>
               <tbody>{bookings.bookings.map(item => <tr key={item.id}>
                 <td>#{item.id}</td>
@@ -167,6 +171,7 @@ export default async function ManagementBookingsPage({ params, searchParams }: {
                 <td><span className={`management-status management-status--${item.status}`}>
                   {statusLabel[item.status]}</span></td>
                 <td>{item.totalPrice.toLocaleString(uk ? 'uk-UA' : 'en-GB')} ₴</td>
+                {mutationsEnabled && <td><BookingStatusActions id={item.id} status={item.status} locale={locale}/></td>}
               </tr>)}</tbody>
             </table>
           </div> : <p className="management-empty">{uk ? 'За цими фільтрами записів не знайдено.' : 'No matching bookings.'}</p>}
@@ -179,10 +184,10 @@ export default async function ManagementBookingsPage({ params, searchParams }: {
               : <span aria-disabled="true">{uk ? 'Наступна' : 'Next'}</span>}
           </nav>
         </section>
-        <p className="management-booking-note">
+        {!mutationsEnabled && <p className="management-booking-note">
           {uk ? 'Зміна статусів записів поки недоступна в production до завершення захищеного сценарію запису.'
             : 'Booking status mutations remain disabled in production until guarded write rollout.'}
-        </p>
+        </p>}
       </div>
     </div>
   </main>
