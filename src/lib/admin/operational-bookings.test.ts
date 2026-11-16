@@ -45,8 +45,8 @@ test('manager inventory excludes private booking metadata and applies strict loc
     startsAt: '2026-11-16T10:00:00Z', endsAt: '2026-11-16T11:00:00Z',
     totalPrice: 600, status: 'confirmed',
   }])
-  assert.equal(search?.limit, 20)
-  assert.deepEqual(search?.where, { and: [
+  assert.equal((search as Record<string, unknown> | null)?.limit, 20)
+  assert.deepEqual((search as Record<string, unknown> | null)?.where, { and: [
     { location: { in: [2] } }, { status: { equals: 'confirmed' } },
   ] })
   assert.doesNotMatch(JSON.stringify(result), /secret|private note|not-for-manager/)
