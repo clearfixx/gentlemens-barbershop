@@ -21,7 +21,7 @@ export const BookingEvents: CollectionConfig = {
     { name: 'action', type: 'select', required: true, options: ['confirmed', 'completed', 'cancelled', 'no_show'] },
     { name: 'previousStatus', type: 'select', required: true, options: ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'] },
     { name: 'actor', type: 'relationship', relationTo: 'users' },
-    { name: 'actorRole', type: 'select', required: true, options: ['customer', 'assigned_barber', 'admin', 'guest'] },
+    { name: 'actorRole', type: 'select', required: true, options: ['customer', 'assigned_barber', 'admin', 'location_admin', 'guest'] },
     { name: 'reason', type: 'textarea' },
   ],
 }
