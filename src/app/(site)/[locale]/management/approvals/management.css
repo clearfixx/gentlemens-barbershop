@@ -126,3 +126,8 @@
 .management-biography-approve{margin-top:20px;display:flex;flex-direction:column;align-items:flex-start;gap:10px}
 .management-biography-approve button{background:var(--m-ink);color:var(--m-card);border:1px solid var(--m-ink);border-radius:4px;min-height:44px;padding:11px 18px;cursor:pointer}
 .management-biography-approve button:disabled{opacity:.5;cursor:not-allowed}
+
+.management-portfolio-assessment{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+.management-portfolio-assessment p{margin:0;padding:16px;border:1px solid var(--m-border);border-radius:4px;background:var(--m-paper);font-size:12px;line-height:1.5}
+.management-portfolio-assessment strong{display:block;font-size:24px;color:var(--m-ink);margin-bottom:5px}
+@media(max-width:550px){.management-portfolio-assessment{grid-template-columns:1fr}}
