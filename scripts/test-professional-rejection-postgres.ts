@@ -185,12 +185,14 @@ async function run() {
     assert.equal(tampered.status, 'mismatch')
     assert.equal(tampered.checks.imageBytes, false)
     assert.equal(tampered.checks.manifest, false)
-    // Restore test fixture so the existing private preview and cleanup work.
+    // Restore the original custody digest, then verify the same manifest.
+    const cleanBytes = await payload.db.drizzle.execute(sql`
+      SELECT content FROM private_barber_portfolio_media WHERE id = ${staged.id}
+    `)
+    const restoredSha = createHash('sha256')
+      .update(Buffer.from(cleanBytes.rows[0]!.content as Uint8Array)).digest('hex')
     await payload.db.drizzle.execute(sql`
-      UPDATE private_barber_portfolio_media SET sha256 = ${createHash('sha256')
-        .update(Buffer.from((await payload.db.drizzle.execute(sql`
-          SELECT content FROM private_barber_portfolio_media WHERE id = ${staged.id}
-        `)).rows[0]!.content as Uint8Array)).digest('hex')}
+      UPDATE private_barber_portfolio_media SET sha256 = ${restoredSha}
       WHERE id = ${staged.id}
     `)
     const reverified = await verifySubmittedPortfolioForStaff(
