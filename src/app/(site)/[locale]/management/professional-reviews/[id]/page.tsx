@@ -42,8 +42,8 @@ export default async function ProfessionalReviewDetailPage({
     throw error
   }
   const fieldNames: Record<string, string> = uk
-    ? { bio: 'Біографія', localizedBio: 'Локалізована біографія' }
-    : { bio: 'Biography', localizedBio: 'Localized biography' }
+    ? { bio: 'Біографія', localizedBio: 'Переклад біографії' }
+    : { bio: 'Biography', localizedBio: 'Biography translation' }
   const statuses: Record<string, string> = uk
     ? { pending: 'Очікує', approved: 'Схвалено', rejected: 'Відхилено' }
     : { pending: 'Pending', approved: 'Approved', rejected: 'Rejected' }
@@ -80,7 +80,8 @@ export default async function ProfessionalReviewDetailPage({
             {uk ? 'Порівняння текстових змін' : 'Text changes comparison'}
           </h2>
           {detail.fields.length ? detail.fields.map(field => <div className="management-review-field" key={field.field}>
-            <h3>{fieldNames[field.field]}</h3>
+            <h3>{fieldNames[field.field]}{field.field === 'localizedBio' && detail.localizedLocale
+              ? ` (${detail.localizedLocale.toUpperCase()})` : ''}</h3>
             <div className="management-review-comparison">
               <div><strong>{uk ? 'Було' : 'Previous'}</strong>
                 <p>{field.before ?? (uk ? 'Немає тексту або формат не підтримується' : 'No text or unsupported format')}</p>
@@ -102,15 +103,13 @@ export default async function ProfessionalReviewDetailPage({
           <h2>{uk ? 'Причина відхилення' : 'Rejection reason'}</h2>
           <p>{detail.rejectionReason}</p>
         </section>}
-        {scope.role === 'admin' && detail.status === 'pending' &&
-          detail.unsupportedChangeCount === 0 && detail.fields.length === 1 &&
-          detail.fields[0]?.field === 'bio' &&
-          <ProfessionalBiographyApprove id={detail.id} locale={locale}/>}
+        {scope.role === 'admin' && detail.status === 'pending' && detail.approvableKind &&
+          <ProfessionalBiographyApprove id={detail.id} locale={locale} kind={detail.approvableKind}/>}
         {scope.role === 'admin' && detail.status === 'pending' &&
           <ProfessionalRejectForm id={detail.id} locale={locale}/>}
         <p className="management-booking-note">{uk
-          ? 'Можна схвалювати лише перевірені зміни звичайної біографії. Публікація фото, сертифікатів, соцпосилань і локалізованого тексту поки недоступна.'
-          : 'Only verified plain biographies can be approved. Photos, certificates, social links and localized text cannot yet be published.'}</p>
+          ? 'Можна схвалити звичайну біографію або перевірений переклад однією мовою. Фото, сертифікати та соцпосилання ще недоступні для публікації.'
+          : 'A verified plain biography or a single-language translation may be approved. Photos, certificates and social links cannot yet be published.'}</p>
       </div>
     </div>
   </main>
