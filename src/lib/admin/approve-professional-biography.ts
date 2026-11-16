@@ -33,6 +33,8 @@ export async function approveProfessionalBiography(
         b.bio AS published_bio
       FROM barber_profile_revisions r
       JOIN barbers b ON b.id = r.barber_id
+      JOIN users author ON author.id = r.author_id
+        AND author.role = 'barber'::public.enum_users_role
       WHERE r.id = ${requestId}
       FOR UPDATE OF r, b
     `)
