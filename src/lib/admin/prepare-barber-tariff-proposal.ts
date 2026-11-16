@@ -105,3 +105,22 @@ export async function prepareBarberTariffProposal(
     status: 'pending' as const,
   }
 }
+
+/** Trusted submission boundary. Caller supplies the authenticated Payload user,
+ * not a user ID from JSON. A proposal is saved pending only: this function
+ * never changes live services, appointments, or barber offerings.
+ * Approval must re-check current revision inside its write transaction.
+ */
+export async function submitBarberTariffProposal(
+  payload: Payload,
+  authenticatedUser: { id: number; role: string },
+  request: BarberTariffProposalInput,
+) {
+  const proposal = await prepareBarberTariffProposal(payload, authenticatedUser, request)
+  return payload.create({
+    collection: 'commercial-change-requests',
+    overrideAccess: true,
+    depth: 0,
+    data: proposal,
+  })
+}
