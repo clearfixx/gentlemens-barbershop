@@ -63,3 +63,40 @@
 @media(max-width:1279px){.barber-hero__headline{font-size:clamp(39px,4.8vw,66px)}.barber-hero__headline--long{font-size:clamp(32px,3.8vw,54px)}}
 @media(max-width:767px){.barber-hero__headline{font-size:clamp(39px,9vw,58px)}.barber-hero__headline--long{font-size:clamp(29px,7.2vw,46px)}}
 @media(prefers-reduced-motion:reduce){.barber-hero__primary,.barber-hero__secondary{transition:none}}
+
+/* Three independent, numbered progress tracks inspired by the approved mockup. */
+.barber-hero__controls{display:flex;align-items:center;gap:clamp(12px,1.8vw,25px);width:max-content;max-width:100%;margin-top:clamp(32px,4.1vw,64px)}
+.barber-hero__pagination{display:flex;align-items:center;gap:clamp(7px,1.2vw,20px);min-width:0}
+.barber-hero__slide-button{display:inline-flex;align-items:center;gap:clamp(6px,.8vw,13px);padding:8px 0;border:0;border-radius:0;background:none;color:color-mix(in srgb,var(--ink) 53%,transparent);font:600 12px/1 Inter,Arial,sans-serif;cursor:pointer;transition:color .2s ease}
+.barber-hero__slide-button--active,.barber-hero__slide-button:hover{color:var(--ink)}
+.barber-hero__number{font:600 clamp(11px,.95vw,14px)/1 Inter,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.barber-hero__slide-button .barber-hero__track{display:block;position:relative;flex:0 0 clamp(36px,5.8vw,83px);width:clamp(36px,5.8vw,83px);height:3px;border:0;border-radius:0;overflow:hidden;background:color-mix(in srgb,var(--ink) 26%,transparent);cursor:inherit}
+.barber-hero__slide-button .barber-hero__fill{display:block;width:0;height:100%;background:var(--hero-gold)}
+.barber-hero__slide-button .barber-hero__fill--running{animation:barber-hero-segment-progress 7s linear forwards}
+@keyframes barber-hero-segment-progress{from{width:0}to{width:100%}}
+.barber-hero__slide-button:focus-visible,.barber-hero__pause:focus-visible{outline:2px solid var(--hero-gold);outline-offset:4px}
+.barber-hero__pause{display:grid;flex:0 0 42px;place-items:center;width:42px;height:42px;padding:0;border:1px solid color-mix(in srgb,var(--ink) 45%,transparent);border-radius:50%;background:color-mix(in srgb,var(--paper) 16%,transparent);color:var(--hero-gold);cursor:pointer;transition:border-color .2s ease,background-color .2s ease}
+.barber-hero__pause:hover{border-color:var(--hero-gold);background:color-mix(in srgb,var(--hero-gold) 12%,transparent)}
+.barber-hero__pause svg{display:block}
+.barber-hero__down{position:absolute;z-index:10;left:50%;bottom:0;display:grid;place-items:center;width:54px;height:82px;padding:5px;transform:translate(-50%,50%);border:1px solid var(--hero-gold);border-radius:29px;background:var(--paper);color:var(--hero-gold);text-decoration:none;transition:background-color .2s ease}
+.barber-hero__down:hover{background:var(--surface)}
+.barber-hero__down:focus-visible{outline:2px solid var(--hero-gold);outline-offset:4px}
+.barber-hero__mouse{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:42px;height:70px;border:1px solid color-mix(in srgb,var(--hero-gold) 50%,transparent);border-radius:24px;background:color-mix(in srgb,var(--ink) 9%,var(--paper))}
+.barber-hero__mouse-wheel{display:block;width:2px;height:13px;border-radius:2px;background:var(--hero-gold);animation:barber-mouse-wheel 2.3s ease-in-out infinite}
+.barber-hero__mouse-arrow{display:block;animation:barber-mouse-arrow 2.3s ease-in-out infinite}
+@keyframes barber-mouse-wheel{0%,100%{transform:translateY(-4px);opacity:.35}55%{transform:translateY(3px);opacity:1}}
+@keyframes barber-mouse-arrow{0%,100%{transform:translateY(-2px)}55%{transform:translateY(3px)}}
+@media(max-width:767px){
+  .barber-hero__controls{gap:10px;margin-top:27px}
+  .barber-hero__pagination{gap:8px}
+  .barber-hero__slide-button{gap:6px}
+  .barber-hero__slide-button .barber-hero__track{flex-basis:clamp(26px,8vw,48px);width:clamp(26px,8vw,48px)}
+  .barber-hero__pause{flex-basis:36px;width:36px;height:36px}
+  .barber-hero__down{width:48px;height:74px}
+  .barber-hero__mouse{width:36px;height:62px}
+}
+@media(prefers-reduced-motion:reduce){
+  .barber-hero__slide-button .barber-hero__fill--running{animation:none;width:100%}
+  .barber-hero__mouse-wheel,.barber-hero__mouse-arrow{animation:none}
+  .barber-hero__pause,.barber-hero__down,.barber-hero__slide-button{transition:none}
+}
