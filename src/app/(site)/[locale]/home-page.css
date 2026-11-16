@@ -438,7 +438,7 @@
   --home-rule:rgba(73,51,34,.22);
   background:var(--home-light-paper);
 }
-:root:not([data-theme=dark]) .home-landing .home-section{
+:root:not([data-theme=dark]) .home-landing .home-section:not(.home-section--questions){
   background:var(--home-light-paper);
 }
 :root:not([data-theme=dark]) .home-landing .home-section--muted{
