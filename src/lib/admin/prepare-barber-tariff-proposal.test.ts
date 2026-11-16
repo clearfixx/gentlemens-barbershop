@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { prepareBarberTariffProposal, tariffRevision } from './prepare-barber-tariff-proposal.ts'
+import { prepareBarberTariffProposal, submitBarberTariffProposal, tariffRevision } from './prepare-barber-tariff-proposal.ts'
 
 type Mock = Parameters<typeof prepareBarberTariffProposal>[0]
 function catalog({
@@ -73,4 +73,25 @@ test('rejects ineffective edits and out-of-range tariffs', async () => {
       id: 11, role: 'location_admin',
     }, { ...request, proposedValue }), /Invalid/)
   }
+})
+
+test('submission saves a pending immutable snapshot without mutating a live tariff', async () => {
+  const writes: Array<{ collection: string; overrideAccess: boolean; data: Record<string, unknown> }> = []
+  const base = catalog()
+  const payload = {
+    ...base,
+    create: async (args: { collection: string; overrideAccess: boolean; data: Record<string, unknown> }) => {
+      writes.push(args)
+      return { id: 123, ...args.data }
+    },
+  } as unknown as Parameters<typeof submitBarberTariffProposal>[0]
+  const result = await submitBarberTariffProposal(payload, { id: 11, role: 'location_admin' }, request)
+  assert.equal(result.id, 123)
+  assert.equal(writes.length, 1)
+  assert.equal(writes[0].collection, 'commercial-change-requests')
+  assert.equal(writes[0].overrideAccess, true)
+  assert.equal(writes[0].data.status, 'pending')
+  assert.equal(writes[0].data.createdBy, 11)
+  assert.equal(writes[0].data.oldValue, 600)
+  assert.equal(writes[0].data.proposedValue, 750)
 })
