@@ -5,11 +5,11 @@ import { LocationAssignments } from '../../payload/collections/LocationAssignmen
 
 type AccessRequest = { user: { id: number; role: string } | null; payload?: unknown }
 async function allowed(
-  config: { access?: Record<string, unknown> },
+  config: { access?: unknown },
   action: string,
   req: AccessRequest,
 ): Promise<unknown> {
-  const rule = config.access?.[action]
+  const rule = (config.access as Record<string, unknown> | undefined)?.[action]
   assert.equal(typeof rule, 'function')
   return await (rule as (args: { req: unknown }) => unknown)({ req })
 }
