@@ -31,19 +31,32 @@ function BenefitIcon({ index }: { index: number }) {
   return <svg viewBox="0 0 48 48" aria-hidden="true" {...common}><path d="M13 9h22l9 12-20 20L4 21 13 9Zm-9 12h40M13 9l5 12 6 20 6-20 5-12"/></svg>
 }
 
-export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function HomePage({ params, searchParams }: {
+  params: Promise<{ locale: string }>
+  searchParams: Promise<{ reviewBarber?: string | string[] }>
+}) {
   const { locale } = await params
   if (!isLocale(locale)) notFound()
   const t = await loadPublicMessages(locale)
   const payload = await getPayload({ config })
-  const [services, barbers, locations, publishedReviews] = await Promise.all([
+  const [services, barbers, locations] = await Promise.all([
     payload.find({ collection: 'services', locale, depth: 0, limit: 8, sort: 'name', overrideAccess: false }),
-    payload.find({ collection: 'barbers', locale, depth: 1, limit: 8, sort: 'name', overrideAccess: false }),
+    payload.find({ collection: 'barbers', locale, depth: 1, limit: 100, sort: 'name', overrideAccess: false }),
     payload.find({ collection: 'locations', locale, depth: 0, limit: 8, sort: 'name', overrideAccess: false }),
-    payload.find({ collection: 'reviews', depth: 1, limit: 6, sort: '-publishedAt', overrideAccess: false,
-      where: { status: { equals: 'published' } },
-    }),
   ])
+  // The submitted filter is advisory only. Validate it against the public barber
+  // catalog, and ALWAYS enforce published-only access at the database query.
+  const rawReviewBarber = (await searchParams).reviewBarber
+  const selectedBarber = typeof rawReviewBarber === 'string' && /^\\d+$/.test(rawReviewBarber)
+    ? barbers.docs.find(barber => String(barber.id) === rawReviewBarber)
+    : undefined
+  const publishedReviews = await payload.find({
+    collection: 'reviews', depth: 0, limit: 6, sort: '-publishedAt', overrideAccess: false,
+    where: { and: [
+      { status: { equals: 'published' } },
+      ...(selectedBarber ? [{ barber: { equals: selectedBarber.id } }] : []),
+    ] },
+  })
 
   const uk = locale === 'uk'
   const labels = uk ? {
@@ -63,6 +76,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     emptyReviews: 'Відгуки з’являться тут після публікації.',
     verifiedVisit: 'Відгук після підтвердженого візиту',
     ratingLabel: 'Оцінка',
+    barberFilter: 'Майстер',
+    allBarbers: 'Усі майстри',
+    filterReviews: 'Показати відгуки',
+    noFilteredReviews: 'Опублікованих відгуків цього майстра поки немає.',
     emptyProducts: 'Каталог товарів наразі наповнюється.',
     questionCopy: 'Зв’яжись із нами, і ми допоможемо обрати зручний час та послугу.',
     socialCopy: 'Слідкуй за новинами, акціями та життям барбершопу.',
@@ -89,6 +106,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     emptyReviews: 'Customer reviews will appear once published.',
     verifiedVisit: 'Verified appointment review',
     ratingLabel: 'Rating',
+    barberFilter: 'Barber',
+    allBarbers: 'All barbers',
+    filterReviews: 'Show reviews',
+    noFilteredReviews: 'No published reviews for this barber yet.',
     emptyProducts: 'The product catalog is being prepared.',
     questionCopy: 'Contact us and we will help you choose a service and time.',
     socialCopy: 'Follow our news, offers and barbershop life.',
@@ -143,6 +164,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     <section id="reviews" className="home-section home-section--muted" aria-labelledby="reviews-title">
       <div className="home-container">
         <h2 id="reviews-title" className="home-section__heading">{labels.reviews}</h2>
+        <form className="home-reviews-filter" method="get" action={`/${locale}#reviews`}>
+          <label htmlFor="home-reviews-barber">{labels.barberFilter}</label>
+          <select id="home-reviews-barber" name="reviewBarber" defaultValue={selectedBarber ? String(selectedBarber.id) : ''}>
+            <option value="">{labels.allBarbers}</option>
+            {barbers.docs.map(barber => <option value={barber.id} key={barber.id}>{barber.name}</option>)}
+          </select>
+          <button type="submit">{labels.filterReviews}</button>
+        </form>
         {publishedReviews.docs.length ? <div className="home-review-previews">
           {publishedReviews.docs.map(review => <article className="home-review-preview home-review-preview--published" key={review.id}>
             <div className="home-review-preview__top">
@@ -159,7 +188,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               }).format(new Date(review.publishedAt))}
             </time>}
           </article>)}
-        </div> : <p className="home-section__note">{labels.emptyReviews}</p>}
+        </div> : <p className="home-section__note">{selectedBarber ? labels.noFilteredReviews : labels.emptyReviews}</p>}
       </div>
     </section>
 
