@@ -1,4 +1,4 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, Where } from 'payload'
 import { resolveLocationScope } from '../../lib/admin/location-access.ts'
 
 /** Approval requests are persisted in Payload, but state changes and live
@@ -18,13 +18,17 @@ export const CommercialChangeRequests: CollectionConfig = {
       if (req.user?.role === 'location_admin') {
         // Membership may be revoked after submission: check current assignments
         // before exposing even the manager's historical request records.
-        return resolveLocationScope(req.payload, req.user)
-          .then(scope => ({
+        return resolveLocationScope(req.payload, {
+          id: Number(req.user.id), role: 'location_admin',
+        }).then(scope => {
+          const where: Where = {
             and: [
               { createdBy: { equals: scope.userId } },
               { location: { in: scope.locationIds } },
             ],
-          }))
+          }
+          return where
+        })
           .catch(() => false)
       }
       return false
