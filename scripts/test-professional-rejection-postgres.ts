@@ -12,6 +12,7 @@ import { ProfessionalReviewConflictError } from '../src/lib/admin/professional-a
 import { listPrivatePortfolioReviewMedia, readPrivatePortfolioReviewImage, PrivatePortfolioMediaNotFound } from '../src/lib/admin/private-portfolio-review-media.ts'
 import { stagePrivatePortfolioImage, PrivatePortfolioUploadForbidden } from '../src/lib/admin/stage-private-portfolio-image.ts'
 import { submitPrivatePortfolioDraft, PortfolioSubmissionConflict } from '../src/lib/admin/submit-private-portfolio-draft.ts'
+import { verifySubmittedPortfolioForStaff, PortfolioReviewUnavailable } from '../src/lib/admin/verify-submitted-portfolio.ts'
 
 /** Disposable full-schema integration: rejection must never mutate the public
  * barber record and must persist a single final decision under row locks.
@@ -165,6 +166,36 @@ async function run() {
       mediaId: staged.id, alt: 'Changed after submission', sortOrder: 0,
       rightsDeclared: true, clientConsentDeclared: true,
     }] }), PortfolioSubmissionConflict)
+    const confirmedIntegrity = await verifySubmittedPortfolioForStaff(
+      payload, staff, Number(draft.id))
+    assert.equal(confirmedIntegrity.status, 'verified')
+    assert.deepEqual(confirmedIntegrity.checks, {
+      metadata: true, imageSet: true, imageBytes: true, manifest: true,
+    })
+    // A revoked branch manager cannot request even the boolean assessment.
+    await assert.rejects(verifySubmittedPortfolioForStaff(payload, {
+      id: managerId, role: 'location_admin',
+    }, Number(draft.id)), PortfolioReviewUnavailable)
+    await payload.db.drizzle.execute(sql`
+      UPDATE private_barber_portfolio_media
+      SET sha256 = ${'0'.repeat(64)} WHERE id = ${staged.id}
+    `)
+    const tampered = await verifySubmittedPortfolioForStaff(
+      payload, staff, Number(draft.id))
+    assert.equal(tampered.status, 'mismatch')
+    assert.equal(tampered.checks.imageBytes, false)
+    assert.equal(tampered.checks.manifest, false)
+    // Restore test fixture so the existing private preview and cleanup work.
+    await payload.db.drizzle.execute(sql`
+      UPDATE private_barber_portfolio_media SET sha256 = ${createHash('sha256')
+        .update(Buffer.from((await payload.db.drizzle.execute(sql`
+          SELECT content FROM private_barber_portfolio_media WHERE id = ${staged.id}
+        `)).rows[0]!.content as Uint8Array)).digest('hex')}
+      WHERE id = ${staged.id}
+    `)
+    const reverified = await verifySubmittedPortfolioForStaff(
+      payload, staff, Number(draft.id))
+    assert.equal(reverified.status, 'verified')
     const submittedPreview = await readPrivatePortfolioReviewImage(
       payload, staff, Number(draft.id), staged.id)
     assert.equal(submittedPreview.mimeType, 'image/png')
