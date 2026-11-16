@@ -104,3 +104,5 @@
 .management-booking-action button{min-height:40px;padding:8px 12px;background:var(--m-ink);border:0;color:var(--m-card);border-radius:4px;cursor:pointer;font:inherit}
 .management-booking-action button:disabled{opacity:.5;cursor:not-allowed}
 .management-booking-action p[role=alert]{width:100%;font-size:11px;white-space:normal;color:#9d4a3e;margin:0}
+
+.management-directory-slug{display:block;margin-top:5px;color:var(--m-muted);font-size:11px;font-weight:400;letter-spacing:.015em}
