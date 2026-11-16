@@ -94,6 +94,10 @@ export async function down({ db }: MigrateDownArgs): Promise<void> {
       IF EXISTS (SELECT 1 FROM "users" WHERE "role"::text = 'location_admin') THEN
         RAISE EXCEPTION 'Cannot roll back: location administrators still exist';
       END IF;
+      IF EXISTS (SELECT 1 FROM "commercial_change_requests")
+         OR EXISTS (SELECT 1 FROM "location_assignments") THEN
+        RAISE EXCEPTION 'Cannot roll back: administrative assignments or requests still exist';
+      END IF;
     END $$;
 
     DROP INDEX "payload_locked_documents_rels_commercial_change_requests_id_idx";
