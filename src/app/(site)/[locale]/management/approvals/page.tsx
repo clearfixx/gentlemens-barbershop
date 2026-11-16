@@ -107,7 +107,7 @@ export default async function ApprovalsPage({ params, searchParams }: {
       <Link href={`/${locale}/management`} className="management-sidebar__item"><LayoutDashboard size={17}/>{uk ? 'Огляд мережі' : 'Network overview'}</Link>
       <Link href={`/${locale}/management/bookings`} className="management-sidebar__item"><CalendarDays size={17}/>{uk ? 'Бронювання' : 'Bookings'}</Link>
       <div className="management-sidebar__item"><MapPin size={17}/>{uk ? 'Заклади' : 'Locations'}</div>
-      <div className="management-sidebar__item"><Scissors size={17}/>{uk ? 'Барбери й послуги' : 'Barbers and services'}</div>
+      <Link href={`/${locale}/management/barbers`} className="management-sidebar__item"><Scissors size={17}/>{uk ? 'Барбери' : 'Barbers'}</Link>
       <div className="management-sidebar__item"><UsersRound size={17}/>{uk ? 'Клієнти' : 'Customers'}</div>
       <Link className="management-sidebar__item management-sidebar__item--active"
         href={`/${locale}/management/approvals`} aria-current="page">
