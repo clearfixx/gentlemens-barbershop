@@ -314,14 +314,14 @@
     grid-template-columns:repeat(2,minmax(0,1fr));
     grid-template-rows:auto;
   }
+  .home-landing .home-benefit,
+  .home-landing .home-benefit:nth-child(n){min-height:210px}
   .home-landing .home-benefit--featured,
   .home-landing .home-benefit--featured:nth-child(n){
     grid-column:span 2;
     grid-row:auto;
     min-height:310px;
   }
-  .home-landing .home-benefit,
-  .home-landing .home-benefit:nth-child(n){min-height:210px}
 }
 @media(max-width:600px){
   .home-landing .home-benefits{grid-template-columns:1fr;gap:12px}
