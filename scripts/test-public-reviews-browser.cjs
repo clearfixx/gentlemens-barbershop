@@ -21,6 +21,22 @@ async function main() {
       assert.equal(await section.locator('.home-review-preview__comment').count(), 1)
       assert.equal(await section.locator('.home-review-preview__date').count(), 1)
       assert.equal(await section.locator('.home-section__note').count(), 0)
+      const barberOptions = section.locator('#home-reviews-barber option')
+      assert.ok(await barberOptions.count() >= 2, 'Public barber filter should offer the actual visit barber')
+      const barberId = await barberOptions.nth(1).getAttribute('value')
+      assert.match(barberId, /^\d+$/)
+      const filtered = await page.goto('http://localhost:3000/' + locale + '?reviewBarber=' + barberId + '#reviews',
+        { waitUntil: 'networkidle' })
+      assert.equal(filtered.status(), 200)
+      assert.equal(await section.locator('#home-reviews-barber').inputValue(), barberId)
+      assert.equal(await section.locator('.home-review-preview--published').count(), 1,
+        'Filtered published review must remain visible for its actual barber')
+      const invalid = await page.goto('http://localhost:3000/' + locale + '?reviewBarber=not-an-id#reviews',
+        { waitUntil: 'networkidle' })
+      assert.equal(invalid.status(), 200)
+      assert.equal(await section.locator('#home-reviews-barber').inputValue(), '',
+        'Invalid barber filter should fall back to published reviews, not an error')
+      assert.equal(await section.locator('.home-review-preview--published').count(), 1)
       assert.deepEqual(errors, [], 'Landing page should not raise runtime errors')
       await page.close()
     }
