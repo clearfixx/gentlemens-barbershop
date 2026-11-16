@@ -428,3 +428,63 @@
   .home-landing .home-benefits .home-benefit::after{transition:none}
   .home-landing .home-benefits .home-benefit:hover::before{transform:none}
 }
+
+/* Light-theme contrast pass: warm paper tones without bleaching photography.
+   Keep the dark-theme palette and approved navigation untouched. */
+:root:not([data-theme=dark]) .home-landing{
+  --home-light-paper:#e9dfd0;
+  --home-light-surface:#dfd0bd;
+  --home-light-border:#ae9980;
+  --home-rule:rgba(73,51,34,.22);
+  background:var(--home-light-paper);
+}
+:root:not([data-theme=dark]) .home-landing .home-section{
+  background:var(--home-light-paper);
+}
+:root:not([data-theme=dark]) .home-landing .home-section--muted{
+  background:#e1d4c3;
+}
+:root:not([data-theme=dark]) .home-landing .home-section__intro,
+:root:not([data-theme=dark]) .home-landing .home-section__note,
+:root:not([data-theme=dark]) .home-landing .home-section__empty{
+  color:#594333;
+}
+:root:not([data-theme=dark]) .home-landing .home-service-card,
+:root:not([data-theme=dark]) .home-landing .home-review-preview--published{
+  border-color:rgba(73,51,34,.25);
+  background:#f0e6d8;
+}
+:root:not([data-theme=dark]) .home-landing .home-reviews-filter select{
+  background:#f0e6d8;
+  border-color:var(--home-light-border);
+}
+:root:not([data-theme=dark]) .home-landing .home-products-feature__copy{
+  background:var(--home-light-surface);
+}
+:root:not([data-theme=dark]) .home-landing .home-benefits .home-benefit,
+:root:not([data-theme=dark]) .home-landing .home-benefits .home-benefit:nth-child(n){
+  --benefit-tint:rgba(191,172,149,.70);
+  --benefit-tint-hover:rgba(191,172,149,.61);
+  --benefit-copy:#241a14;
+  --benefit-subcopy:#392b21;
+  --benefit-accent:#72501f;
+  background:#c6b49c;
+  border-color:rgba(76,52,33,.40);
+}
+:root:not([data-theme=dark]) .home-landing .home-benefits .home-benefit--featured,
+:root:not([data-theme=dark]) .home-landing .home-benefits .home-benefit--featured:nth-child(n){
+  --benefit-tint:rgba(194,173,147,.66);
+  --benefit-tint-hover:rgba(194,173,147,.56);
+  background:#c6b49c;
+}
+:root:not([data-theme=dark]) .home-landing .home-benefits .home-benefit:hover{
+  background:#c6b49c;
+  border-color:#86633e;
+}
+:root:not([data-theme=dark]) .home-landing .home-benefits .home-benefit::before{
+  filter:saturate(.72) contrast(1.1);
+}
+:root:not([data-theme=dark]) .home-landing .home-footer{
+  background:#dfd0bd;
+  border-color:var(--home-light-border);
+}
