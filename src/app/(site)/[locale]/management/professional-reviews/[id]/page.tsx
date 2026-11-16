@@ -8,6 +8,7 @@ import { isLocale } from '@/i18n/config'
 import { resolveLocationScope } from '@/lib/admin/location-access'
 import { loadProfessionalReviewDetail } from '@/lib/admin/professional-review-detail'
 import { listPrivatePortfolioReviewMedia } from '@/lib/admin/private-portfolio-review-media'
+import { verifySubmittedPortfolioForStaff } from '@/lib/admin/verify-submitted-portfolio'
 import { ProfessionalRejectForm } from '@/components/admin/professional-reject-form'
 import { ProfessionalBiographyApprove } from '@/components/admin/professional-biography-approve'
 import '../../approvals/management.css'
@@ -44,10 +45,13 @@ export default async function ProfessionalReviewDetailPage({
   }
   // Separate SQL authorization prevents viewing a draft image solely because
   // the surrounding review page was previously authorized.
-  const privateMedia = detail.portfolioAssessment
-    ? await listPrivatePortfolioReviewMedia(payload, {
-      id: Number(user.id), role: user.role,
-    }, detail.id)
+  const reviewActor = { id: Number(user.id), role: user.role }
+  const integrity = detail.portfolioAssessment
+    ? await verifySubmittedPortfolioForStaff(payload, reviewActor, detail.id)
+    : null
+  // Do not show an unverified or tampered submission's photos.
+  const privateMedia = integrity?.status === 'verified'
+    ? await listPrivatePortfolioReviewMedia(payload, reviewActor, detail.id)
     : []
 
   const fieldNames: Record<string, string> = uk
@@ -124,6 +128,18 @@ export default async function ProfessionalReviewDetailPage({
               : 'Structure matches the preliminary contract. Independent media verification is still required.')
             : (uk ? 'У заявці відсутні потрібні декларації або є помилки структури.'
               : 'The proposal is missing declarations or has structural issues.')}</p>
+          {integrity && <div className="management-portfolio-integrity" role="status">
+            <strong>{integrity.status === 'verified'
+              ? (uk ? 'Цілісність заявки підтверджено' : 'Submission integrity verified')
+              : integrity.status === 'not_submitted'
+                ? (uk ? 'Маніфест подання відсутній' : 'Submission manifest is missing')
+                : (uk ? 'Невідповідність у заявці' : 'Submission integrity mismatch')}</strong>
+            <p>{integrity.status === 'verified'
+              ? (uk ? 'Перевірено набір фото, контрольні суми файлів і зафіксований маніфест.'
+                : 'Image set, image checksums and submitted manifest match.')
+              : (uk ? 'Приватні фотографії приховані до усунення невідповідності. Схвалення портфоліо недоступне.'
+                : 'Private images are hidden until the discrepancy is resolved. Portfolio approval is unavailable.')}</p>
+          </div>}
           {privateMedia.length > 0 && <div className="management-private-media-grid">
             {privateMedia.map(media => <figure key={media.id}>
               {/* Unoptimized deliberately: Next Image optimization may cache a private image. */}
