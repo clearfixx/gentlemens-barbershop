@@ -1,12 +1,12 @@
 import type { Payload, Where } from 'payload'
 import type { LocationScope } from './location-access.ts'
 
-export type ProfessionalReviewStatus = 'draft' | 'pending' | 'approved' | 'rejected'
+export type ProfessionalReviewStatus = 'pending' | 'approved' | 'rejected'
 export type ProfessionalReviewFilters = { status?: string; page?: string; location?: string }
 
 export function parseProfessionalReviewFilters(scope: LocationScope, filters: ProfessionalReviewFilters) {
   const status = filters.status ?? 'pending'
-  if (!['draft', 'pending', 'approved', 'rejected'].includes(status)) {
+  if (!['pending', 'approved', 'rejected'].includes(status)) {
     throw new RangeError('Invalid professional review status')
   }
   const page = filters.page ?? '1'
