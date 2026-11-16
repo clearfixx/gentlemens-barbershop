@@ -4,6 +4,7 @@ import './hero-slider.css'
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { Pause, Play, ArrowDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Locale } from '@/i18n/config'
 
@@ -115,26 +116,40 @@ export function HeroSlider({ locale }: { locale: Locale }) {
             {locale === 'uk' ? 'Наші послуги' : 'Our services'}
           </a>
         </div>
-        <div className="barber-hero__controls" aria-label={locale === 'uk' ? 'Керування слайдами' : 'Slide controls'}>
-          <span className="barber-hero__number">{String(active + 1).padStart(2, '0')}</span>
-          <button type="button" className="barber-hero__track" aria-label={locale === 'uk' ? 'Наступний слайд' : 'Next slide'} onClick={() => goTo((active + 1) % slides[locale].length)}>
-            <span key={resetKey} className={`barber-hero__fill${running ? ' barber-hero__fill--running' : ''}`} />
-          </button>
-          <span className="barber-hero__number">03</span>
+        <div className="barber-hero__controls" role="group" aria-label={locale === 'uk' ? 'Керування слайдами' : 'Slide controls'}>
+          <div className="barber-hero__pagination">
+            {slides[locale].map((item, index) => (
+              <button
+                key={item.eyebrow}
+                type="button"
+                className={`barber-hero__slide-button${active === index ? ' barber-hero__slide-button--active' : ''}`}
+                aria-label={locale === 'uk' ? `Слайд ${index + 1} з ${slides[locale].length}` : `Slide ${index + 1} of ${slides[locale].length}`}
+                aria-current={active === index ? 'true' : undefined}
+                onClick={() => goTo(index)}
+              >
+                <span className="barber-hero__number">{String(index + 1).padStart(2, '0')}</span>
+                <span className="barber-hero__track" aria-hidden="true">
+                  {active === index && <span key={resetKey} className={`barber-hero__fill${running ? ' barber-hero__fill--running' : ''}`} />}
+                </span>
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             className="barber-hero__pause"
             aria-label={playing ? (locale === 'uk' ? 'Зупинити слайдер' : 'Pause slides') : (locale === 'uk' ? 'Відновити слайдер' : 'Play slides')}
+            aria-pressed={!playing}
             onClick={() => { setPlaying(value => !value); setResetKey(key => key + 1) }}
           >
-            {playing ? 'Ⅱ' : '▶'}
+            {playing ? <Pause size={16} strokeWidth={2} fill="currentColor" aria-hidden="true" /> : <Play size={16} strokeWidth={2} fill="currentColor" aria-hidden="true" />}
           </button>
         </div>
       </div>
-      <a className="barber-hero__down" href="#about" aria-label={locale === 'uk' ? 'До наступної секції' : 'Next section'}>
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M12 3v17m-6-6 6 6 6-6"/>
-        </svg>
+      <a className="barber-hero__down" href="#about" aria-label={locale === 'uk' ? 'Прокрутити до наступної секції' : 'Scroll to next section'}>
+        <span className="barber-hero__mouse" aria-hidden="true">
+          <span className="barber-hero__mouse-wheel" />
+          <ArrowDown className="barber-hero__mouse-arrow" size={18} strokeWidth={1.8} />
+        </span>
       </a>
     </section>
   )
