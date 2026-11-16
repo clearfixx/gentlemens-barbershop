@@ -92,7 +92,7 @@ export default async function ProfessionalReviewsPage({ params, searchParams }: 
               <th scope="col">{uk ? 'Створено' : 'Created'}</th>
             </tr></thead>
             <tbody>{queue.rows.map(item => <tr key={item.id}>
-              <td>#{item.id}</td><td>{names.get(item.barberId) ?? `#${item.barberId}`}</td>
+              <td><Link href={`${base}/${item.id}`} className="management-review-link">#{item.id}</Link></td><td>{names.get(item.barberId) ?? `#${item.barberId}`}</td>
               <td>#{item.locationId}</td>
               <td><span className={`management-status management-status--${item.status}`}>{labels[item.status] ?? item.status}</span></td>
               <td><time dateTime={item.createdAt}>{new Intl.DateTimeFormat(uk ? 'uk-UA' : 'en-GB', {
