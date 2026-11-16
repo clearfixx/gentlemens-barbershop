@@ -5,7 +5,7 @@ import { CalendarDays, Gift, Heart, LayoutDashboard, Menu, Settings2, Star, User
 import type { Locale } from '@/i18n/config'
 import { AccountSidebarLogout } from '@/components/account-sidebar-logout'
 
-const ids = ['overview', 'bookings', 'reviews', 'profile-editor', 'favorites', 'loyalty', 'settings'] as const
+const ids = ['overview', 'history', 'profile-editor', 'reviews', 'favorites', 'loyalty', 'settings'] as const
 type SectionId = (typeof ids)[number]
 
 /** One-page anchor navigation, scroll spy, and a mobile off-canvas drawer. */
@@ -15,7 +15,7 @@ export function AccountSidebarNavigation({ locale }: { locale: Locale }) {
   const [open, setOpen] = useState(false)
   const links = [
     { id: 'overview', label: uk ? 'Огляд' : 'Overview', icon: LayoutDashboard },
-    { id: 'bookings', label: uk ? 'Мої записи' : 'My bookings', icon: CalendarDays },
+    { id: 'history', label: uk ? 'Мої записи' : 'My bookings', icon: CalendarDays },
     { id: 'profile-editor', label: uk ? 'Профіль' : 'Profile', icon: UserRound },
     { id: 'reviews', label: uk ? 'Відгуки' : 'Reviews', icon: Star },
     { id: 'favorites', label: uk ? 'Обране' : 'Favorites', icon: Heart },
