@@ -144,7 +144,7 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
         <Link role="menuitem" href={`/${locale}/account#overview`} onClick={() => setOpen(false)}>
           <UserRound size={18} strokeWidth={1.7} aria-hidden="true" />{uk ? 'Мій кабінет' : 'My account'}
         </Link>
-        <Link role="menuitem" href={`/${locale}/account#bookings`} onClick={() => setOpen(false)}>
+        <Link role="menuitem" href={`/${locale}/account#history`} onClick={() => setOpen(false)}>
           <CalendarDays size={18} strokeWidth={1.7} aria-hidden="true" />{uk ? 'Мої записи' : 'My bookings'}
         </Link>
         <Link role="menuitem" href={`/${locale}/booking`} onClick={() => setOpen(false)}>
