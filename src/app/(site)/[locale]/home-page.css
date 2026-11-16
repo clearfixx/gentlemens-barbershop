@@ -85,3 +85,20 @@
 .home-section--benefits .home-section__heading{font-family:Arial,Helvetica,sans-serif;font-weight:600;font-size:clamp(23px,2vw,34px);letter-spacing:.015em}
 @media(max-width:850px){.home-footer__layout{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:500px){.home-footer__layout{grid-template-columns:1fr 1fr;gap:25px 13px}.home-footer__brand,.home-footer__newsletter{grid-column:1/-1}.home-footer__nav{gap:8px}}
+
+
+/* Published booking-verified reviews replace the empty-state skeletons. */
+.home-review-preview--published{display:flex;flex-direction:column;gap:13px;min-height:165px}
+.home-review-preview__top{display:flex!important;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:9px}
+.home-review-preview__verified{font-size:11px;line-height:1.4;color:var(--muted)}
+.home-review-preview__stars{display:inline-flex;gap:3px;color:var(--gold)}
+.home-review-preview__comment{margin:0;font-size:13px;line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap}
+.home-review-preview__date{margin-top:auto;color:var(--muted);font-size:11px}
+
+/* Compact server-side barber filter, preserving the established review grid. */
+.home-reviews-filter{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 20px}
+.home-reviews-filter label{font-size:12px;color:var(--muted)}
+.home-reviews-filter select{min-height:38px;max-width:100%;min-width:170px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--paper);color:var(--ink);font:inherit;font-size:12px}
+.home-reviews-filter button{min-height:38px;padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:var(--ink);color:var(--paper);font:inherit;font-size:12px;cursor:pointer}
+.home-reviews-filter select:focus-visible,.home-reviews-filter button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media(max-width:580px){.home-reviews-filter select{flex:1;min-width:0}.home-reviews-filter button{width:100%}}

@@ -919,6 +919,8 @@ jobs:
           CI=true NODE_ENV=production timeout 60s \
             node --experimental-strip-types scripts/ci-account-populated-fixture.ts
           CI=true timeout 120s node scripts/test-customer-account-populated-browser.cjs
+          CI=true NODE_ENV=production timeout 60s node --experimental-strip-types scripts/ci-review-moderation.ts
+          CI=true timeout 90s node scripts/test-public-reviews-browser.cjs
 
           # A customer must not be able to enumerate the administrator or other users.
           customer_list_status=$(curl --silent --show-error --output /tmp/barbershop-customer-list.json --write-out '%{http_code}' \
@@ -1271,6 +1273,7 @@ jobs:
           mkdir -p /tmp/booking-migrations-outside-historical-rehearsal
           mv src/migrations/*booking*.ts src/migrations/*barber_account_binding.ts \
             src/migrations/*customer_phone.ts src/migrations/*customer_avatar.ts \
+            src/migrations/*verified_reviews.ts \
             /tmp/booking-migrations-outside-historical-rehearsal/
           # Rehearse the committed, previously normalized localization files unchanged.
           mkdir -p /tmp/incremental-migration

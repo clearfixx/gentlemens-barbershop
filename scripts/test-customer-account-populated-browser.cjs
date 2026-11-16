@@ -46,6 +46,49 @@ async function run() {
         dateText(fixture.bookings.cancelledFuture.startsAt, locale)),
         'Cancelled future booking must never become next visit')
 
+      // Reviews are available only for an actual completed appointment.
+      if (locale === 'uk') {
+        const form = page.locator('.account-reviews__form')
+        assert.ok(await form.isVisible(), 'Completed visit must enable review form')
+        await form.locator('#account-review-comment').fill('Відмінна стрижка, привітний майстер, рекомендую цей барбершоп!')
+        await form.getByRole('button', { name: 'Надіслати відгук' }).click()
+        await page.getByText('На модерації', { exact: true }).waitFor()
+        assert.ok((await page.locator('.account-reviews__list').innerText()).includes('Відмінна стрижка'),
+          'Submitted review must persist under the account')
+        const validReview = {
+          bookingId: fixture.bookings.completedPast.id, rating: 5,
+          comment: 'Excellent verified appointment and excellent service!',
+        }
+        const duplicate = await context.request.post(origin + '/api/account/reviews', { data: validReview })
+        assert.equal(duplicate.status(), 409, 'One booking must only have one review')
+        const foreign = await context.request.post(origin + '/api/account/reviews', {
+          data: { ...validReview, bookingId: fixture.bookings.foreignBooking.id },
+        })
+        assert.equal(foreign.status(), 404, 'Customer must not review a foreign booking')
+        const cancelled = await context.request.post(origin + '/api/account/reviews', {
+          data: { ...validReview, bookingId: fixture.bookings.cancelledPast.id },
+        })
+        assert.equal(cancelled.status(), 409, 'Cancelled booking must never be eligible')
+        const forged = await context.request.post(origin + '/api/account/reviews', {
+          data: { ...validReview, bookingId: fixture.bookings.first.id, status: 'published' },
+        })
+        assert.equal(forged.status(), 400, 'Customer must not set moderation status')
+        const oversized = await context.request.post(origin + '/api/account/reviews', {
+          data: { ...validReview, comment: 'x'.repeat(6000) },
+        })
+        assert.equal(oversized.status(), 413, 'Review JSON must be rejected before buffering beyond 4 KiB')
+        const malformed = await context.request.post(origin + '/api/account/reviews', {
+          headers: { 'Content-Type': 'application/json' },
+          data: '{"bookingId":',
+        })
+        assert.equal(malformed.status(), 400, 'Malformed JSON must not be reported as server failure')
+      } else {
+        assert.ok((await page.locator('.account-reviews__list').innerText()).includes('Excellent') === false,
+          'Original submitted Ukrainian review must not be replaced by fabricated English text')
+        assert.match(await page.locator('.account-reviews__list').innerText(), /Pending moderation/,
+          'Existing review moderation state must be localized')
+      }
+
       const list = page.locator('.account-recent-list li')
       assert.equal(await list.count(), 2, 'All preview is bounded to two rows')
       // Default all = latest by date, including cancelled future booking.
