@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { CommercialChangeRequests } from '../../payload/collections/CommercialChangeRequests.ts'
 import { LocationAssignments } from '../../payload/collections/LocationAssignments.ts'
+import { BarberProfileRevisions } from '../../payload/collections/BarberProfileRevisions.ts'
 
 type AccessRequest = { user: { id: number; role: string } | null; payload?: unknown }
 async function allowed(
@@ -54,4 +55,29 @@ test('revoked manager membership gives no approval history', async () => {
     user: { id: 8, role: 'location_admin' }, payload,
   })
   assert.equal(result, false)
+})
+
+test('professional content revisions cannot be modified through Payload REST/CMS', async () => {
+  for (const role of ['admin', 'location_admin', 'barber', 'customer']) {
+    for (const action of ['create', 'update', 'delete']) {
+      assert.equal(await allowed(BarberProfileRevisions, action, {
+        user: { id: 8, role },
+      }), false)
+    }
+  }
+  assert.equal(await allowed(BarberProfileRevisions, 'read', {
+    user: { id: 1, role: 'admin' },
+  }), true)
+  for (const role of ['barber', 'customer']) {
+    assert.equal(await allowed(BarberProfileRevisions, 'read', {
+      user: { id: 8, role },
+    }), false)
+  }
+})
+
+test('professional review read access is revoked with location membership', async () => {
+  const payload = { find: async () => ({ docs: [], hasNextPage: false }) }
+  assert.equal(await allowed(BarberProfileRevisions, 'read', {
+    user: { id: 8, role: 'location_admin' }, payload,
+  }), false)
 })
