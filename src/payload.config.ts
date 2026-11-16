@@ -15,6 +15,8 @@ import { BookingEvents } from './payload/collections/BookingEvents.ts'
 import { BarberSchedules } from './payload/collections/BarberSchedules.ts'
 import { BarberTimeOff } from './payload/collections/BarberTimeOff.ts'
 import { Translations } from './payload/collections/Translations.ts'
+import { LocationAssignments } from './payload/collections/LocationAssignments.ts'
+import { CommercialChangeRequests } from './payload/collections/CommercialChangeRequests.ts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -26,7 +28,7 @@ export default buildConfig({
     // Customer and barber accounts never enter the CMS administration UI.
     // First administrator must be provisioned by a trusted server-side bootstrap.
   },
-  collections: [Users, Media, Locations, Services, Barbers, Bookings, Reviews, BookingEvents, BarberSchedules, BarberTimeOff, Translations],
+  collections: [Users, Media, Locations, Services, Barbers, Bookings, Reviews, BookingEvents, BarberSchedules, BarberTimeOff, Translations, LocationAssignments, CommercialChangeRequests],
   editor: lexicalEditor(),
   localization: {
     locales: [
