@@ -8,6 +8,7 @@ import { isLocale } from '@/i18n/config'
 import { resolveLocationScope } from '@/lib/admin/location-access'
 import { loadProfessionalReviewDetail } from '@/lib/admin/professional-review-detail'
 import { ProfessionalRejectForm } from '@/components/admin/professional-reject-form'
+import { ProfessionalBiographyApprove } from '@/components/admin/professional-biography-approve'
 import '../../approvals/management.css'
 
 export const dynamic = 'force-dynamic'
@@ -102,10 +103,14 @@ export default async function ProfessionalReviewDetailPage({
           <p>{detail.rejectionReason}</p>
         </section>}
         {scope.role === 'admin' && detail.status === 'pending' &&
+          detail.unsupportedChangeCount === 0 && detail.fields.length === 1 &&
+          detail.fields[0]?.field === 'bio' &&
+          <ProfessionalBiographyApprove id={detail.id} locale={locale}/>}
+        {scope.role === 'admin' && detail.status === 'pending' &&
           <ProfessionalRejectForm id={detail.id} locale={locale}/>}
         <p className="management-booking-note">{uk
-          ? 'Це попередній перегляд для адміністратора. Публікація та схвалення залишаються недоступними, доки не завершено транзакційний workflow.'
-          : 'This is a staff review preview. Publication and approvals are disabled until the transactional workflow is complete.'}</p>
+          ? 'Можна схвалювати лише перевірені зміни звичайної біографії. Публікація фото, сертифікатів, соцпосилань і локалізованого тексту поки недоступна.'
+          : 'Only verified plain biographies can be approved. Photos, certificates, social links and localized text cannot yet be published.'}</p>
       </div>
     </div>
   </main>
