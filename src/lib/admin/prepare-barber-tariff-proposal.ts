@@ -61,7 +61,11 @@ export async function prepareBarberTariffProposal(
       idOf(service.id) !== request.serviceId) {
     throw new Error('Tariff target does not belong to requested location')
   }
-  const offerings = barber.serviceOfferings ?? []
+  const offerings = (barber.serviceOfferings ?? []) as Array<{
+    service: unknown
+    priceOverride?: number | null
+    durationOverrideMinutes?: number | null
+  }>
   const matches = offerings.filter(row => idOf(row.service) === request.serviceId)
   if (matches.length !== 1) throw new Error('Missing or ambiguous barber service offering')
   const match = matches[0]
