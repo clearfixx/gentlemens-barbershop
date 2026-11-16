@@ -136,3 +136,7 @@
 .management-private-media-grid figure{margin:0;min-width:0;border:1px solid var(--m-border);background:var(--m-paper);border-radius:4px;overflow:hidden}
 .management-private-media-grid img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain;background:var(--m-card)}
 .management-private-media-grid figcaption{padding:10px 12px;font-size:11px;color:var(--m-muted);line-height:1.4}
+
+.management-portfolio-integrity{border:1px solid var(--m-border);border-radius:4px;padding:15px 18px;margin:18px 0;background:var(--m-paper)}
+.management-portfolio-integrity strong{font-size:13px;color:var(--m-ink)}
+.management-portfolio-integrity p{margin:8px 0 0;font-size:12px;line-height:1.6;color:var(--m-muted)}
