@@ -417,3 +417,21 @@
 @media(prefers-reduced-motion:reduce){
   .site-header.floating-header{transition:none}
 }
+
+
+/* Light Navbar: improve thin control borders on translucent backgrounds.
+   No geometry, behavior, dark-theme colors, or dropdown surfaces change. */
+:root:not([data-theme=dark]) .site-header.floating-header{
+  --navbar-border:rgba(98,72,47,.25);
+}
+:root:not([data-theme=dark]) .floating-header .internal-nav-menu,
+:root:not([data-theme=dark]) .site-header.floating-header .site-header__actions{
+  border-left-color:rgba(98,72,47,.32);
+}
+:root:not([data-theme=dark]) .floating-header .header-preferences{
+  border-color:rgba(105,74,40,.55);
+  background:rgba(225,207,181,.22);
+}
+:root:not([data-theme=dark]) .floating-header .locale-compact{
+  border-left-color:rgba(105,74,40,.42);
+}
