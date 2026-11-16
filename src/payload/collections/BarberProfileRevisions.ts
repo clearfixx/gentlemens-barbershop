@@ -55,5 +55,7 @@ export const BarberProfileRevisions: CollectionConfig = {
     { name: 'reviewedAt', type: 'date' },
     { name: 'rejectionReason', type: 'textarea', maxLength: 1000 },
     { name: 'appliedRevision', type: 'text', maxLength: 128 },
+    { name: 'submittedManifestHash', type: 'text', maxLength: 64,
+      admin: { readOnly: true, description: 'Private portfolio evidence: not publication permission' } },
   ],
 }
