@@ -6,8 +6,7 @@ type Mock = Parameters<typeof prepareBarberTariffProposal>[0]
 function catalog({
   branch = 4,
   offering = { service: 7, priceOverride: 600, durationOverrideMinutes: null },
-  roles = 'location_admin',
-} = {}): Mock {
+}: { branch?: number; offering?: { service: number; priceOverride: number | null; durationOverrideMinutes: number | null } } = {}): Mock {
   return {
     find: async () => ({
       docs: [{ user: 11, location: 4 }],
