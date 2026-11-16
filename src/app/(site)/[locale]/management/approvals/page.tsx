@@ -143,7 +143,7 @@ export default async function ApprovalsPage({ params, searchParams }: {
                 return <article className="management-request" key={item.id}>
                   <div className="management-request__top">
                     <span className="management-request__number">#{item.id}</span>
-                    <span className={`management-status management-status--${item.status}`}>{labels[item.status]}</span>
+                    <span className={`management-status management-status--${item.status}`}>{labels[item.status as Status] ?? String(item.status)}</span>
                   </div>
                   <h3>{types[kind] ?? kind} · {serviceNames.get(refId(item.service) ?? 0) ?? (uk ? 'Послуга' : 'Service')}</h3>
                   <p>{locationNames.get(refId(item.location) ?? 0) ?? (uk ? 'Заклад' : 'Location')}
