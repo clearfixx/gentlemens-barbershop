@@ -113,7 +113,10 @@ export async function decideBarberTariffProposal(
     const currentValue = overrideValue ?? baseValue
     const proposedValue = numeric(row.proposed_value)
     const oldValue = numeric(row.old_value)
-    if (currentValue !== oldValue) {
+    // Rejection never changes a tariff and must remain possible even if the
+    // underlying price has changed since submission. Only approval requires
+    // an unchanged current value and matching revision.
+    if (decision.status === 'approved' && currentValue !== oldValue) {
       throw new Error('Commercial proposal is stale; tariff changed')
     }
     const revision = tariffRevision({
