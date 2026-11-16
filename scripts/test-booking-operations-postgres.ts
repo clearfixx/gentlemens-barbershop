@@ -4,6 +4,7 @@ import config from '../src/payload.config.ts'
 import { getOwnBookingHistory } from '../src/lib/booking/get-own-booking-history.ts'
 import { getAdminBookings, changeAdminBookingStatus, AdminBookingConflictError } from '../src/lib/booking/admin-booking-operations.ts'
 import { getAdminBookingAudit, AdminBookingAuditAccessError } from '../src/lib/booking/admin-booking-audit.ts'
+import { changeStaffBookingStatus } from '../src/lib/admin/staff-booking-transitions.ts'
 import { cancelOwnedBooking, BookingCancellationConflictError } from '../src/lib/booking/cancel-owned-booking.ts'
 import {
   getOwnBarberBookings, changeOwnBarberBookingStatus, BarberBookingConflictError,
@@ -334,6 +335,71 @@ async function main() {
     assert.equal(historicalEvents.docs[0]?.actorRole, 'assigned_barber')
     assert.equal(historicalEvents.docs[0]?.actor, barberUser.id)
   }
+  // Branch manager transitions: real PostgreSQL authorization, audit, and
+  // revocation. Run on a separate far-future fixture to avoid existing tests.
+  const managerUser = await payload.create({
+    collection: 'users', overrideAccess: true,
+    data: { email: 'ci-booking-location-admin@example.invalid',
+      password: 'ci-disposable-manager-password', role: 'location_admin' },
+  })
+  const assignment = await payload.create({
+    collection: 'location-assignments', overrideAccess: true,
+    data: { user: Number(managerUser.id), location: locationId, isActive: true },
+  })
+  const managerScope = {
+    userId: Number(managerUser.id), role: 'location_admin' as const, locationIds: [locationId],
+  }
+  const managerBooking = await payload.create({
+    collection: 'bookings', overrideAccess: true, depth: 0,
+    data: {
+      location: locationId, barber: barberId, services: [serviceId],
+      customerName: 'CI manager transition', customerPhone: '+380671234567',
+      startsAt: '2038-01-02T10:00:00.000Z',
+      endsAt: '2038-01-02T11:00:00.000Z',
+      totalPrice: 650, status: 'pending',
+    },
+  })
+  const managerConfirmed = await changeStaffBookingStatus(
+    payload, managerScope, String(managerBooking.id), 'confirmed',
+  )
+  assert.deepEqual(managerConfirmed, { id: managerBooking.id, status: 'confirmed' })
+  await assert.rejects(changeStaffBookingStatus(
+    payload, managerScope, String(managerBooking.id), 'confirmed',
+  ), AdminBookingConflictError)
+  const managerAudit = await payload.find({
+    collection: 'booking-events', overrideAccess: true, depth: 0,
+    where: { booking: { equals: managerBooking.id } },
+  })
+  assert.equal(managerAudit.totalDocs, 1)
+  assert.equal(managerAudit.docs[0]?.actorRole, 'location_admin')
+  assert.equal(managerAudit.docs[0]?.actor, managerUser.id)
+  await payload.update({
+    collection: 'location-assignments', id: assignment.id, overrideAccess: true,
+    data: { isActive: false },
+  })
+  await assert.rejects(changeStaffBookingStatus(
+    payload, managerScope, String(managerBooking.id), 'cancelled',
+  ), AdminBookingConflictError, 'Revocation must block writes even with a stale scope snapshot')
+  const noRevocationAudit = await payload.find({
+    collection: 'booking-events', overrideAccess: true, depth: 0,
+    where: { booking: { equals: managerBooking.id } },
+  })
+  assert.equal(noRevocationAudit.totalDocs, 1)
+  const stillConfirmed = await payload.findByID({
+    collection: 'bookings', id: managerBooking.id, overrideAccess: true, depth: 0,
+  })
+  assert.equal(stillConfirmed.status, 'confirmed')
+  const networkCancel = await changeStaffBookingStatus(
+    payload, { userId: Number(adminUser.id), role: 'admin', locationIds: [] },
+    String(managerBooking.id), 'cancelled',
+  )
+  assert.equal(networkCancel.status, 'cancelled')
+  const fullManagerTimeline = await getAdminBookingAudit(
+    payload, adminActor, String(managerBooking.id),
+  )
+  assert.deepEqual(fullManagerTimeline.events.map(event => event.actorRole),
+    ['location_admin', 'admin'])
+
   console.info('Booking operations PostgreSQL integration passed: ownership, cancellation policy, confirmation, completion, no-show and audit')
 }
 
