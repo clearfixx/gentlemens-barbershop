@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { resolveLocationScope } from '../../lib/admin/location-access.ts'
 
 /** Approval requests are persisted in Payload, but state changes and live
  * pricing writes must happen only in a trusted transactional domain service.
@@ -15,7 +16,16 @@ export const CommercialChangeRequests: CollectionConfig = {
     read: ({ req }) => {
       if (req.user?.role === 'admin') return true
       if (req.user?.role === 'location_admin') {
-        return { createdBy: { equals: req.user.id } }
+        // Membership may be revoked after submission: check current assignments
+        // before exposing even the manager's historical request records.
+        return resolveLocationScope(req.payload, req.user)
+          .then(scope => ({
+            and: [
+              { createdBy: { equals: scope.userId } },
+              { location: { in: scope.locationIds } },
+            ],
+          }))
+          .catch(() => false)
       }
       return false
     },
