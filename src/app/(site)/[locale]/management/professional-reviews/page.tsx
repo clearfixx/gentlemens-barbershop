@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: 'Професійний контент — Погодження | Gentlemen’s Barbershop',
   robots: { index: false, follow: false },
 }
-const statuses = ['pending', 'approved', 'rejected', 'draft'] as const
+const statuses = ['pending', 'approved', 'rejected'] as const
 
 export default async function ProfessionalReviewsPage({ params, searchParams }: {
   params: Promise<{ locale: string }>
@@ -42,8 +42,8 @@ export default async function ProfessionalReviewsPage({ params, searchParams }: 
     throw error
   }
   const labels: Record<string, string> = uk
-    ? { pending: 'Очікують', approved: 'Схвалені', rejected: 'Відхилені', draft: 'Чернетки' }
-    : { pending: 'Pending', approved: 'Approved', rejected: 'Rejected', draft: 'Drafts' }
+    ? { pending: 'Очікують', approved: 'Схвалені', rejected: 'Відхилені' }
+    : { pending: 'Pending', approved: 'Approved', rejected: 'Rejected' }
   const barberIds = [...new Set(queue.rows.map(item => item.barberId))]
   const barbers = barberIds.length ? await payload.find({
     collection: 'barbers', overrideAccess: true, depth: 0, limit: 20,
