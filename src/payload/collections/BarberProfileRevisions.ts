@@ -15,12 +15,19 @@ export const BarberProfileRevisions: CollectionConfig = {
   },
   access: {
     read: ({ req }) => {
-      if (req.user?.role === 'admin') return true
+      if (req.user?.role === 'admin') {
+        // Private drafts are not submitted for review and remain invisible.
+        const where: Where = { status: { not_equals: 'draft' } }
+        return where
+      }
       if (req.user?.role === 'location_admin') {
         return resolveLocationScope(req.payload, {
           id: Number(req.user.id), role: 'location_admin',
         }).then(scope => {
-          const where: Where = { location: { in: scope.locationIds } }
+          const where: Where = { and: [
+            { location: { in: scope.locationIds } },
+            { status: { not_equals: 'draft' } },
+          ] }
           return where
         }).catch(() => false)
       }
