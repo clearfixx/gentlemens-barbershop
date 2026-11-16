@@ -3,7 +3,9 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-export function ProfessionalBiographyApprove({ id, locale }: { id: number; locale: string }) {
+export function ProfessionalBiographyApprove({ id, locale, kind = 'bio' }: {
+  id: number; locale: string; kind?: 'bio' | 'localizedBio'
+}) {
   const router = useRouter()
   const uk = locale === 'uk'
   const [busy, setBusy] = useState(false)
@@ -13,7 +15,7 @@ export function ProfessionalBiographyApprove({ id, locale }: { id: number; local
     setBusy(true)
     setError('')
     try {
-      const response = await fetch(`/api/admin/professional-reviews/${id}/approve`, {
+      const response = await fetch(`/api/admin/professional-reviews/${id}/${kind === 'localizedBio' ? 'approve-localized' : 'approve'}`, {
         method: 'POST',
       })
       if (!response.ok) {
@@ -33,7 +35,9 @@ export function ProfessionalBiographyApprove({ id, locale }: { id: number; local
   }
   return <div className="management-biography-approve">
     <button type="button" disabled={busy} onClick={approve}>
-      {busy ? (uk ? 'Публікація…' : 'Publishing…') : (uk ? 'Схвалити біографію' : 'Approve biography')}
+      {busy ? (uk ? 'Публікація…' : 'Publishing…') : (kind === 'localizedBio'
+        ? (uk ? 'Схвалити переклад' : 'Approve translation')
+        : (uk ? 'Схвалити біографію' : 'Approve biography'))}
     </button>
     {error && <p role="alert" className="management-error">{error}</p>}
   </div>
