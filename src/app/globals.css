@@ -223,6 +223,14 @@
 .floating-header .site-brand{display:flex;align-items:center;min-width:0;text-decoration:none}
 .floating-header .site-brand__art{position:relative;display:block;width:clamp(165px,14vw,232px)}
 .floating-header .site-brand__logo{display:block;width:100%;height:auto;max-height:56px;object-fit:contain}
+/* Lighten only the crown in dark mode; preserve the shield and wordmark. */
+:root[data-theme=dark] .floating-header .site-brand__art::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:#eee3cf;
+  -webkit-mask:url('/images/brand/logo.svg') center/contain no-repeat;
+  mask:url('/images/brand/logo.svg') center/contain no-repeat;
+  clip-path:inset(0 76% 75% 9%);
+}
 :root[data-theme=dark] .floating-header .site-brand__art::after{
   content:"";position:absolute;inset:0;pointer-events:none;
   background:#eee3cf;
