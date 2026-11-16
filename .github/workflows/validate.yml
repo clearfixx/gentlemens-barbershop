@@ -1313,6 +1313,7 @@ jobs:
             src/migrations/*verified_reviews.ts \
             src/migrations/*admin_management_foundation.ts \
             src/migrations/*barber_professional_revisions.ts \
+            src/migrations/*private_barber_portfolio_media.ts \
             /tmp/booking-migrations-outside-historical-rehearsal/
           # Rehearse the committed, previously normalized localization files unchanged.
           mkdir -p /tmp/incremental-migration
