@@ -117,6 +117,7 @@ export async function submitPrivatePortfolioDraft(
     const updated = await tx.execute(sql`
       UPDATE barber_profile_revisions
       SET changes = ${JSON.stringify({ portfolio: { items } })}::jsonb,
+        submitted_manifest_hash = ${manifestSha256},
         status = 'pending'::public.enum_barber_profile_revisions_status,
         updated_at = NOW()
       WHERE id = ${revisionId}
