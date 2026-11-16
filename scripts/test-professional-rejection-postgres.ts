@@ -10,6 +10,7 @@ import { approveProfessionalLocalizedBiography } from '../src/lib/admin/approve-
 import { localizedBiographyRevision } from '../src/lib/admin/professional-localized-biography.ts'
 import { ProfessionalReviewConflictError } from '../src/lib/admin/professional-approval-policy.ts'
 import { listPrivatePortfolioReviewMedia, readPrivatePortfolioReviewImage, PrivatePortfolioMediaNotFound } from '../src/lib/admin/private-portfolio-review-media.ts'
+import { stagePrivatePortfolioImage, PrivatePortfolioUploadForbidden } from '../src/lib/admin/stage-private-portfolio-image.ts'
 
 /** Disposable full-schema integration: rejection must never mutate the public
  * barber record and must persist a single final decision under row locks.
@@ -29,6 +30,7 @@ async function run() {
     return value
   }
   let privateMediaId: number | null = null
+  let stagedImageId: number | null = null
   try {
     const network = add('users', await payload.create({ collection: 'users', overrideAccess: true,
       data: { email: `professional-admin-${suffix}@example.invalid`,
@@ -117,6 +119,33 @@ async function run() {
     }))
     await assert.rejects(readPrivatePortfolioReviewImage(payload, staff,
       Number(draft.id), privateMediaId), PrivatePortfolioMediaNotFound)
+    // A verified BARBER can only add sanitized bytes to their own DRAFT.
+    // An admin cannot impersonate the author or upload to a submitted revision.
+    const pngWithMetadata = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAF3RFWHRjb21tZW50AHNlY3JldC1tZXRhZGF0YdHOKngAAAANSURBVHicY/jPwPAfAAUAAf+JmT0dAAAAAElFTkSuQmCC',
+      'base64',
+    )
+    const staged = await stagePrivatePortfolioImage(payload, {
+      id: Number(barberUser.id), role: 'barber',
+    }, Number(draft.id), pngWithMetadata)
+    stagedImageId = staged.id
+    assert.ok(staged.sizeBytes < pngWithMetadata.length, 'PNG metadata must be removed')
+    await assert.rejects(stagePrivatePortfolioImage(payload, {
+      id: Number(network.id), role: 'admin',
+    }, Number(draft.id), pngWithMetadata), PrivatePortfolioUploadForbidden)
+    await assert.rejects(readPrivatePortfolioReviewImage(
+      payload, staff, Number(draft.id), staged.id), PrivatePortfolioMediaNotFound)
+    await payload.update({
+      collection: 'barber-profile-revisions', id: draft.id, overrideAccess: true,
+      data: { status: 'pending' },
+    })
+    const submittedPreview = await readPrivatePortfolioReviewImage(
+      payload, staff, Number(draft.id), staged.id)
+    assert.equal(submittedPreview.mimeType, 'image/png')
+    assert.equal(Buffer.from(submittedPreview.bytes).includes(Buffer.from('secret-metadata')), false)
+    await assert.rejects(stagePrivatePortfolioImage(payload, {
+      id: Number(barberUser.id), role: 'barber',
+    }, Number(draft.id), pngWithMetadata), PrivatePortfolioUploadForbidden)
     const result = await rejectProfessionalProposal(payload, Number(proposal.id),
       { id: Number(network.id), role: 'admin' }, 'Insufficient verification')
     assert.deepEqual(result, { id: Number(proposal.id), status: 'rejected' })
@@ -275,6 +304,9 @@ async function run() {
     assert.equal(afterLocalized.bio, 'Approved public biography')
     console.info('Professional rejection and biography/locale publication PostgreSQL integration passed')
   } finally {
+    if (stagedImageId !== null) {
+      await payload.db.drizzle.execute(sql`DELETE FROM private_barber_portfolio_media WHERE id = ${stagedImageId}`)
+    }
     if (privateMediaId !== null) {
       await payload.db.drizzle.execute(sql`DELETE FROM private_barber_portfolio_media WHERE id = ${privateMediaId}`)
     }
