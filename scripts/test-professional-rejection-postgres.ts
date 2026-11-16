@@ -11,6 +11,7 @@ import { localizedBiographyRevision } from '../src/lib/admin/professional-locali
 import { ProfessionalReviewConflictError } from '../src/lib/admin/professional-approval-policy.ts'
 import { listPrivatePortfolioReviewMedia, readPrivatePortfolioReviewImage, PrivatePortfolioMediaNotFound } from '../src/lib/admin/private-portfolio-review-media.ts'
 import { stagePrivatePortfolioImage, PrivatePortfolioUploadForbidden } from '../src/lib/admin/stage-private-portfolio-image.ts'
+import { submitPrivatePortfolioDraft, PortfolioSubmissionConflict } from '../src/lib/admin/submit-private-portfolio-draft.ts'
 
 /** Disposable full-schema integration: rejection must never mutate the public
  * barber record and must persist a single final decision under row locks.
@@ -135,10 +136,35 @@ async function run() {
     }, Number(draft.id), pngWithMetadata), PrivatePortfolioUploadForbidden)
     await assert.rejects(readPrivatePortfolioReviewImage(
       payload, staff, Number(draft.id), staged.id), PrivatePortfolioMediaNotFound)
-    await payload.update({
-      collection: 'barber-profile-revisions', id: draft.id, overrideAccess: true,
-      data: { status: 'pending' },
+    const submitted = await submitPrivatePortfolioDraft(payload, {
+      id: Number(barberUser.id), role: 'barber',
+    }, Number(draft.id), {
+      items: [{
+        mediaId: staged.id, alt: 'CI private haircut', caption: 'Verified draft',
+        sortOrder: 0, rightsDeclared: true, clientConsentDeclared: true,
+      }],
     })
+    assert.equal(submitted.status, 'pending')
+    assert.equal(submitted.mediaCount, 1)
+    assert.match(submitted.manifestSha256, /^[0-9a-f]{64}$/)
+    const submittedRecord = await payload.findByID({
+      collection: 'barber-profile-revisions', id: draft.id,
+      overrideAccess: true, depth: 0,
+    })
+    assert.equal(submittedRecord.status, 'pending')
+    assert.equal(submittedRecord.submittedManifestHash, submitted.manifestSha256)
+    assert.deepEqual(submittedRecord.changes, {
+      portfolio: { items: [{
+        mediaId: staged.id, alt: 'CI private haircut', caption: 'Verified draft',
+        sortOrder: 0, rightsDeclared: true, clientConsentDeclared: true,
+      }] },
+    })
+    await assert.rejects(submitPrivatePortfolioDraft(payload, {
+      id: Number(barberUser.id), role: 'barber',
+    }, Number(draft.id), { items: [{
+      mediaId: staged.id, alt: 'Changed after submission', sortOrder: 0,
+      rightsDeclared: true, clientConsentDeclared: true,
+    }] }), PortfolioSubmissionConflict)
     const submittedPreview = await readPrivatePortfolioReviewImage(
       payload, staff, Number(draft.id), staged.id)
     assert.equal(submittedPreview.mimeType, 'image/png')
