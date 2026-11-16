@@ -92,6 +92,11 @@ export async function decideBarberTariffProposal(
       throw new Error('Missing or ambiguous commercial proposal target')
     }
     const row = result.rows[0] as LockedProposal
+    // Check the terminal state before checking live tariff drift: a replayed
+    // decision must always be reported as already processed.
+    if (row.status !== 'pending') {
+      throw new Error('Commercial proposal is no longer pending')
+    }
     const locationId = id(row.location_id)
     const barberId = id(row.barber_id)
     const serviceId = id(row.service_id)
