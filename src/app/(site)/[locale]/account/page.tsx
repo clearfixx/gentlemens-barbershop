@@ -38,7 +38,7 @@ const statusLabels = {
 
 export default async function AccountPage({ params, searchParams }: {
   params: Promise<{ locale: string }>
-  searchParams: Promise<{ filter?: string; historyFilter?: string; page?: string }>
+  searchParams: Promise<{ historyFilter?: string; page?: string }>
 }) {
   const { locale } = await params
   if (!isLocale(locale)) notFound()
@@ -50,7 +50,6 @@ export default async function AccountPage({ params, searchParams }: {
   if (user.role !== 'customer' && user.role !== 'admin') notFound()
 
   const query = await searchParams
-  const filter: BookingHistoryFilter = query.filter === 'upcoming' || query.filter === 'past' ? query.filter : 'all'
   const requestedPage = typeof query.page === 'string' && /^[1-9][0-9]{0,2}$/.test(query.page)
     ? Number(query.page) : 1
   const historyFilter: BookingHistoryFilter = query.historyFilter === 'upcoming' || query.historyFilter === 'past' ? query.historyFilter : 'all'
@@ -63,7 +62,7 @@ export default async function AccountPage({ params, searchParams }: {
     ? await getOwnBookingHistory(payload, actor, { limit: 10, page: pageNumber, filter: historyFilter, ascending: historyFilter === 'upcoming' })
     : history
   const accountUrl = (nextFilter: BookingHistoryFilter, nextPage = 1) =>
-    '/' + locale + '/account?filter=' + filter + '&historyFilter=' + nextFilter + '&page=' + nextPage + '#history'
+    '/' + locale + '/account?historyFilter=' + nextFilter + '&page=' + nextPage + '#history'
 
   const displayName = typeof user.displayName === 'string' && user.displayName.trim()
     ? user.displayName.trim()
@@ -83,12 +82,6 @@ export default async function AccountPage({ params, searchParams }: {
     filter: 'upcoming', activeOnly: true, ascending: true, limit: 1,
   })
   const nextBooking = upcoming.bookings[0]
-  // The dashboard preview uses the same booking filters as the full history.
-  // Keep the preview bounded to two records; the full view retains pagination.
-  const previewFilter: BookingHistoryFilter = filter
-  const recent = await getOwnBookingHistory(payload, actor, {
-    filter: previewFilter, limit: 2, ascending: previewFilter === 'upcoming',
-  })
   // Reviews belong exclusively to the authenticated customer. We never
   // trust a browser-supplied owner/barber or include another customer's drafts.
   const [completedVisits, ownReviews] = await Promise.all([
@@ -112,17 +105,6 @@ export default async function AccountPage({ params, searchParams }: {
     id: Number(item.id), rating: item.rating, comment: item.comment,
     status: item.status, createdAt: item.createdAt,
   }))
-  const recentDetails = await Promise.all((recent?.bookings ?? []).map(async booking => {
-    const [person, visitServices] = await Promise.all([
-      payload.findByID({ collection: 'barbers', id: booking.barberId, depth: 1, overrideAccess: true }),
-      payload.find({ collection: 'services', where: { id: { in: booking.serviceIds } },
-        depth: 0, limit: 10, overrideAccess: true }),
-    ])
-    const portraitUrl = person.portrait && typeof person.portrait === 'object' &&
-      typeof person.portrait.url === 'string' ? person.portrait.url : null
-    return { ...booking, portraitUrl, barberName: person.name,
-      serviceNames: visitServices.docs.map(service => service.name).join(' + ') }
-  }))
 
   const [barber, location, services] = nextBooking
     ? await Promise.all([
@@ -136,9 +118,6 @@ export default async function AccountPage({ params, searchParams }: {
   const dateLocale = uk ? 'uk-UA' : 'en-GB'
   const dateFormat = new Intl.DateTimeFormat(dateLocale, {
     day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Kyiv',
-  })
-  const shortDate = new Intl.DateTimeFormat(dateLocale, {
-    day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Kyiv',
   })
   const timeFormat = new Intl.DateTimeFormat(dateLocale, {
     hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv',
@@ -160,7 +139,6 @@ export default async function AccountPage({ params, searchParams }: {
         </aside>
 
         <div className="account-content">
-          <>
             <header id="overview" className="account-welcome">
               <div>
                 <h1>{uk ? 'Вітаємо, ' : 'Welcome, '}{firstName}!</h1>
@@ -197,59 +175,6 @@ export default async function AccountPage({ params, searchParams }: {
                 </>}
               </div>
             </section>
-            <div className="account-activity-grid">
-              <section id="visits" className="account-panel account-activity-card" aria-labelledby="account-history-heading">
-                <div className="account-card-heading">
-                  <h2 id="account-history-heading">{uk ? 'ІСТОРІЯ ЗАПИСІВ' : 'BOOKING HISTORY'}</h2>
-                  <Link href="#history">{uk ? 'Усі записи' : 'All bookings'} <ChevronRight size={15}/></Link>
-                </div>
-                <nav className="account-overview-filters" aria-label={uk ? 'Фільтр записів' : 'Booking filter'}>
-                  {(['all','upcoming','past'] as const).map(option =>
-                    <Link key={option} href={`/${locale}/account?filter=${option}#visits`}
-                      aria-current={previewFilter === option ? 'page' : undefined}
-                      className={previewFilter === option ? 'is-active' : undefined}>
-                      {option === 'all' ? (uk ? 'Усі' : 'All') : option === 'upcoming'
-                        ? (uk ? 'Майбутні' : 'Upcoming') : (uk ? 'Минулі' : 'Past')}
-                    </Link>
-                  )}
-                </nav>
-                {recentDetails.length ? (
-                  <ul className="account-recent-list">
-                    {recentDetails.map(booking => <li key={booking.id}>
-                      <div className="account-recent-list__thumb">
-                        {booking.portraitUrl
-                          ? <Image src={booking.portraitUrl} alt="" width={48} height={54} unoptimized />
-                          : <Scissors size={22} aria-hidden="true" />}
-                      </div>
-                      <time className="account-recent-list__date" dateTime={booking.startsAt}>
-                        {shortDate.format(new Date(booking.startsAt))}
-                      </time>
-                      <span className="account-recent-list__text">
-                        <strong>{booking.serviceNames || (uk ? 'Візит №' : 'Visit #') + booking.id}</strong>
-                        <small>{uk ? 'Барбер: ' : 'Barber: '}{booking.barberName}</small>
-                      </span>
-                      <span className={`account-status account-status--${booking.status}`}>
-                        {statusLabels[locale][booking.status]}
-                      </span>
-                    </li>)}
-                  </ul>
-                ) : <div className="account-card-empty">
-                  <CalendarDays size={25}/><p>{
-                    previewFilter === 'upcoming' ? (uk ? 'Майбутніх записів поки немає.' : 'No upcoming bookings yet.') :
-                    previewFilter === 'past' ? (uk ? 'Минулих записів поки немає.' : 'No past bookings yet.') :
-                    (uk ? 'Записів поки немає.' : 'No bookings yet.')
-                  }</p>
-                </div>}
-              </section>
-              <section id="reviews" className="account-panel account-activity-card" aria-labelledby="account-reviews-heading">
-                <div className="account-card-heading">
-                  <h2 id="account-reviews-heading">{uk ? 'МОЇ ВІДГУКИ' : 'MY REVIEWS'}</h2>
-                  <span className="account-card-heading__disabled">{uk ? 'Перевірені візити' : 'Verified visits'}</span>
-                </div>
-                <AccountReviews locale={locale} eligibleVisits={eligibleVisits} reviews={reviews}/>
-              </section>
-            </div>
-          </>
             <section id="history" className="account-panel account-bookings-view" aria-labelledby="account-bookings-heading">
               <div className="account-heading">
                 <div><p className="account-kicker">{uk ? 'ВАШІ ВІЗИТИ' : 'YOUR VISITS'}</p>
@@ -299,6 +224,13 @@ export default async function AccountPage({ params, searchParams }: {
                   email={email} userId={Number(user.id)} locale={locale}/>
               </div>
             </section>
+              <section id="reviews" className="account-panel account-activity-card" aria-labelledby="account-reviews-heading">
+                <div className="account-card-heading">
+                  <h2 id="account-reviews-heading">{uk ? 'МОЇ ВІДГУКИ' : 'MY REVIEWS'}</h2>
+                  <span className="account-card-heading__disabled">{uk ? 'Перевірені візити' : 'Verified visits'}</span>
+                </div>
+                <AccountReviews locale={locale} eligibleVisits={eligibleVisits} reviews={reviews}/>
+              </section>
             <section id="favorites" className="account-panel account-placeholder-view">
               <Heart size={32} aria-hidden="true"/>
               <h2>{uk ? 'Обране' : 'Favorites'}</h2>
