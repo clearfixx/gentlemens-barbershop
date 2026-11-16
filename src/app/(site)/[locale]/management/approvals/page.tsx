@@ -113,6 +113,7 @@ export default async function ApprovalsPage({ params, searchParams }: {
         href={`/${locale}/management/approvals`} aria-current="page">
         <ClipboardCheck size={17}/>{uk ? 'Погодження' : 'Approvals'}
       </Link>
+      <Link href={`/${locale}/management/professional-reviews`} className="management-sidebar__item"><ClipboardCheck size={17}/>{uk ? 'Контент' : 'Content reviews'}</Link>
       <div className="management-sidebar__bottom"><Settings2 size={17}/>
         {scope.role === 'admin' ? (uk ? 'Адміністратор мережі' : 'Network administrator')
           : (uk ? 'Адміністратор закладу' : 'Location manager')}
