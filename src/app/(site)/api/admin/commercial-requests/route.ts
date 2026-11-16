@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { readBookingBody, BookingBodyError } from '@/lib/booking/read-booking-body'
+import { checkCommercialWriteBudget } from '@/lib/admin/commercial-write-budget'
 import { assertCommercialMutationOrigin, parseTariffSubmission } from '@/lib/admin/commercial-http'
 import { submitBarberTariffProposal } from '@/lib/admin/prepare-barber-tariff-proposal'
 import { resolveLocationScope } from '@/lib/admin/location-access'
@@ -60,6 +61,12 @@ export async function POST(request: Request) {
     if (!user || !('role' in user) || typeof user.role !== 'string' ||
         !['admin', 'location_admin'].includes(user.role)) {
       return NextResponse.json({ error: 'Staff authentication required' }, { status: 403, headers })
+    }
+    const budget = await checkCommercialWriteBudget(payload, Number(user.id))
+    if (!budget.allowed) {
+      return NextResponse.json({ error: 'Administrative requests temporarily limited' }, {
+        status: 429, headers: { ...headers, 'Retry-After': String(budget.retryAfterSeconds) },
+      })
     }
     const body = parseTariffSubmission(await readBookingBody(request, 4096))
     const created = await submitBarberTariffProposal(payload,
