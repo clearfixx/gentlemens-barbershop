@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { getPayload } from 'payload'
-import { Bell, ClipboardCheck, LayoutDashboard, MapPin, Scissors, Settings2, UsersRound } from 'lucide-react'
+import { Bell, CalendarDays, ClipboardCheck, LayoutDashboard, MapPin, Scissors, Settings2, UsersRound } from 'lucide-react'
 
 import config from '@/payload.config'
 import { isLocale } from '@/i18n/config'
@@ -105,6 +105,7 @@ export default async function ApprovalsPage({ params, searchParams }: {
       <Link href={`/${locale}/management/approvals`} className="management-brand">GENTLEMEN’S <span>BARBERSHOP</span></Link>
       <p className="management-sidebar__caption">{uk ? 'КЕРУВАННЯ' : 'MANAGEMENT'}</p>
       <Link href={`/${locale}/management`} className="management-sidebar__item"><LayoutDashboard size={17}/>{uk ? 'Огляд мережі' : 'Network overview'}</Link>
+      <Link href={`/${locale}/management/bookings`} className="management-sidebar__item"><CalendarDays size={17}/>{uk ? 'Бронювання' : 'Bookings'}</Link>
       <div className="management-sidebar__item"><MapPin size={17}/>{uk ? 'Заклади' : 'Locations'}</div>
       <div className="management-sidebar__item"><Scissors size={17}/>{uk ? 'Барбери й послуги' : 'Barbers and services'}</div>
       <div className="management-sidebar__item"><UsersRound size={17}/>{uk ? 'Клієнти' : 'Customers'}</div>
