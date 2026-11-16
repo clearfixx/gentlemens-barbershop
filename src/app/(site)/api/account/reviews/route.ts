@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { readBookingBody, BookingBodyError } from '@/lib/booking/read-booking-body'
 import { assertReviewEligibility, isReviewUniquenessError, parseNewReview, ReviewAccessError } from '@/lib/reviews/verified-review'
 
 export const runtime = 'nodejs'
@@ -22,12 +23,9 @@ export async function POST(request: Request) {
   if (!request.headers.get('content-type')?.startsWith('application/json')) {
     return NextResponse.json({ error: 'Expected JSON' }, { status: 415, headers: noStore })
   }
-  if (Number(request.headers.get('content-length') || 0) > 4096) {
-    return NextResponse.json({ error: 'Review too large' }, { status: 413, headers: noStore })
-  }
-
   try {
-    const input = parseNewReview(await request.json())
+    // Enforce the byte budget while reading the stream, even with no Content-Length.
+    const input = parseNewReview(await readBookingBody(request, 4096))
     const booking = await payload.findByID({
       collection: 'bookings', id: input.bookingId, depth: 0, overrideAccess: true,
     }).catch(() => null)
@@ -48,6 +46,12 @@ export async function POST(request: Request) {
     })
     return NextResponse.json({ id: created.id, status: 'pending' }, { status: 201, headers: noStore })
   } catch (error) {
+    if (error instanceof BookingBodyError) {
+      return NextResponse.json(
+        { error: error.status === 413 ? 'Review too large' : 'Invalid JSON body' },
+        { status: error.status, headers: noStore },
+      )
+    }
     if (error instanceof ReviewAccessError) {
       return NextResponse.json({ error: error.message }, { status: error.status, headers: noStore })
     }
