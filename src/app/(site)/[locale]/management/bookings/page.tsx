@@ -96,7 +96,7 @@ export default async function ManagementBookingsPage({ params, searchParams }: {
         <CalendarDays size={17}/>{uk ? 'Бронювання' : 'Bookings'}
       </Link>
       <div className="management-sidebar__item"><MapPin size={17}/>{uk ? 'Заклади' : 'Locations'}</div>
-      <div className="management-sidebar__item"><Scissors size={17}/>{uk ? 'Барбери й послуги' : 'Barbers and services'}</div>
+      <Link href={`/${locale}/management/barbers`} className="management-sidebar__item"><Scissors size={17}/>{uk ? 'Барбери' : 'Barbers'}</Link>
       <div className="management-sidebar__item"><UsersRound size={17}/>{uk ? 'Клієнти' : 'Customers'}</div>
       <Link href={`/${locale}/management/approvals`} className="management-sidebar__item">
         <ClipboardCheck size={17}/>{scope.role === 'admin'
