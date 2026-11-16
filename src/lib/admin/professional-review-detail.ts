@@ -1,5 +1,7 @@
 import type { Payload } from 'payload'
 import type { LocationScope } from './location-access.ts'
+import { validateBiographyProposal } from './professional-biography-revision.ts'
+import { validateLocalizedBiographyProposal } from './professional-localized-biography.ts'
 import { assertCanReviewProfessionalProposal, type ProfessionalProposal } from './professional-approval-policy.ts'
 
 export type ProfessionalReviewDetail = {
@@ -12,6 +14,8 @@ export type ProfessionalReviewDetail = {
   rejectionReason: string | null
   fields: Array<{ field: 'bio' | 'localizedBio'; before: string | null; after: string | null }>
   unsupportedChangeCount: number
+  approvableKind: 'bio' | 'localizedBio' | null
+  localizedLocale: 'uk' | 'en' | null
 }
 
 function idOf(value: unknown): number {
@@ -64,10 +68,22 @@ export async function loadProfessionalReviewDetail(
   }
   const snapshot = objectOf(record.snapshot)
   const proposed = objectOf(record.changes)
+  let localized: ReturnType<typeof validateLocalizedBiographyProposal> | null = null
+  try { localized = validateLocalizedBiographyProposal(snapshot, proposed) } catch { /* Unsupported preview */ }
+  let biographyOnly = false
+  try {
+    validateBiographyProposal(snapshot, proposed)
+    biographyOnly = true
+  } catch { /* Unsupported preview */ }
+  const approvableKind = biographyOnly ? 'bio' as const :
+    localized ? 'localizedBio' as const : null
   const supported = ['bio', 'localizedBio'] as const
   const fields = supported.flatMap(field =>
     Object.hasOwn(proposed, field)
-      ? [{ field, before: textOf(snapshot[field]), after: textOf(proposed[field]) }]
+      ? [{ field,
+        before: field === 'localizedBio' ? localized?.previous ?? null : textOf(snapshot[field]),
+        after: field === 'localizedBio' ? localized?.proposed ?? null : textOf(proposed[field]),
+      }]
       : [])
   const unsupportedChangeCount = Object.keys(proposed).filter(
     key => !supported.includes(key as typeof supported[number]),
@@ -81,5 +97,6 @@ export async function loadProfessionalReviewDetail(
     reviewedAt: record.reviewedAt ?? null,
     rejectionReason: record.status === 'rejected' ? record.rejectionReason ?? null : null,
     fields, unsupportedChangeCount,
+    approvableKind, localizedLocale: localized?.locale ?? null,
   }
 }
