@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { readBookingBody, BookingBodyError } from '@/lib/booking/read-booking-body'
+import { checkCommercialWriteBudget } from '@/lib/admin/commercial-write-budget'
 import { assertCommercialMutationOrigin, parseTariffDecision } from '@/lib/admin/commercial-http'
 import { decideBarberTariffProposal } from '@/lib/admin/decide-barber-tariff-proposal'
 
@@ -19,6 +20,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const { user } = await payload.auth({ headers: request.headers })
     if (!user || !('role' in user) || user.role !== 'admin') {
       return NextResponse.json({ error: 'Network administrator required' }, { status: 403, headers })
+    }
+    const budget = await checkCommercialWriteBudget(payload, Number(user.id))
+    if (!budget.allowed) {
+      return NextResponse.json({ error: 'Administrative requests temporarily limited' }, {
+        status: 429, headers: { ...headers, 'Retry-After': String(budget.retryAfterSeconds) },
+      })
     }
     const { id } = await context.params
     if (!/^[1-9][0-9]*$/.test(id) || !Number.isSafeInteger(Number(id))) {
