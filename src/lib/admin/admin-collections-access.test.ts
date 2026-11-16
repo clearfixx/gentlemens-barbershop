@@ -65,9 +65,9 @@ test('professional content revisions cannot be modified through Payload REST/CMS
       }), false)
     }
   }
-  assert.equal(await allowed(BarberProfileRevisions, 'read', {
+  assert.deepEqual(await allowed(BarberProfileRevisions, 'read', {
     user: { id: 1, role: 'admin' },
-  }), true)
+  }), { status: { not_equals: 'draft' } })
   for (const role of ['barber', 'customer']) {
     assert.equal(await allowed(BarberProfileRevisions, 'read', {
       user: { id: 8, role },
