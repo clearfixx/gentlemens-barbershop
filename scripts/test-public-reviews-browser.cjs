@@ -23,7 +23,7 @@ async function main() {
       assert.equal(await section.locator('.home-section__note').count(), 0)
       const barberOptions = section.locator('#home-reviews-barber option')
       assert.ok(await barberOptions.count() >= 2, 'Public barber filter should offer the actual visit barber')
-      const barberId = await barberOptions.nth(1).getAttribute('value')
+      const barberId = await barberOptions.filter({ hasText: 'CI Barber Leon' }).first().getAttribute('value')
       assert.match(barberId, /^\d+$/)
       const filtered = await page.goto('http://localhost:3000/' + locale + '?reviewBarber=' + barberId + '#reviews',
         { waitUntil: 'networkidle' })
@@ -37,6 +37,16 @@ async function main() {
       assert.equal(await section.locator('#home-reviews-barber').inputValue(), '',
         'Invalid barber filter should fall back to published reviews, not an error')
       assert.equal(await section.locator('.home-review-preview--published').count(), 1)
+      const overflow = await page.evaluate(() =>
+        document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
+      assert.equal(overflow, false, 'Reviews must not cause horizontal overflow at ' + width + 'px')
+      await page.locator('.theme-toggle').first().click()
+      assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark',
+        'Theme control must apply dark mode without breaking the reviews section')
+      assert.equal(await section.locator('.home-review-preview--published').count(), 1)
+      const darkOverflow = await page.evaluate(() =>
+        document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
+      assert.equal(darkOverflow, false, 'Dark theme reviews must not overflow at ' + width + 'px')
       assert.deepEqual(errors, [], 'Landing page should not raise runtime errors')
       await page.close()
     }
