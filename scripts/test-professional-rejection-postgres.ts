@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import { getPayload } from 'payload'
 import { sql } from '@payloadcms/db-postgres'
 import config from '../src/payload.config.ts'
@@ -9,6 +9,7 @@ import { biographyRevision } from '../src/lib/admin/professional-biography-revis
 import { approveProfessionalLocalizedBiography } from '../src/lib/admin/approve-professional-localized-biography.ts'
 import { localizedBiographyRevision } from '../src/lib/admin/professional-localized-biography.ts'
 import { ProfessionalReviewConflictError } from '../src/lib/admin/professional-approval-policy.ts'
+import { listPrivatePortfolioReviewMedia, readPrivatePortfolioReviewImage, PrivatePortfolioMediaNotFound } from '../src/lib/admin/private-portfolio-review-media.ts'
 
 /** Disposable full-schema integration: rejection must never mutate the public
  * barber record and must persist a single final decision under row locks.
@@ -20,13 +21,14 @@ async function run() {
   const payload = await getPayload({ config })
   const suffix = randomUUID().slice(0, 12)
   const cleanup: Array<{
-    collection: 'users' | 'locations' | 'barbers' | 'barber-profile-revisions'
+    collection: 'users' | 'locations' | 'barbers' | 'barber-profile-revisions' | 'location-assignments'
     id: number
   }> = []
   const add = <T extends { id: number | string }>(collection: typeof cleanup[number]['collection'], value: T): T => {
     cleanup.push({ collection, id: Number(value.id) })
     return value
   }
+  let privateMediaId: number | null = null
   try {
     const network = add('users', await payload.create({ collection: 'users', overrideAccess: true,
       data: { email: `professional-admin-${suffix}@example.invalid`,
@@ -55,6 +57,66 @@ async function run() {
         snapshot: { bio: 'Published biography' }, changes: { bio: 'Unpublished biography' },
       },
     }))
+    // Private bytes live outside public Payload media and require a current
+    // staff role and branch assignment on every image request.
+    const sampleImage = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==',
+      'base64',
+    )
+    const imageHash = createHash('sha256').update(sampleImage).digest('hex')
+    const storedImage = await payload.db.drizzle.execute(sql`
+      INSERT INTO private_barber_portfolio_media
+        (revision_id, barber_id, location_id, uploaded_by_id,
+         mime_type, size_bytes, sha256, content)
+      VALUES (${Number(proposal.id)}, ${Number(barber.id)}, ${Number(location.id)},
+        ${Number(barberUser.id)}, 'image/png', ${sampleImage.length},
+        ${imageHash}, ${sampleImage})
+      RETURNING id
+    `)
+    privateMediaId = Number(storedImage.rows[0]?.id)
+    assert.ok(privateMediaId > 0)
+    const staff = { id: Number(network.id), role: 'admin' as const }
+    const staffList = await listPrivatePortfolioReviewMedia(payload, staff, Number(proposal.id))
+    assert.deepEqual(staffList, [{ id: privateMediaId,
+      mimeType: 'image/png', sizeBytes: sampleImage.length }])
+    const staffPreview = await readPrivatePortfolioReviewImage(
+      payload, staff, Number(proposal.id), privateMediaId)
+    assert.deepEqual(Buffer.from(staffPreview.bytes), sampleImage)
+    const manager = add('users', await payload.create({
+      collection: 'users', overrideAccess: true,
+      data: { email: `portfolio-manager-${suffix}@example.invalid`,
+        password: 'ci-only-private-media', role: 'location_admin' },
+    }))
+    const managerId = Number(manager.id)
+    await assert.rejects(readPrivatePortfolioReviewImage(payload, {
+      id: managerId, role: 'location_admin',
+    }, Number(proposal.id), privateMediaId), PrivatePortfolioMediaNotFound)
+    const assignment = add('location-assignments', await payload.create({
+      collection: 'location-assignments', overrideAccess: true,
+      data: { user: managerId, location: Number(location.id), isActive: true },
+    }))
+    const scopedPreview = await readPrivatePortfolioReviewImage(payload, {
+      id: managerId, role: 'location_admin',
+    }, Number(proposal.id), privateMediaId)
+    assert.deepEqual(Buffer.from(scopedPreview.bytes), sampleImage)
+    await payload.update({ collection: 'location-assignments',
+      id: assignment.id, overrideAccess: true, data: { isActive: false } })
+    await assert.rejects(readPrivatePortfolioReviewImage(payload, {
+      id: managerId, role: 'location_admin',
+    }, Number(proposal.id), privateMediaId), PrivatePortfolioMediaNotFound)
+    await assert.rejects(readPrivatePortfolioReviewImage(payload, {
+      id: Number(barberUser.id), role: 'location_admin',
+    }, Number(proposal.id), privateMediaId), PrivatePortfolioMediaNotFound)
+    // Unsubmitted drafts are not visible even to a network admin.
+    const draft = add('barber-profile-revisions', await payload.create({
+      collection: 'barber-profile-revisions', overrideAccess: true,
+      data: { barber: Number(barber.id), location: Number(location.id),
+        author: Number(barberUser.id), status: 'draft',
+        baseRevision: 'a'.repeat(64), snapshot: { bio: 'draft' },
+        changes: { portfolio: { items: [] } } },
+    }))
+    await assert.rejects(readPrivatePortfolioReviewImage(payload, staff,
+      Number(draft.id), privateMediaId), PrivatePortfolioMediaNotFound)
     const result = await rejectProfessionalProposal(payload, Number(proposal.id),
       { id: Number(network.id), role: 'admin' }, 'Insufficient verification')
     assert.deepEqual(result, { id: Number(proposal.id), status: 'rejected' })
@@ -213,6 +275,9 @@ async function run() {
     assert.equal(afterLocalized.bio, 'Approved public biography')
     console.info('Professional rejection and biography/locale publication PostgreSQL integration passed')
   } finally {
+    if (privateMediaId !== null) {
+      await payload.db.drizzle.execute(sql`DELETE FROM private_barber_portfolio_media WHERE id = ${privateMediaId}`)
+    }
     for (const item of cleanup.reverse()) {
       await payload.delete({ collection: item.collection, id: item.id, overrideAccess: true })
     }
