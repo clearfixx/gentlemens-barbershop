@@ -51,3 +51,19 @@ test('invalid identifiers and suspicious draft shapes fail or are redacted', asy
     { field: 'localizedBio', before: null, after: null },
   ])
 })
+
+test('portfolio overview exposes declaration counts but never URLs, media IDs, or captions', async () => {
+  const detail = await loadProfessionalReviewDetail(fake({
+    ...record,
+    changes: { portfolio: { items: [{
+      mediaId: 91, alt: 'Private portrait', caption: 'Customer private content',
+      sortOrder: 0, rightsDeclared: true, clientConsentDeclared: false,
+    }] } },
+  }), admin, '15')
+  assert.equal(detail.approvableKind, null)
+  assert.equal(detail.portfolioAssessment?.itemCount, 1)
+  assert.equal(detail.portfolioAssessment?.evidence.clientConsentDeclarations, 0)
+  assert.equal(detail.portfolioAssessment?.structurallyValid, false)
+  assert.equal(detail.unsupportedChangeCount, 1)
+  assert.doesNotMatch(JSON.stringify(detail), /Private portrait|Customer private|mediaId|91/)
+})
