@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 import type { LocationScope } from './location-access.ts'
 import { validateBiographyProposal } from './professional-biography-revision.ts'
 import { validateLocalizedBiographyProposal } from './professional-localized-biography.ts'
+import { assessPortfolioProposal, type PortfolioReviewAssessment } from './portfolio-review-assessment.ts'
 import { assertCanReviewProfessionalProposal, type ProfessionalProposal } from './professional-approval-policy.ts'
 
 export type ProfessionalReviewDetail = {
@@ -16,6 +17,7 @@ export type ProfessionalReviewDetail = {
   unsupportedChangeCount: number
   approvableKind: 'bio' | 'localizedBio' | null
   localizedLocale: 'uk' | 'en' | null
+  portfolioAssessment: PortfolioReviewAssessment | null
 }
 
 function idOf(value: unknown): number {
@@ -98,5 +100,6 @@ export async function loadProfessionalReviewDetail(
     rejectionReason: record.status === 'rejected' ? record.rejectionReason ?? null : null,
     fields, unsupportedChangeCount,
     approvableKind, localizedLocale: localized?.locale ?? null,
+    portfolioAssessment: assessPortfolioProposal(record.changes),
   }
 }
