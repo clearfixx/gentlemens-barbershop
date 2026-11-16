@@ -47,7 +47,7 @@ export default async function HomePage({ params, searchParams }: {
   // The submitted filter is advisory only. Validate it against the public barber
   // catalog, and ALWAYS enforce published-only access at the database query.
   const rawReviewBarber = (await searchParams).reviewBarber
-  const selectedBarber = typeof rawReviewBarber === 'string' && /^\\d+$/.test(rawReviewBarber)
+  const selectedBarber = typeof rawReviewBarber === 'string' && /^\d+$/.test(rawReviewBarber)
     ? barbers.docs.find(barber => String(barber.id) === rawReviewBarber)
     : undefined
   const publishedReviews = await payload.find({
