@@ -35,6 +35,29 @@ const publicReview = await payload.find({
   where: { id: { equals: review.id } }, limit: 1,
 })
 assert.equal(publicReview.docs.length, 1, 'Published review should be public')
+// An admin cannot forge the publication timestamp, even with overrideAccess.
+const forgedTimestamp = await payload.update({
+  collection: 'reviews', id: review.id, overrideAccess: true,
+  data: { publishedAt: '2000-01-01T00:00:00.000Z' },
+})
+assert.equal(forgedTimestamp.publishedAt, published.publishedAt, 'Publication timestamp must be server-owned')
+const rejected = await payload.update({
+  collection: 'reviews', id: review.id, overrideAccess: true,
+  data: { status: 'rejected' },
+})
+assert.equal(rejected.status, 'rejected')
+assert.equal(rejected.publishedAt, null, 'Rejected reviews must not retain a publication timestamp')
+const hiddenRejected = await payload.find({
+  collection: 'reviews', overrideAccess: false, depth: 0,
+  where: { id: { equals: review.id } }, limit: 1,
+})
+assert.equal(hiddenRejected.docs.length, 0, 'Rejected reviews must never be visible to anonymous readers')
+const republished = await payload.update({
+  collection: 'reviews', id: review.id, overrideAccess: true,
+  data: { status: 'published' },
+})
+assert.equal(republished.status, 'published')
+assert.ok(republished.publishedAt, 'Republishing must set a new server timestamp')
 await assert.rejects(() => payload.update({
   collection: 'reviews', id: review.id, overrideAccess: true,
   data: { rating: 1 },
