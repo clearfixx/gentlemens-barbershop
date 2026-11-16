@@ -1,7 +1,7 @@
-import { createHash } from 'node:crypto'
 import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 import { assessPortfolioProposal } from './portfolio-review-assessment.ts'
+import { computeSubmittedPortfolioManifest } from './portfolio-manifest-integrity.ts'
 
 export class PortfolioSubmissionConflict extends Error {
   constructor(message = 'Portfolio draft is unavailable or already submitted') {
@@ -105,13 +105,13 @@ export async function submitPrivatePortfolioDraft(
     if (items.some(item => !mediaById.has(item.mediaId))) {
       throw new PortfolioSubmissionConflict('Foreign image reference in portfolio')
     }
-    const manifest = items.map(item => ({
-      ...item, image: mediaById.get(item.mediaId)!,
-    }))
-    const manifestSha256 = createHash('sha256')
-      .update(JSON.stringify(['barber-portfolio-manifest-v1',
-        Number(row.barber_id), Number(row.location_id), actor.id, manifest]))
-      .digest('hex')
+    const manifestSha256 = computeSubmittedPortfolioManifest({
+      barberId: Number(row.barber_id),
+      locationId: Number(row.location_id),
+      authorId: actor.id,
+    }, items, [...mediaById].map(([id, image]) => ({
+      id, mime: image.mime, size: image.size, sha: image.sha,
+    })))
     // No publication occurs here. The approved-content workflow must recheck
     // this manifest and consent evidence before any public gallery exists.
     const updated = await tx.execute(sql`
