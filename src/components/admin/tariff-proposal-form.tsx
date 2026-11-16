@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import type { FormEvent } from 'react'
 import { useState } from 'react'
 
 export type TariffOfferingOption = {
@@ -24,7 +25,7 @@ export function TariffProposalForm({ locale, offerings }: {
   const [success, setSuccess] = useState(false)
   const chosen = offerings[selected]
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!chosen || busy) return
     const proposedValue = Number(value)
