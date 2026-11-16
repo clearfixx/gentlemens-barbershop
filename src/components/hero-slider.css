@@ -51,3 +51,15 @@
 
 /* Keep the circular scroll cue above the following section, not beneath its painted background. */
 .barber-hero + .home-section{z-index:0}
+
+/* Homepage typography pass: align the approved hero composition with Inter. */
+.barber-hero__headline{font-family:Inter,Arial,Helvetica,sans-serif;font-size:clamp(48px,4.1vw,76px);font-weight:650;letter-spacing:-.055em;line-height:1.01}
+.barber-hero__headline--long{font-size:clamp(39px,3.45vw,65px)}
+.barber-hero__description{line-height:1.65}
+.barber-hero__eyebrow{font-weight:650;letter-spacing:.21em}
+.barber-hero__primary,.barber-hero__secondary{border-radius:2px;transition:background-color .2s ease,border-color .2s ease,color .2s ease}
+.barber-hero__primary:hover{background:#ddba81}
+.barber-hero__secondary:hover{border-color:var(--hero-gold);background:color-mix(in srgb,var(--paper) 35%,transparent)}
+@media(max-width:1279px){.barber-hero__headline{font-size:clamp(39px,4.8vw,66px)}.barber-hero__headline--long{font-size:clamp(32px,3.8vw,54px)}}
+@media(max-width:767px){.barber-hero__headline{font-size:clamp(39px,9vw,58px)}.barber-hero__headline--long{font-size:clamp(29px,7.2vw,46px)}}
+@media(prefers-reduced-motion:reduce){.barber-hero__primary,.barber-hero__secondary{transition:none}}
