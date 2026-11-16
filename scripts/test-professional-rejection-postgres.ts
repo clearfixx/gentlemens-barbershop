@@ -171,7 +171,7 @@ async function run() {
     const translations = await payload.db.drizzle.execute(sql`
       SELECT _locale::text AS locale, localized_bio AS bio
       FROM barbers_locales WHERE _parent_id = ${Number(barber.id)}
-      ORDER BY _locale
+      ORDER BY _locale::text
     `)
     assert.deepEqual(translations.rows.map(row => ({ locale: row.locale, bio: row.bio })),
       [
