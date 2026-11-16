@@ -7,6 +7,7 @@ import config from '@/payload.config'
 import { isLocale } from '@/i18n/config'
 import { resolveLocationScope } from '@/lib/admin/location-access'
 import { loadProfessionalReviewDetail } from '@/lib/admin/professional-review-detail'
+import { listPrivatePortfolioReviewMedia } from '@/lib/admin/private-portfolio-review-media'
 import { ProfessionalRejectForm } from '@/components/admin/professional-reject-form'
 import { ProfessionalBiographyApprove } from '@/components/admin/professional-biography-approve'
 import '../../approvals/management.css'
@@ -41,6 +42,14 @@ export default async function ProfessionalReviewDetailPage({
     }
     throw error
   }
+  // Separate SQL authorization prevents viewing a draft image solely because
+  // the surrounding review page was previously authorized.
+  const privateMedia = detail.portfolioAssessment
+    ? await listPrivatePortfolioReviewMedia(payload, {
+      id: Number(user.id), role: user.role,
+    }, detail.id)
+    : []
+
   const fieldNames: Record<string, string> = uk
     ? { bio: 'Біографія', localizedBio: 'Переклад біографії' }
     : { bio: 'Biography', localizedBio: 'Biography translation' }
@@ -115,9 +124,19 @@ export default async function ProfessionalReviewDetailPage({
               : 'Structure matches the preliminary contract. Independent media verification is still required.')
             : (uk ? 'У заявці відсутні потрібні декларації або є помилки структури.'
               : 'The proposal is missing declarations or has structural issues.')}</p>
+          {privateMedia.length > 0 && <div className="management-private-media-grid">
+            {privateMedia.map(media => <figure key={media.id}>
+              {/* Unoptimized deliberately: Next Image optimization may cache a private image. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/admin/professional-reviews/${detail.id}/private-media/${media.id}`}
+                alt={uk ? 'Приватна фотографія для модерації' : 'Private image for moderation'}
+                loading="lazy" referrerPolicy="no-referrer"/>
+              <figcaption>{uk ? 'Приватний перегляд' : 'Private review'} · {media.mimeType}</figcaption>
+            </figure>)}
+          </div>}
           <p className="management-booking-note">{uk
-            ? 'Перегляд файлів, завантаження та схвалення портфоліо поки недоступні.'
-            : 'Media preview, uploads and portfolio approval remain disabled.'}</p>
+            ? 'Приватні зображення доступні лише авторизованим модераторам. Завантаження та публікація портфоліо залишаються вимкненими.'
+            : 'Private images are visible only to authorized reviewers. Portfolio uploads and publication remain disabled.'}</p>
         </section>}
         {detail.status === 'rejected' && detail.rejectionReason && <section className="management-panel management-booking-results">
           <h2>{uk ? 'Причина відхилення' : 'Rejection reason'}</h2>
