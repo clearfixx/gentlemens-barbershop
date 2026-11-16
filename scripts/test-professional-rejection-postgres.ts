@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { getPayload } from 'payload'
+import { sql } from '@payloadcms/db-postgres'
 import config from '../src/payload.config.ts'
 import { rejectProfessionalProposal } from '../src/lib/admin/reject-professional-proposal.ts'
 import { approveProfessionalBiography } from '../src/lib/admin/approve-professional-biography.ts'
 import { biographyRevision } from '../src/lib/admin/professional-biography-revision.ts'
+import { approveProfessionalLocalizedBiography } from '../src/lib/admin/approve-professional-localized-biography.ts'
+import { localizedBiographyRevision } from '../src/lib/admin/professional-localized-biography.ts'
 import { ProfessionalReviewConflictError } from '../src/lib/admin/professional-approval-policy.ts'
 
 /** Disposable full-schema integration: rejection must never mutate the public
@@ -134,7 +137,81 @@ async function run() {
     }))
     await assert.rejects(approveProfessionalBiography(payload, Number(unsupported.id),
       { id: Number(network.id), role: 'admin' }), /unsupported/)
-    console.info('Professional rejection and biography approval PostgreSQL integration passed')
+    // Payload stores translations in a separate locale table. Publishing
+    // English must not alter Ukrainian, including under stale/replay attempts.
+    await payload.update({
+      collection: 'barbers', id: barber.id, overrideAccess: true, locale: 'uk',
+      data: { localizedBio: 'Українська біографія' },
+    })
+    await payload.update({
+      collection: 'barbers', id: barber.id, overrideAccess: true, locale: 'en',
+      data: { localizedBio: 'Old English biography' },
+    })
+    const localeRevision = (locale: 'uk' | 'en', value: string | null) =>
+      localizedBiographyRevision({
+        barberId: Number(barber.id), locationId: Number(location.id),
+        authorId: Number(barberUser.id), locale, value,
+      })
+    const translated = add('barber-profile-revisions', await payload.create({
+      collection: 'barber-profile-revisions', overrideAccess: true,
+      data: {
+        barber: Number(barber.id), location: Number(location.id),
+        author: Number(barberUser.id), status: 'pending',
+        baseRevision: localeRevision('en', 'Old English biography'),
+        snapshot: { localizedBio: { locale: 'en', value: 'Old English biography' } },
+        changes: { localizedBio: { locale: 'en', value: 'Approved English biography' } },
+      },
+    }))
+    const localizedApproved = await approveProfessionalLocalizedBiography(
+      payload, Number(translated.id), { id: Number(network.id), role: 'admin' })
+    assert.deepEqual(localizedApproved, {
+      id: Number(translated.id), status: 'approved', locale: 'en',
+      appliedRevision: localeRevision('en', 'Approved English biography'),
+    })
+    const translations = await payload.db.drizzle.execute(sql`
+      SELECT _locale::text AS locale, localized_bio AS bio
+      FROM barbers_locales WHERE _parent_id = ${Number(barber.id)}
+      ORDER BY _locale
+    `)
+    assert.deepEqual(translations.rows.map(row => ({ locale: row.locale, bio: row.bio })),
+      [
+        { locale: 'uk', bio: 'Українська біографія' },
+        { locale: 'en', bio: 'Approved English biography' },
+      ].sort((a, b) => a.locale.localeCompare(b.locale)))
+    const translatedDecision = await payload.findByID({
+      collection: 'barber-profile-revisions', id: translated.id,
+      depth: 0, overrideAccess: true,
+    })
+    assert.equal(translatedDecision.status, 'approved')
+    assert.equal(translatedDecision.reviewer, network.id)
+    assert.equal(translatedDecision.appliedRevision, localizedApproved.appliedRevision)
+    await assert.rejects(approveProfessionalLocalizedBiography(
+      payload, Number(translated.id), { id: Number(network.id), role: 'admin' }),
+    ProfessionalReviewConflictError)
+
+    const staleTranslation = add('barber-profile-revisions', await payload.create({
+      collection: 'barber-profile-revisions', overrideAccess: true,
+      data: {
+        barber: Number(barber.id), location: Number(location.id),
+        author: Number(barberUser.id), status: 'pending',
+        baseRevision: localeRevision('en', 'Old English biography'),
+        snapshot: { localizedBio: { locale: 'en', value: 'Old English biography' } },
+        changes: { localizedBio: { locale: 'en', value: 'Stale English biography' } },
+      },
+    }))
+    await assert.rejects(approveProfessionalLocalizedBiography(
+      payload, Number(staleTranslation.id), { id: Number(network.id), role: 'admin' }),
+    ProfessionalReviewConflictError)
+    const staleRecord = await payload.findByID({
+      collection: 'barber-profile-revisions', id: staleTranslation.id,
+      depth: 0, overrideAccess: true,
+    })
+    assert.equal(staleRecord.status, 'pending')
+    const afterLocalized = await payload.findByID({
+      collection: 'barbers', id: barber.id, depth: 0, overrideAccess: true,
+    })
+    assert.equal(afterLocalized.bio, 'Approved public biography')
+    console.info('Professional rejection and biography/locale publication PostgreSQL integration passed')
   } finally {
     for (const item of cleanup.reverse()) {
       await payload.delete({ collection: item.collection, id: item.id, overrideAccess: true })
