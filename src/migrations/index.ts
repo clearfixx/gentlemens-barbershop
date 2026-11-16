@@ -19,6 +19,8 @@ import * as migration_20261115_030000_customer_avatar from './20261115_030000_cu
 
 import * as migration_20261115_110000_verified_reviews from './20261115_110000_verified_reviews';
 
+import * as migration_20261116_160000_admin_management_foundation from './20261116_160000_admin_management_foundation';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -74,5 +76,10 @@ export const migrations = [
     up: migration_20261115_110000_verified_reviews.up,
     down: migration_20261115_110000_verified_reviews.down,
     name: '20261115_110000_verified_reviews',
+  },
+  {
+    up: migration_20261116_160000_admin_management_foundation.up,
+    down: migration_20261116_160000_admin_management_foundation.down,
+    name: '20261116_160000_admin_management_foundation',
   },
 ];
