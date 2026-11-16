@@ -23,6 +23,8 @@ import * as migration_20261116_160000_admin_management_foundation from './202611
 
 import * as migration_20261116_180000_location_booking_audit_role from './20261116_180000_location_booking_audit_role';
 
+import * as migration_20261116_190000_barber_professional_revisions from './20261116_190000_barber_professional_revisions';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -88,5 +90,10 @@ export const migrations = [
     up: migration_20261116_180000_location_booking_audit_role.up,
     down: migration_20261116_180000_location_booking_audit_role.down,
     name: '20261116_180000_location_booking_audit_role',
+  },
+  {
+    up: migration_20261116_190000_barber_professional_revisions.up,
+    down: migration_20261116_190000_barber_professional_revisions.down,
+    name: '20261116_190000_barber_professional_revisions',
   },
 ];
