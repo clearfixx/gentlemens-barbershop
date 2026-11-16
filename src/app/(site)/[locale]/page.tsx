@@ -199,14 +199,19 @@ export default async function HomePage({ params, searchParams }: {
           <h2 id="products-title" className="home-section__heading">{labels.products}</h2>
           <Link href={`/${locale}/catalog`} className="home-section__more">{labels.moreProducts} →</Link>
         </div>
-        <div className="home-product-previews" aria-hidden="true">
-          {Array.from({ length: 4 }, (_, index) => <div className="home-product-preview" key={index}>
-            <div className="home-product-preview__image" />
-            <span className="home-product-preview__label" />
-            <span className="home-product-preview__short" />
-          </div>)}
+        <div className="home-products-feature">
+          <div className="home-products-feature__visual" aria-hidden="true">
+            <span className="home-products-feature__monogram">G.</span>
+            <span className="home-products-feature__rule" />
+            <span className="home-products-feature__caption">GENTLEMEN’S / GROOMING</span>
+          </div>
+          <div className="home-products-feature__copy">
+            <span className="home-section__eyebrow">{uk ? 'ДОГЛЯД ПРОДОВЖУЄТЬСЯ ВДОМА' : 'THE RITUAL CONTINUES AT HOME'}</span>
+            <h3>{uk ? 'Усе для твого щоденного стилю.' : 'Everyday care, with character.'}</h3>
+            <p>{labels.emptyProducts}</p>
+            <Link href={`/${locale}/catalog`} className="home-section__more">{labels.moreProducts} <span aria-hidden="true">↗</span></Link>
+          </div>
         </div>
-        <p className="home-section__note">{labels.emptyProducts}</p>
       </div>
     </section>
 
@@ -230,12 +235,19 @@ export default async function HomePage({ params, searchParams }: {
       <div className="home-container">
         <h2 id="locations-title" className="home-section__heading">{labels.findUs}</h2>
         <div className="home-location-layout">
-          <div className="home-location-layout__art" aria-hidden="true"><span className="home-location-layout__compass">✦</span></div>
+          <div className="home-location-layout__intro">
+            <span className="home-section__eyebrow">GENTLEMEN’S / LOCATIONS</span>
+            <p>{uk ? 'Обери свій барбершоп. Ми подбали про те, щоб кожен візит був особливим.' : 'Find your barbershop. Every visit deserves the same attention to detail.'}</p>
+            <Link href={`/${locale}/booking`} className="home-section__more">{labels.booking} <span aria-hidden="true">↗</span></Link>
+          </div>
           <div className="home-location-list">
-            {locations.docs.length ? locations.docs.map(location => <address key={location.id}>
-              <h3>{location.name}</h3>
-              <p>{location.city}, {location.address}</p>
-              {location.phone && <a href={`tel:${location.phone.replace(/[^+\d]/g, '')}`}>{location.phone}</a>}
+            {locations.docs.length ? locations.docs.map((location, index) => <address key={location.id}>
+              <span className="home-location-list__index">{String(index + 1).padStart(2, '0')}</span>
+              <div>
+                <h3>{location.name}</h3>
+                <p>{location.city}, {location.address}</p>
+                {location.phone && <a href={`tel:${location.phone.replace(/[^+\d]/g, '')}`}>{location.phone}</a>}
+              </div>
             </address>) : <p className="home-section__empty">{labels.noLocations}</p>}
           </div>
         </div>
