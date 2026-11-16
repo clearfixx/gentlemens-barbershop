@@ -118,6 +118,15 @@ jobs:
         run: |
           set -euo pipefail
           node --experimental-strip-types scripts/test-admin-approval-integration.ts
+      - name: Management dashboard PostgreSQL aggregates and location isolation
+        shell: bash
+        env:
+          ADMIN_APPROVAL_INTEGRATION: isolated
+          NODE_ENV: production
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/test-management-dashboard-integration.ts
       - name: Verify first-admin bootstrap is one-time only
         shell: bash
         env:
