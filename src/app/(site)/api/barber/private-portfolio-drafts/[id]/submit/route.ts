@@ -33,7 +33,7 @@ export async function POST(
       return NextResponse.json({ error: 'Private portfolio draft unavailable' },
         { status: 404, headers: noStore })
     }
-    const body: unknown = await readBookingBody(request, 16 * 1024)
+    const body: unknown = await readBookingBody(request, 64 * 1024)
     if (!body || typeof body !== 'object' || Array.isArray(body) ||
         Object.keys(body).length !== 1 || !Object.hasOwn(body, 'portfolio')) {
       return NextResponse.json({ error: 'Invalid portfolio submission body' },
