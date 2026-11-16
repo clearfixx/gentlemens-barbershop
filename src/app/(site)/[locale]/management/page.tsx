@@ -90,6 +90,7 @@ export default async function ManagementPage({ params, searchParams }: {
         <ClipboardCheck size={17}/>{scope.role === 'admin'
           ? (uk ? 'Погодження' : 'Approvals') : (uk ? 'Мої заявки' : 'My requests')}
       </Link>
+      <Link href={`/${locale}/management/professional-reviews`} className="management-sidebar__item"><ClipboardCheck size={17}/>{uk ? 'Контент' : 'Content reviews'}</Link>
       <div className="management-sidebar__bottom"><Settings2 size={17}/>
         {scope.role === 'admin' ? (uk ? 'Адміністратор мережі' : 'Network administrator')
           : (uk ? 'Адміністратор закладу' : 'Location manager')}
