@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { LogIn, LogOut } from 'lucide-react'
+import { CalendarDays, CalendarPlus, LayoutDashboard, LogIn, LogOut, Scissors, Settings2, Star, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { Locale } from '@/i18n/config'
 
@@ -132,15 +132,51 @@ export function AuthNavControl({ locale }: { locale: Locale }) {
       />
     </button>
     <div className="auth-nav__panel" role="menu" aria-label={uk ? 'Меню профілю' : 'Account menu'} data-state={open ? 'open' : 'closed'} aria-hidden={!open} inert={!open}>
-      <p className="auth-nav__identity">{name}</p>
-      <Link role="menuitem" href={`/${locale}/account`} onClick={() => setOpen(false)}>{uk ? 'Особистий кабінет' : 'My account'}</Link>
-      <Link role="menuitem" href={`/${locale}/booking`} onClick={() => setOpen(false)}>{uk ? 'Новий запис' : 'Book a visit'}</Link>
-      <Link role="menuitem" href={`/${locale}/catalog`} onClick={() => setOpen(false)}>{uk ? 'Каталог' : 'Catalog'}</Link>
-      {user.role === 'admin' && <Link role="menuitem" href="/admin">{uk ? 'Адміністрування' : 'Admin'}</Link>}
-      {signOutError && <p role="alert" className="auth-nav__error">{uk ? 'Не вдалося вийти. Спробуй ще раз.' : 'Could not log out. Please retry.'}</p>}
-      <button type="button" role="menuitem" disabled={signingOut} onClick={() => void signOut()}>
-        <LogOut size={18} strokeWidth={1.75} aria-hidden="true" /> {uk ? 'Вийти' : 'Log out'}
-      </button>
+      <div className="auth-nav__identity">
+        <Image src={avatar || '/images/brand/no-avatar.svg'} width={46} height={46}
+          unoptimized className="auth-nav__identity-avatar" alt="" />
+        <div className="auth-nav__identity-text">
+          <strong>{name}</strong>
+          {user.displayName && user.email && <span>{user.email}</span>}
+        </div>
+      </div>
+      {user.role !== 'barber' && <div className="auth-nav__group">
+        <Link role="menuitem" href={`/${locale}/account#overview`} onClick={() => setOpen(false)}>
+          <UserRound size={18} strokeWidth={1.7} aria-hidden="true" />{uk ? 'Мій кабінет' : 'My account'}
+        </Link>
+        <Link role="menuitem" href={`/${locale}/account#bookings`} onClick={() => setOpen(false)}>
+          <CalendarDays size={18} strokeWidth={1.7} aria-hidden="true" />{uk ? 'Мої записи' : 'My bookings'}
+        </Link>
+        <Link role="menuitem" href={`/${locale}/booking`} onClick={() => setOpen(false)}>
+          <CalendarPlus size={18} strokeWidth={1.7} aria-hidden="true" />{uk ? 'Новий запис' : 'New booking'}
+        </Link>
+        <Link role="menuitem" href={`/${locale}/account#reviews`} onClick={() => setOpen(false)}>
+          <Star size={18} strokeWidth={1.7} aria-hidden="true" />{uk ? 'Мої відгуки' : 'My reviews'}
+        </Link>
+        <Link role="menuitem" href={`/${locale}/account#settings`} onClick={() => setOpen(false)}>
+          <Settings2 size={18} strokeWidth={1.7} aria-hidden="true" />{uk ? 'Налаштування' : 'Settings'}
+        </Link>
+      </div>}
+      {(user.role === 'admin' || user.role === 'barber') && <div className="auth-nav__group auth-nav__group--staff">
+        {user.role === 'admin' ? (
+          <Link role="menuitem" href="/admin" onClick={() => setOpen(false)}>
+            <LayoutDashboard size={18} strokeWidth={1.7} aria-hidden="true" />{uk ? 'Адмінпанель' : 'Admin dashboard'}
+            <span className="auth-nav__role-tag">ADMIN</span>
+          </Link>
+        ) : (
+          <div className="auth-nav__disabled" aria-disabled="true">
+            <Scissors size={18} strokeWidth={1.7} aria-hidden="true" />
+            <span>{uk ? 'Кабінет барбера' : 'Barber dashboard'}</span>
+            <span className="auth-nav__role-tag">{uk ? 'Незабаром' : 'Soon'}</span>
+          </div>
+        )}
+      </div>}
+      <div className="auth-nav__group auth-nav__group--footer">
+        {signOutError && <p role="alert" className="auth-nav__error">{uk ? 'Не вдалося вийти. Спробуй ще раз.' : 'Could not log out. Please retry.'}</p>}
+        <button type="button" role="menuitem" disabled={signingOut} onClick={() => void signOut()}>
+          <LogOut size={18} strokeWidth={1.7} aria-hidden="true" />{uk ? 'Вийти' : 'Log out'}
+        </button>
+      </div>
     </div>
   </div>
 }
