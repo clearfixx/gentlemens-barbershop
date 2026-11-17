@@ -9,6 +9,8 @@ import { resolveLocationScope } from '@/lib/admin/location-access'
 import { loadProfessionalReviewDetail } from '@/lib/admin/professional-review-detail'
 import { listPrivatePortfolioReviewMedia } from '@/lib/admin/private-portfolio-review-media'
 import { verifySubmittedPortfolioForStaff } from '@/lib/admin/verify-submitted-portfolio'
+import { listPortfolioEvidenceStatuses } from '@/lib/admin/portfolio-evidence-statuses'
+import { PortfolioEvidenceReviewForm } from '@/components/admin/portfolio-evidence-review-form'
 import { ProfessionalRejectForm } from '@/components/admin/professional-reject-form'
 import { ProfessionalBiographyApprove } from '@/components/admin/professional-biography-approve'
 import '../../approvals/management.css'
@@ -53,6 +55,14 @@ export default async function ProfessionalReviewDetailPage({
   const privateMedia = integrity?.status === 'verified'
     ? await listPrivatePortfolioReviewMedia(payload, reviewActor, detail.id)
     : []
+
+  const evidenceStatuses = integrity?.status === 'verified'
+    ? await listPortfolioEvidenceStatuses(payload, reviewActor, detail.id)
+    : []
+  const evidenceByMedia = new Map(evidenceStatuses.map(item => [item.mediaId, item.status]))
+  const evidenceLabels = uk
+    ? { needs_evidence: 'Потрібні матеріали', evidence_reviewed: 'Матеріали перевірено', rejected: 'Відхилено' }
+    : { needs_evidence: 'More evidence needed', evidence_reviewed: 'Evidence reviewed', rejected: 'Rejected' }
 
   const fieldNames: Record<string, string> = uk
     ? { bio: 'Біографія', localizedBio: 'Переклад біографії' }
@@ -147,7 +157,13 @@ export default async function ProfessionalReviewDetailPage({
               <img src={`/api/admin/professional-reviews/${detail.id}/private-media/${media.id}`}
                 alt={uk ? 'Приватна фотографія для модерації' : 'Private image for moderation'}
                 loading="lazy" referrerPolicy="no-referrer"/>
-              <figcaption>{uk ? 'Приватний перегляд' : 'Private review'} · {media.mimeType}</figcaption>
+              <figcaption>{uk ? 'Приватний перегляд' : 'Private review'} · {media.mimeType}
+                <span className="management-evidence-state">{evidenceByMedia.has(media.id)
+                  ? evidenceLabels[evidenceByMedia.get(media.id)!]
+                  : (uk ? 'Ще не перевірено' : 'Not reviewed')}</span>
+              </figcaption>
+              {scope.role === 'admin' && detail.status === 'pending' &&
+                <PortfolioEvidenceReviewForm revisionId={detail.id} mediaId={media.id} locale={locale}/>}
             </figure>)}
           </div>}
           <p className="management-booking-note">{uk
