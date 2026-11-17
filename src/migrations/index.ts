@@ -31,6 +31,8 @@ import * as migration_20261116_210000_submitted_portfolio_manifest from './20261
 
 import * as migration_20261117_090000_portfolio_evidence_review from './20261117_090000_portfolio_evidence_review';
 
+import * as migration_20261117_100000_portfolio_review_signoff from './20261117_100000_portfolio_review_signoff';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -116,5 +118,10 @@ export const migrations = [
     up: migration_20261117_090000_portfolio_evidence_review.up,
     down: migration_20261117_090000_portfolio_evidence_review.down,
     name: '20261117_090000_portfolio_evidence_review',
+  },
+  {
+    up: migration_20261117_100000_portfolio_review_signoff.up,
+    down: migration_20261117_100000_portfolio_review_signoff.down,
+    name: '20261117_100000_portfolio_review_signoff',
   },
 ];
