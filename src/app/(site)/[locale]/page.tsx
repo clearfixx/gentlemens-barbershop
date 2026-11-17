@@ -2,7 +2,7 @@ import './home-page.css'
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Armchair, Crown, Gem, Scissors, SprayCan, Star } from 'lucide-react'
+import { Armchair, CalendarDays, Clock3, Crown, Gem, Scissors, SprayCan, Star } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getPayload } from 'payload'
 import { notFound } from 'next/navigation'
@@ -55,6 +55,9 @@ export default async function HomePage({ params, searchParams }: {
   const uk = locale === 'uk'
   const labels = uk ? {
     benefits: 'ЧОМУ ОБИРАЮТЬ НАС',
+    philosophy: 'ФІЛОСОФІЯ БРЕНДУ',
+    philosophyTitle: 'Традиції в характері. Сучасність у майстерності.',
+    philosophyCopy: 'Ми цінуємо спадщину класичного барберингу — повагу до ремесла, точність рухів і увагу до деталей. Водночас поєднуємо перевірені часом традиції із сучасними техніками та індивідуальним стилем кожного гостя. Тут важливі майстерність, комфорт і гостинність.',
     team: 'НАШІ МАЙСТРИ',
     reviews: 'ВІДГУКИ КЛІЄНТІВ',
     products: 'ТОП ТОВАРИ',
@@ -63,7 +66,7 @@ export default async function HomePage({ params, searchParams }: {
     social: 'МИ В СОЦМЕРЕЖАХ',
     intro: 'Ми поєднуємо традиції барбер-культури з сучасним сервісом, щоб ти завжди виглядав бездоганно.',
     benefitNames: ['Досвідчені майстри', 'Преміальний сервіс', 'Якісна косметика', 'Атмосфера', 'Індивідуальний підхід'],
-    benefitDetails: ['Команда професіоналів', 'Комфорт, увага та турбота про кожного', 'Професійні бренди для догляду вдома', 'Класичний стиль і сучасний комфорт', 'Рішення, що підкреслюють твій стиль'],
+    benefitDetails: ['Команда професіоналів', 'Кава, чай або прохолодний напій на вибір включені у вартість послуги', 'Професійні бренди для догляду вдома', 'Класичний стиль і сучасний комфорт', 'Рішення, що підкреслюють твій стиль'],
     moreTeam: 'Переглянути всю команду',
     moreServices: 'Переглянути послуги',
     moreProducts: 'Усі товари',
@@ -83,8 +86,16 @@ export default async function HomePage({ params, searchParams }: {
     noLocations: 'Адреси закладів незабаром будуть доступні.',
     noServices: 'Перелік послуг наразі наповнюється.',
     services: 'ПОСЛУГИ',
+    serviceIntro: 'Від класичного гоління до сучасної стрижки — обери послугу, яка підкреслює твій характер.',
+    basePrice: 'Базова ціна',
+    teamIntro: 'Майстерність має обличчя. Знайомся з барберами та обирай свого майстра.',
+    profileSoon: 'Профіль незабаром',
+    visitBooking: 'Записатись',
   } : {
     benefits: 'WHY CHOOSE US',
+    philosophy: 'OUR PHILOSOPHY',
+    philosophyTitle: 'Tradition in character. Precision in craft.',
+    philosophyCopy: 'We value the heritage of classic barbering — respect for the craft, precision, and attention to detail. At the same time, we pair time-honoured traditions with modern techniques and each guest’s individual style. Skill, comfort and hospitality matter here.',
     team: 'OUR BARBERS',
     reviews: 'CLIENT REVIEWS',
     products: 'TOP PRODUCTS',
@@ -93,7 +104,7 @@ export default async function HomePage({ params, searchParams }: {
     social: 'FOLLOW US',
     intro: 'We combine barbering traditions with modern service so you always look your best.',
     benefitNames: ['Experienced barbers', 'Premium service', 'Quality grooming', 'Atmosphere', 'Personal approach'],
-    benefitDetails: ['Attention to every detail', 'Comfort in every visit', 'Professional care', 'Tradition meets modern comfort', 'Style made for you'],
+    benefitDetails: ['Attention to every detail', 'Your choice of coffee, tea or a cold soft drink is included with your service', 'Professional care', 'Tradition meets modern comfort', 'Style made for you'],
     moreTeam: 'Meet our barbers',
     moreServices: 'Explore services',
     moreProducts: 'All products',
@@ -113,11 +124,26 @@ export default async function HomePage({ params, searchParams }: {
     noLocations: 'Shop locations will be available soon.',
     noServices: 'Our service list is being prepared.',
     services: 'SERVICES',
+    serviceIntro: 'From a traditional shave to a modern haircut — choose the service that fits your style.',
+    basePrice: 'Base price',
+    teamIntro: 'Great craft is personal. Meet our barbers and choose your specialist.',
+    profileSoon: 'Profile coming soon',
+    visitBooking: 'Book now',
   }
 
   return <main id="top" className="landing home-landing">
     <SiteHeader locale={locale} messages={t} />
     <HeroSlider locale={locale} />
+
+    <section id="philosophy" className="home-philosophy" aria-labelledby="home-philosophy-title">
+      <div className="home-container home-philosophy__layout">
+        <div className="home-philosophy__lead">
+          <span className="home-section__eyebrow">{labels.philosophy}</span>
+          <h2 id="home-philosophy-title">{labels.philosophyTitle}</h2>
+        </div>
+        <p className="home-philosophy__copy">{labels.philosophyCopy}</p>
+      </div>
+    </section>
 
     <section id="about" className="home-section home-section--benefits" aria-labelledby="benefits-title">
       <div className="home-container">
@@ -141,27 +167,71 @@ export default async function HomePage({ params, searchParams }: {
       </div>
     </section>
 
-    <section id="team" className="home-section" aria-labelledby="team-title">
+    <section id="team" className="home-section home-section--team" aria-labelledby="team-title">
       <div className="home-container">
-        <div className="home-section__heading-row">
-          <h2 id="team-title" className="home-section__heading">{labels.team}</h2>
-          <Link href={`/${locale}/catalog`} className="home-section__more">{labels.moreTeam} →</Link>
-        </div>
+        <h2 id="team-title" className="home-section__heading">{labels.team}</h2>
+        <p className="home-section__intro">{labels.teamIntro}</p>
         {barbers.docs.length ? <div className="home-team-grid">
-          {barbers.docs.slice(0, 4).map(barber => <article className="home-team-card" key={barber.id}>
-            {barber.portrait && typeof barber.portrait === 'object' && barber.portrait.url
-              ? <Image className="home-team-card__portrait" src={barber.portrait.url} alt={barber.portrait.alt || barber.name} width={500} height={625} unoptimized />
-              : <div className="home-team-card__placeholder" aria-hidden="true">{barber.name.slice(0, 1).toUpperCase()}</div>}
-            <div className="home-team-card__caption">
-              <h3>{barber.name}</h3>
-              {localizedCopy(barber, 'localizedBio', 'bio') && <p>{localizedCopy(barber, 'localizedBio', 'bio')}</p>}
-            </div>
-          </article>)}
+          {barbers.docs.slice(0, 4).map(barber => {
+            const bio = localizedCopy(barber, 'localizedBio', 'bio')
+            // These fields will be populated by the separate barber-platform work.
+            // Never show an invented qualification or specialty on the public site.
+            const level = 'qualificationLevel' in barber && typeof barber.qualificationLevel === 'string'
+              ? barber.qualificationLevel : null
+            return <article className="home-team-card" key={barber.id}>
+              <div className="home-team-card__media">
+                {barber.portrait && typeof barber.portrait === 'object' && barber.portrait.url
+                  ? <Image className="home-team-card__portrait" src={barber.portrait.url}
+                      alt={barber.portrait.alt || barber.name} width={500} height={625} unoptimized />
+                  : <div className="home-team-card__placeholder" aria-hidden="true">{barber.name.slice(0, 1).toUpperCase()}</div>}
+              </div>
+              <div className="home-team-card__content">
+                {level && <span className="home-team-card__level">{level}</span>}
+                <h3>{barber.name}</h3>
+                {bio && <p>{bio}</p>}
+                <div className="home-team-card__actions">
+                  <span className="home-team-card__profile-pending" aria-label={labels.profileSoon}>
+                    {labels.profileSoon}
+                  </span>
+                  <Link href={`/${locale}/booking`} className="home-team-card__book">
+                    <CalendarDays size={15} aria-hidden="true" />{labels.visitBooking}
+                  </Link>
+                </div>
+              </div>
+            </article>
+          })}
         </div> : <p className="home-section__empty">{labels.noBarbers}</p>}
       </div>
     </section>
 
     <AtmosphereParallax locale={locale} />
+
+    <section id="services" className="home-section home-section--muted home-section--services" aria-labelledby="services-title">
+      <div className="home-container">
+        <div className="home-section__heading-row">
+          <div>
+            <h2 id="services-title" className="home-section__heading">{labels.services}</h2>
+            <p className="home-services__intro">{labels.serviceIntro}</p>
+          </div>
+          <Link href={`/${locale}/catalog`} className="home-section__more">{labels.moreServices} →</Link>
+        </div>
+        {services.docs.length ? <div className="home-services-grid">
+          {services.docs.slice(0, 6).map(service => <article className="home-service-card" key={service.id}>
+            <div className="home-service-card__heading">
+              <Scissors size={24} strokeWidth={1.5} aria-hidden="true" />
+              <h3>{service.name}</h3>
+            </div>
+            {localizedCopy(service, 'localizedDescription', 'description') &&
+              <p>{localizedCopy(service, 'localizedDescription', 'description')}</p>}
+            <div className="home-service-card__bottom">
+              <span className="home-service-card__time"><Clock3 size={15} aria-hidden="true" />{service.durationMinutes} {t.common.minutes}</span>
+              <span className="home-service-card__price"><small>{labels.basePrice}</small><strong>{service.price} {t.common.currency}</strong></span>
+              <Link href={`/${locale}/booking`} className="home-service-card__book">{labels.visitBooking}</Link>
+            </div>
+          </article>)}
+        </div> : <p className="home-section__empty">{labels.noServices}</p>}
+      </div>
+    </section>
 
     <section id="reviews" className="home-section home-section--muted" aria-labelledby="reviews-title">
       <div className="home-container">
@@ -213,22 +283,6 @@ export default async function HomePage({ params, searchParams }: {
             <Link href={`/${locale}/catalog`} className="home-section__more">{labels.moreProducts} <span aria-hidden="true">↗</span></Link>
           </div>
         </div>
-      </div>
-    </section>
-
-    <section id="services" className="home-section home-section--muted" aria-labelledby="services-title">
-      <div className="home-container">
-        <div className="home-section__heading-row">
-          <h2 id="services-title" className="home-section__heading">{labels.services}</h2>
-          <Link href={`/${locale}/catalog`} className="home-section__more">{labels.moreServices} →</Link>
-        </div>
-        {services.docs.length ? <div className="home-services-grid">
-          {services.docs.slice(0, 4).map(service => <article className="home-service-card" key={service.id}>
-            <h3>{service.name}</h3>
-            <p>{localizedCopy(service, 'localizedDescription', 'description')}</p>
-            <div><span>{service.durationMinutes} {t.common.minutes}</span><strong>{service.price} {t.common.currency}</strong></div>
-          </article>)}
-        </div> : <p className="home-section__empty">{labels.noServices}</p>}
       </div>
     </section>
 
