@@ -148,3 +148,10 @@
 .management-evidence-form textarea{resize:vertical}
 .management-evidence-form button{cursor:pointer;min-height:40px;border:1px solid var(--m-ink);border-radius:3px;background:var(--m-ink);color:var(--m-card);padding:8px 12px}
 .management-evidence-form button:disabled{opacity:.55;cursor:not-allowed}
+
+.management-candidate-list{display:grid;gap:8px;margin:15px 0}
+.management-candidate-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 14px;border:1px solid var(--m-border);border-radius:4px;background:var(--m-paper);font-size:12px;color:var(--m-ink)}
+.management-candidate-note{display:grid;gap:8px;margin:16px 0;font-size:12px;color:var(--m-muted)}
+.management-candidate-note textarea{width:100%;resize:vertical;background:var(--m-paper);color:var(--m-ink);padding:12px;border:1px solid var(--m-border);border-radius:4px;font:inherit}
+.management-candidate-row button,.management-candidate-prepare{min-height:40px;padding:10px 14px;border:1px solid var(--m-ink);background:var(--m-ink);color:var(--m-card);border-radius:4px;cursor:pointer}
+.management-candidate-row button:disabled,.management-candidate-prepare:disabled{opacity:.55;cursor:not-allowed}
