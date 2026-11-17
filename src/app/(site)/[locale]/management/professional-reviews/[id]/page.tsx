@@ -12,6 +12,8 @@ import { verifySubmittedPortfolioForStaff } from '@/lib/admin/verify-submitted-p
 import { listPortfolioEvidenceStatuses } from '@/lib/admin/portfolio-evidence-statuses'
 import { getPortfolioSignoffStatus } from '@/lib/admin/portfolio-signoff-status'
 import { listPrivatePortfolioCandidates } from '@/lib/admin/private-portfolio-candidate-list'
+import { listPrecautionaryPortfolioHolds } from '@/lib/admin/portfolio-precautionary-holds'
+import { PortfolioMediaHoldForm } from '@/components/admin/portfolio-media-hold-form'
 import { PortfolioCandidateControls } from '@/components/admin/portfolio-candidate-controls'
 import { PortfolioSignoffForm } from '@/components/admin/portfolio-signoff-form'
 import { PortfolioEvidenceReviewForm } from '@/components/admin/portfolio-evidence-review-form'
@@ -60,6 +62,10 @@ export default async function ProfessionalReviewDetailPage({
     ? await listPrivatePortfolioReviewMedia(payload, reviewActor, detail.id)
     : []
 
+  const heldMedia = detail.portfolioAssessment
+    ? await listPrecautionaryPortfolioHolds(payload, reviewActor, detail.id)
+    : []
+  const heldSet = new Set(heldMedia)
   const evidenceStatuses = integrity?.status === 'verified'
     ? await listPortfolioEvidenceStatuses(payload, reviewActor, detail.id)
     : []
@@ -70,7 +76,7 @@ export default async function ProfessionalReviewDetailPage({
   const candidates = integrity?.status === 'verified'
     ? await listPrivatePortfolioCandidates(payload, reviewActor, detail.id)
     : []
-  const evidenceComplete = privateMedia.length > 0 && evidenceStatuses.length === privateMedia.length &&
+  const evidenceComplete = privateMedia.length > 0 && heldMedia.length === 0 && evidenceStatuses.length === privateMedia.length &&
     evidenceStatuses.every(item => item.status === 'evidence_reviewed')
 
   const evidenceLabels = uk
@@ -171,12 +177,16 @@ export default async function ProfessionalReviewDetailPage({
                 alt={uk ? 'Приватна фотографія для модерації' : 'Private image for moderation'}
                 loading="lazy" referrerPolicy="no-referrer"/>
               <figcaption>{uk ? 'Приватний перегляд' : 'Private review'} · {media.mimeType}
+                {heldSet.has(media.id) && <strong className="management-evidence-state">
+                  {uk ? 'Запобіжне блокування активне' : 'Precautionary hold active'}</strong>}
                 <span className="management-evidence-state">{evidenceByMedia.has(media.id)
                   ? evidenceLabels[evidenceByMedia.get(media.id)!]
                   : (uk ? 'Ще не перевірено' : 'Not reviewed')}</span>
               </figcaption>
+              {scope.role === 'admin' && !heldSet.has(media.id) &&
+                <PortfolioMediaHoldForm revisionId={detail.id} mediaId={media.id} locale={locale}/>}
               {scope.role === 'admin' && detail.status === 'pending' &&
-                signoff?.outcome !== 'review_complete' &&
+                !heldSet.has(media.id) && signoff?.outcome !== 'review_complete' &&
                 <PortfolioEvidenceReviewForm revisionId={detail.id} mediaId={media.id} locale={locale}/>}
             </figure>)}
           </div>}
@@ -202,7 +212,7 @@ export default async function ProfessionalReviewDetailPage({
           (candidates.length > 0 || (detail.status === 'pending' && signoff?.outcome === 'review_complete')) &&
           <PortfolioCandidateControls
             revisionId={detail.id} locale={locale} candidates={candidates}
-            canPrepare={detail.status === 'pending' && signoff?.outcome === 'review_complete'}/>}
+            canPrepare={detail.status === 'pending' && heldMedia.length === 0 && signoff?.outcome === 'review_complete'}/>}
         {detail.status === 'rejected' && detail.rejectionReason && <section className="management-panel management-booking-results">
           <h2>{uk ? 'Причина відхилення' : 'Rejection reason'}</h2>
           <p>{detail.rejectionReason}</p>
