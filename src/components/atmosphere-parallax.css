@@ -1,4 +1,4 @@
-/* One full-width cinematic pause after the team section.
+/* Short cinematic interlude after the team section (50svh).
    The background is 280px taller than its clipped frame so ±120px of parallax
    never reveals an edge. Foreground always scrolls at normal document speed. */
 .atmosphere-parallax {
@@ -7,8 +7,9 @@
   display: grid;
   place-items: center;
   width: 100%;
-  min-height: clamp(620px, 90svh, 1000px);
-  padding: 130px 24px;
+  height: 50svh;
+  min-height: 330px;
+  padding: 38px 24px;
   overflow: hidden;
   background: #211913;
   color: #f2e7d6;
@@ -44,7 +45,7 @@
   gap: 0;
 }
 .atmosphere-parallax__kicker {
-  margin: 0 0 23px;
+  margin: 0 0 14px;
   color: #d5af76;
   font-family: Inter, system-ui, sans-serif;
   font-size: clamp(11px, .78vw, 14px);
@@ -55,7 +56,7 @@
   margin: 0;
   max-width: 950px;
   font-family: Inter, system-ui, sans-serif;
-  font-size: clamp(38px, 5.6vw, 90px);
+  font-size: clamp(32px, 4.1vw, 66px);
   font-weight: 600;
   line-height: 1.05;
   letter-spacing: -.035em;
@@ -63,7 +64,7 @@
   color: #f2e7d6;
 }
 .atmosphere-parallax__description {
-  margin: 24px 0 0;
+  margin: 15px 0 0;
   color: #e5d7c3;
   font-family: Inter, system-ui, sans-serif;
   font-size: clamp(16px, 1.25vw, 22px);
@@ -74,7 +75,7 @@
   align-items: center;
   justify-content: center;
   min-height: 49px;
-  margin-top: 34px;
+  margin-top: 22px;
   padding: 12px 25px;
   border: 1px solid rgba(213, 175, 118, .8);
   border-radius: 5px;
@@ -97,8 +98,9 @@
 }
 @media (max-width: 767px) {
   .atmosphere-parallax {
-    min-height: min(74svh, 700px);
-    padding: 100px 22px;
+    height: 50svh;
+    min-height: 300px;
+    padding: 28px 22px;
   }
   .atmosphere-parallax__background {
     inset: 0;
@@ -110,8 +112,8 @@
   .atmosphere-parallax h2 {
     font-size: clamp(32px, 8.5vw, 56px);
   }
-  .atmosphere-parallax__description { margin-top: 18px; }
-  .atmosphere-parallax__action { margin-top: 27px; }
+  .atmosphere-parallax__description { margin-top: 12px; }
+  .atmosphere-parallax__action { margin-top: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .atmosphere-parallax__background {
