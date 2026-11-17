@@ -13,6 +13,8 @@ import { listPrivatePortfolioReviewMedia, readPrivatePortfolioReviewImage, Priva
 import { stagePrivatePortfolioImage, PrivatePortfolioUploadForbidden } from '../src/lib/admin/stage-private-portfolio-image.ts'
 import { submitPrivatePortfolioDraft, PortfolioSubmissionConflict } from '../src/lib/admin/submit-private-portfolio-draft.ts'
 import { verifySubmittedPortfolioForStaff, PortfolioReviewUnavailable } from '../src/lib/admin/verify-submitted-portfolio.ts'
+import { recordPortfolioEvidenceReview, PortfolioEvidenceConflict } from '../src/lib/admin/portfolio-evidence-review.ts'
+import { listPortfolioEvidenceStatuses } from '../src/lib/admin/portfolio-evidence-statuses.ts'
 
 /** Disposable full-schema integration: rejection must never mutate the public
  * barber record and must persist a single final decision under row locks.
@@ -198,6 +200,31 @@ async function run() {
     const reverified = await verifySubmittedPortfolioForStaff(
       payload, staff, Number(draft.id))
     assert.equal(reverified.status, 'verified')
+    const evidenceDecision = await recordPortfolioEvidenceReview(
+      payload, staff, Number(draft.id), staged.id, {
+        outcome: 'evidence_reviewed',
+        note: 'Reviewed source and consent records in isolated CI',
+        rightsReference: 'rights:ci-example',
+        consentReference: 'consent:ci-example',
+      })
+    assert.equal(evidenceDecision.outcome, 'evidence_reviewed')
+    const statuses = await listPortfolioEvidenceStatuses(payload, staff, Number(draft.id))
+    assert.deepEqual(statuses.map(({ mediaId, status }) => ({ mediaId, status })), [{
+      mediaId: staged.id, status: 'evidence_reviewed',
+    }])
+    await assert.rejects(recordPortfolioEvidenceReview(payload, {
+      id: managerId, role: 'location_admin',
+    }, Number(draft.id), staged.id, {
+      outcome: 'needs_evidence', note: 'Not authorized',
+    }), PortfolioEvidenceConflict)
+    await assert.rejects(payload.db.drizzle.execute(sql`
+      DELETE FROM portfolio_media_evidence_events WHERE id = ${evidenceDecision.id}
+    `), /append-only/)
+    await recordPortfolioEvidenceReview(payload, staff, Number(draft.id), staged.id, {
+      outcome: 'needs_evidence', note: 'Request further consent verification',
+    })
+    const updatedStatuses = await listPortfolioEvidenceStatuses(payload, staff, Number(draft.id))
+    assert.equal(updatedStatuses[0]?.status, 'needs_evidence')
     const submittedPreview = await readPrivatePortfolioReviewImage(
       payload, staff, Number(draft.id), staged.id)
     assert.equal(submittedPreview.mimeType, 'image/png')
@@ -364,6 +391,17 @@ async function run() {
     console.info('Professional rejection and biography/locale publication PostgreSQL integration passed')
   } finally {
     if (stagedImageId !== null) {
+      // Isolated CI teardown must clear the append-only fixture through a
+      // temporarily disabled fixture-only trigger, never in application code.
+      await payload.db.drizzle.transaction(async tx => {
+        await tx.execute(sql`ALTER TABLE portfolio_media_evidence_events DISABLE TRIGGER portfolio_evidence_immutable`)
+        try {
+          await tx.execute(sql`DELETE FROM portfolio_media_evidence_events
+            WHERE media_id = ${stagedImageId}`)
+        } finally {
+          await tx.execute(sql`ALTER TABLE portfolio_media_evidence_events ENABLE TRIGGER portfolio_evidence_immutable`)
+        }
+      })
       await payload.db.drizzle.execute(sql`DELETE FROM private_barber_portfolio_media WHERE id = ${stagedImageId}`)
     }
     if (privateMediaId !== null) {
