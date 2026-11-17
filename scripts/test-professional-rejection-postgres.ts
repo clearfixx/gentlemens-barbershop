@@ -15,6 +15,8 @@ import { submitPrivatePortfolioDraft, PortfolioSubmissionConflict } from '../src
 import { verifySubmittedPortfolioForStaff, PortfolioReviewUnavailable } from '../src/lib/admin/verify-submitted-portfolio.ts'
 import { recordPortfolioEvidenceReview, PortfolioEvidenceConflict } from '../src/lib/admin/portfolio-evidence-review.ts'
 import { listPortfolioEvidenceStatuses } from '../src/lib/admin/portfolio-evidence-statuses.ts'
+import { signoffPortfolioReview, PortfolioSignoffConflict } from '../src/lib/admin/portfolio-review-signoff.ts'
+import { getPortfolioSignoffStatus } from '../src/lib/admin/portfolio-signoff-status.ts'
 
 /** Disposable full-schema integration: rejection must never mutate the public
  * barber record and must persist a single final decision under row locks.
@@ -225,6 +227,37 @@ async function run() {
     })
     const updatedStatuses = await listPortfolioEvidenceStatuses(payload, staff, Number(draft.id))
     assert.equal(updatedStatuses[0]?.status, 'needs_evidence')
+    await assert.rejects(signoffPortfolioReview(payload, staff, Number(draft.id), {
+      outcome: 'review_complete', note: 'All evidence checks done',
+    }), PortfolioSignoffConflict)
+    const returned = await signoffPortfolioReview(payload, staff, Number(draft.id), {
+      outcome: 'returned_for_evidence', note: 'Need updated consent confirmation',
+    })
+    assert.equal(returned.outcome, 'returned_for_evidence')
+    const returnedStatus = await getPortfolioSignoffStatus(payload, staff, Number(draft.id))
+    assert.equal(returnedStatus?.outcome, 'returned_for_evidence')
+    await recordPortfolioEvidenceReview(payload, staff, Number(draft.id), staged.id, {
+      outcome: 'evidence_reviewed', note: 'Reviewed updated supporting records',
+      rightsReference: 'rights:ci-updated', consentReference: 'consent:ci-updated',
+    })
+    const finished = await signoffPortfolioReview(payload, staff, Number(draft.id), {
+      outcome: 'review_complete', note: 'Document reviews are complete for all photographs',
+    })
+    assert.equal(finished.outcome, 'review_complete')
+    const finalizedStatus = await getPortfolioSignoffStatus(payload, staff, Number(draft.id))
+    assert.equal(finalizedStatus?.outcome, 'review_complete')
+    await assert.rejects(signoffPortfolioReview(payload, staff, Number(draft.id), {
+      outcome: 'review_complete', note: 'Attempt to finalize twice',
+    }), PortfolioSignoffConflict)
+    await assert.rejects(recordPortfolioEvidenceReview(payload, staff,
+      Number(draft.id), staged.id, {
+        outcome: 'needs_evidence', note: 'Attempt change after final decision',
+      }), PortfolioEvidenceConflict)
+    const remainsNotPublished = await payload.findByID({
+      collection: 'barber-profile-revisions', id: draft.id,
+      overrideAccess: true, depth: 0,
+    })
+    assert.equal(remainsNotPublished.status, 'pending')
     const submittedPreview = await readPrivatePortfolioReviewImage(
       payload, staff, Number(draft.id), staged.id)
     assert.equal(submittedPreview.mimeType, 'image/png')
@@ -395,10 +428,14 @@ async function run() {
       // temporarily disabled fixture-only trigger, never in application code.
       await payload.db.drizzle.transaction(async tx => {
         await tx.execute(sql`ALTER TABLE portfolio_media_evidence_events DISABLE TRIGGER portfolio_evidence_immutable`)
+        await tx.execute(sql`ALTER TABLE portfolio_review_signoff_events DISABLE TRIGGER portfolio_signoff_immutable`)
         try {
+          await tx.execute(sql`DELETE FROM portfolio_review_signoff_events
+            WHERE revision_id = (SELECT revision_id FROM private_barber_portfolio_media WHERE id = ${stagedImageId})`)
           await tx.execute(sql`DELETE FROM portfolio_media_evidence_events
             WHERE media_id = ${stagedImageId}`)
         } finally {
+          await tx.execute(sql`ALTER TABLE portfolio_review_signoff_events ENABLE TRIGGER portfolio_signoff_immutable`)
           await tx.execute(sql`ALTER TABLE portfolio_media_evidence_events ENABLE TRIGGER portfolio_evidence_immutable`)
         }
       })
