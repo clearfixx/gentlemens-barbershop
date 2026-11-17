@@ -11,6 +11,8 @@ import { listPrivatePortfolioReviewMedia } from '@/lib/admin/private-portfolio-r
 import { verifySubmittedPortfolioForStaff } from '@/lib/admin/verify-submitted-portfolio'
 import { listPortfolioEvidenceStatuses } from '@/lib/admin/portfolio-evidence-statuses'
 import { getPortfolioSignoffStatus } from '@/lib/admin/portfolio-signoff-status'
+import { listPrivatePortfolioCandidates } from '@/lib/admin/private-portfolio-candidate-list'
+import { PortfolioCandidateControls } from '@/components/admin/portfolio-candidate-controls'
 import { PortfolioSignoffForm } from '@/components/admin/portfolio-signoff-form'
 import { PortfolioEvidenceReviewForm } from '@/components/admin/portfolio-evidence-review-form'
 import { ProfessionalRejectForm } from '@/components/admin/professional-reject-form'
@@ -65,6 +67,9 @@ export default async function ProfessionalReviewDetailPage({
   const signoff = integrity?.status === 'verified'
     ? await getPortfolioSignoffStatus(payload, reviewActor, detail.id)
     : null
+  const candidates = integrity?.status === 'verified'
+    ? await listPrivatePortfolioCandidates(payload, reviewActor, detail.id)
+    : []
   const evidenceComplete = privateMedia.length > 0 && evidenceStatuses.length === privateMedia.length &&
     evidenceStatuses.every(item => item.status === 'evidence_reviewed')
 
@@ -192,6 +197,12 @@ export default async function ProfessionalReviewDetailPage({
             <PortfolioSignoffForm revisionId={detail.id} locale={locale}
               completeEvidence={evidenceComplete}/>}
         </>}
+        {detail.portfolioAssessment && integrity?.status === 'verified' &&
+          scope.role === 'admin' &&
+          (candidates.length > 0 || (detail.status === 'pending' && signoff?.outcome === 'review_complete')) &&
+          <PortfolioCandidateControls
+            revisionId={detail.id} locale={locale} candidates={candidates}
+            canPrepare={detail.status === 'pending' && signoff?.outcome === 'review_complete'}/>}
         {detail.status === 'rejected' && detail.rejectionReason && <section className="management-panel management-booking-results">
           <h2>{uk ? 'Причина відхилення' : 'Rejection reason'}</h2>
           <p>{detail.rejectionReason}</p>
