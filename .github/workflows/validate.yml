@@ -1317,6 +1317,7 @@ jobs:
             src/migrations/*submitted_portfolio_manifest.ts \
             src/migrations/*portfolio_evidence_review.ts \
             src/migrations/*portfolio_review_signoff.ts \
+            src/migrations/*private_portfolio_candidates.ts \
             /tmp/booking-migrations-outside-historical-rehearsal/
           # Rehearse the committed, previously normalized localization files unchanged.
           mkdir -p /tmp/incremental-migration
