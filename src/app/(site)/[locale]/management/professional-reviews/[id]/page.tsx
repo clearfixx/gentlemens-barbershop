@@ -13,6 +13,8 @@ import { listPortfolioEvidenceStatuses } from '@/lib/admin/portfolio-evidence-st
 import { getPortfolioSignoffStatus } from '@/lib/admin/portfolio-signoff-status'
 import { listPrivatePortfolioCandidates } from '@/lib/admin/private-portfolio-candidate-list'
 import { listPrecautionaryPortfolioHolds } from '@/lib/admin/portfolio-precautionary-holds'
+import { listPortfolioHoldCases } from '@/lib/admin/portfolio-hold-cases'
+import { PortfolioHoldCaseForm } from '@/components/admin/portfolio-hold-case-form'
 import { PortfolioMediaHoldForm } from '@/components/admin/portfolio-media-hold-form'
 import { PortfolioCandidateControls } from '@/components/admin/portfolio-candidate-controls'
 import { PortfolioSignoffForm } from '@/components/admin/portfolio-signoff-form'
@@ -66,6 +68,18 @@ export default async function ProfessionalReviewDetailPage({
     ? await listPrecautionaryPortfolioHolds(payload, reviewActor, detail.id)
     : []
   const heldSet = new Set(heldMedia)
+  const holdCases = heldMedia.length
+    ? await listPortfolioHoldCases(payload, reviewActor, detail.id)
+    : []
+  const caseByMedia = new Map(holdCases.map(item => [item.mediaId, item]))
+  const caseNames = uk
+    ? { untriaged: 'Не розподілено', investigating: 'Розслідується',
+      awaiting_information: 'Очікує інформації', escalated: 'Передано на перевірку',
+      closed_administratively: 'Адміністративно закрито (hold чинний)' }
+    : { untriaged: 'Untriaged', investigating: 'Investigating',
+      awaiting_information: 'Awaiting information', escalated: 'Escalated',
+      closed_administratively: 'Closed administratively (hold remains)' }
+
   const evidenceStatuses = integrity?.status === 'verified'
     ? await listPortfolioEvidenceStatuses(payload, reviewActor, detail.id)
     : []
@@ -178,11 +192,17 @@ export default async function ProfessionalReviewDetailPage({
                 loading="lazy" referrerPolicy="no-referrer"/>
               <figcaption>{uk ? 'Приватний перегляд' : 'Private review'} · {media.mimeType}
                 {heldSet.has(media.id) && <strong className="management-evidence-state">
-                  {uk ? 'Запобіжне блокування активне' : 'Precautionary hold active'}</strong>}
+                  {uk ? 'Запобіжне блокування активне' : 'Precautionary hold active'}</strong>
+                {caseByMedia.has(media.id) && <span className="management-evidence-state">
+                  {uk ? 'Справа' : 'Case'}: {caseNames[caseByMedia.get(media.id)!.stage]}
+                </span>}}
                 <span className="management-evidence-state">{evidenceByMedia.has(media.id)
                   ? evidenceLabels[evidenceByMedia.get(media.id)!]
                   : (uk ? 'Ще не перевірено' : 'Not reviewed')}</span>
               </figcaption>
+              {scope.role === 'admin' && caseByMedia.has(media.id) &&
+                <PortfolioHoldCaseForm item={caseByMedia.get(media.id)!} locale={locale}
+                  currentAdminId={Number(user.id)}/>}
               {scope.role === 'admin' && !heldSet.has(media.id) &&
                 <PortfolioMediaHoldForm revisionId={detail.id} mediaId={media.id} locale={locale}/>}
               {scope.role === 'admin' && detail.status === 'pending' &&
