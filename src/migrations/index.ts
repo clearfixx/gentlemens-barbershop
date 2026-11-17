@@ -37,6 +37,8 @@ import * as migration_20261117_110000_private_portfolio_candidates from './20261
 
 import * as migration_20261117_120000_portfolio_precautionary_holds from './20261117_120000_portfolio_precautionary_holds';
 
+import * as migration_20261117_130000_portfolio_hold_case_events from './20261117_130000_portfolio_hold_case_events';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -137,5 +139,10 @@ export const migrations = [
     up: migration_20261117_120000_portfolio_precautionary_holds.up,
     down: migration_20261117_120000_portfolio_precautionary_holds.down,
     name: '20261117_120000_portfolio_precautionary_holds',
+  },
+  {
+    up: migration_20261117_130000_portfolio_hold_case_events.up,
+    down: migration_20261117_130000_portfolio_hold_case_events.down,
+    name: '20261117_130000_portfolio_hold_case_events',
   },
 ];
