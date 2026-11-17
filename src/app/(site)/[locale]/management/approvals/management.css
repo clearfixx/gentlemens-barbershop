@@ -140,3 +140,11 @@
 .management-portfolio-integrity{border:1px solid var(--m-border);border-radius:4px;padding:15px 18px;margin:18px 0;background:var(--m-paper)}
 .management-portfolio-integrity strong{font-size:13px;color:var(--m-ink)}
 .management-portfolio-integrity p{margin:8px 0 0;font-size:12px;line-height:1.6;color:var(--m-muted)}
+
+.management-evidence-state{display:block;margin-top:7px;font-weight:600;color:var(--m-ink)}
+.management-evidence-form{display:grid;gap:10px;padding:13px;border-top:1px solid var(--m-border)}
+.management-evidence-form label{font-size:11px;display:grid;gap:5px;color:var(--m-muted)}
+.management-evidence-form input,.management-evidence-form textarea,.management-evidence-form select{min-width:0;width:100%;padding:9px;background:var(--m-paper);border:1px solid var(--m-border);border-radius:3px;color:var(--m-ink);font:inherit}
+.management-evidence-form textarea{resize:vertical}
+.management-evidence-form button{cursor:pointer;min-height:40px;border:1px solid var(--m-ink);border-radius:3px;background:var(--m-ink);color:var(--m-card);padding:8px 12px}
+.management-evidence-form button:disabled{opacity:.55;cursor:not-allowed}
