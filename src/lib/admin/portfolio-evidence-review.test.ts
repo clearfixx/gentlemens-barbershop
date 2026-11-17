@@ -26,7 +26,8 @@ function fake(record: Record<string, unknown>, images: Record<string, unknown>[]
     fn({ execute: async () => {
       calls.push(1)
       if (calls.length === 1) return { rows: [record] }
-      if (calls.length === 2) return { rows: images }
+      if (calls.length === 2) return { rows: [] } // Not already finalized.
+      if (calls.length === 3) return { rows: images }
       return { rows: [{ id: 11 }] }
     } }),
   } } } as unknown as Repo
@@ -51,7 +52,7 @@ test('records one event without publishing or exposing evidence references', asy
     actor, 10, 4, decision)
   assert.deepEqual(result, { id: 11, revisionId: 10, mediaId: 4,
     outcome: 'evidence_reviewed' })
-  assert.equal(calls.length, 3)
+  assert.equal(calls.length, 4)
   assert.doesNotMatch(JSON.stringify(result), /rights|consent|note/)
 })
 
@@ -64,9 +65,9 @@ test('invalid role, stale revision, foreign or tampered media fail closed', asyn
     [{ ...row, status: 'draft' }, [photo], 1],
     [{ ...row, status: 'approved' }, [photo], 1],
     [{ ...row, barber_user_id: 99 }, [photo], 1],
-    [row, [{ ...photo, content: Buffer.from('tampered') }], 2],
-    [row, [{ ...photo, id: 40 }], 2],
-    [{ ...row, submitted_manifest_hash: 'a'.repeat(64) }, [photo], 2],
+    [row, [{ ...photo, content: Buffer.from('tampered') }], 3],
+    [row, [{ ...photo, id: 40 }], 3],
+    [{ ...row, submitted_manifest_hash: 'a'.repeat(64) }, [photo], 3],
   ] as Array<[Record<string, unknown>, Record<string, unknown>[], number]>) {
     const calls: number[] = []
     await assert.rejects(recordPortfolioEvidenceReview(fake(revision, images, calls),
