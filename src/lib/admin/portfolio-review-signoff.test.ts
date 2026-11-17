@@ -21,16 +21,25 @@ const image = { id: 9, barber_id: 7, location_id: 2, uploaded_by_id: 5,
 const reviewed = { media_id: 9, outcome: 'evidence_reviewed',
   rights_reference: 'rights:doc-1', consent_reference: 'consent:doc-1' }
 type Repo = Parameters<typeof signoffPortfolioReview>[0]
-function fake(value: Record<string, unknown>, imgs: Record<string, unknown>[],
-  evidence: Record<string, unknown>[], counts: number[]): Repo {
-  return { db: { drizzle: { transaction: async (fn: (tx: {
-    execute: () => Promise<{ rows: unknown[] }>
-  }) => Promise<unknown>) => fn({ execute: async () => {
-    counts.push(1)
-    return { rows: counts.length === 1 ? [value]
-      : counts.length === 2 ? imgs
-        : counts.length === 3 ? evidence : [{ id: 41 }] }
-  }) } } } as unknown as Repo
+function fake(
+  value: Record<string, unknown>,
+  imgs: Record<string, unknown>[],
+  evidence: Record<string, unknown>[],
+  counts: number[],
+): Repo {
+  const tx = {
+    execute: async (): Promise<{ rows: unknown[] }> => {
+      counts.push(1)
+      if (counts.length === 1) return { rows: [value] }
+      if (counts.length === 2) return { rows: imgs }
+      if (counts.length === 3) return { rows: evidence }
+      return { rows: [{ id: 41 }] }
+    },
+  }
+  return {
+    db: { drizzle: { transaction: async (callback: (t: typeof tx) => Promise<unknown>) =>
+      callback(tx) } },
+  } as unknown as Repo
 }
 
 test('parse exact signoff contract with minimum reviewer explanation', () => {
