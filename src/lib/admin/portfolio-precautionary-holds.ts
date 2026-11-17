@@ -55,8 +55,7 @@ export async function placePrecautionaryPortfolioHold(
     const review = await tx.execute(sql`
       SELECT r.id FROM barber_profile_revisions r
       JOIN barbers b ON b.id = r.barber_id
-      WHERE r.id = ${revisionId} AND
-        b.user_id = r.author_id AND b.location_id = r.location_id
+      WHERE r.id = ${revisionId}
       FOR UPDATE OF r, b
     `)
     if (review.rows.length !== 1) throw new PortfolioHoldConflict()
@@ -131,9 +130,7 @@ export async function listPrecautionaryPortfolioHolds(
   const rows = await payload.db.drizzle.execute(sql`
     SELECT h.media_id FROM portfolio_media_precautionary_holds h
     JOIN barber_profile_revisions r ON r.id = h.revision_id
-    JOIN barbers b ON b.id = r.barber_id
-    WHERE r.id = ${revisionId} AND b.user_id = r.author_id
-      AND b.location_id = r.location_id AND ${access}
+    WHERE r.id = ${revisionId} AND ${access}
     ORDER BY h.media_id LIMIT 31
   `)
   if (rows.rows.length > 30) throw new Error('Unexpected hold count')
