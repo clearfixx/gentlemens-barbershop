@@ -29,6 +29,8 @@ import * as migration_20261116_200000_private_barber_portfolio_media from './202
 
 import * as migration_20261116_210000_submitted_portfolio_manifest from './20261116_210000_submitted_portfolio_manifest';
 
+import * as migration_20261117_090000_portfolio_evidence_review from './20261117_090000_portfolio_evidence_review';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -109,5 +111,10 @@ export const migrations = [
     up: migration_20261116_210000_submitted_portfolio_manifest.up,
     down: migration_20261116_210000_submitted_portfolio_manifest.down,
     name: '20261116_210000_submitted_portfolio_manifest',
+  },
+  {
+    up: migration_20261117_090000_portfolio_evidence_review.up,
+    down: migration_20261117_090000_portfolio_evidence_review.down,
+    name: '20261117_090000_portfolio_evidence_review',
   },
 ];
