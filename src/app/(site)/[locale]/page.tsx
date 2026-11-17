@@ -89,6 +89,13 @@ export default async function HomePage({ params, searchParams }: {
     serviceIntro: 'Від класичного гоління до сучасної стрижки — обери послугу, яка підкреслює твій характер.',
     basePrice: 'Базова ціна',
     teamIntro: 'Майстерність має обличчя. Знайомся з барберами та обирай свого майстра.',
+    levelsTitle: 'Рівні майстерності',
+    levels: [
+      { title: 'Junior Barber', description: 'Майстер на початку кар’єри, який працює за стандартами мережі.' },
+      { title: 'Barber', description: 'Самостійний майстер зі сформованою технікою.' },
+      { title: 'Senior Barber', description: 'Досвідчений барбер із широкою практикою.' },
+      { title: 'Expert Barber', description: 'Майстер складних технік і професійний наставник.' },
+    ],
     profileSoon: 'Профіль незабаром',
     visitBooking: 'Записатись',
   } : {
@@ -127,6 +134,13 @@ export default async function HomePage({ params, searchParams }: {
     serviceIntro: 'From a traditional shave to a modern haircut — choose the service that fits your style.',
     basePrice: 'Base price',
     teamIntro: 'Great craft is personal. Meet our barbers and choose your specialist.',
+    levelsTitle: 'Our experience levels',
+    levels: [
+      { title: 'Junior Barber', description: 'An emerging barber working to the same studio standards.' },
+      { title: 'Barber', description: 'A skilled independent professional.' },
+      { title: 'Senior Barber', description: 'An experienced barber with a wide range of practice.' },
+      { title: 'Expert Barber', description: 'A specialist in advanced techniques and mentoring.' },
+    ],
     profileSoon: 'Profile coming soon',
     visitBooking: 'Book now',
   }
@@ -201,6 +215,16 @@ export default async function HomePage({ params, searchParams }: {
             </article>
           })}
         </div> : <p className="home-section__empty">{labels.noBarbers}</p>}
+        <div className="home-team-levels" aria-label={labels.levelsTitle}>
+          <h3>{labels.levelsTitle}</h3>
+          <div className="home-team-levels__items">
+            {labels.levels.map((level, index) => <div className="home-team-levels__item" key={level.title}>
+              <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+              <strong>{level.title}</strong>
+              <p>{level.description}</p>
+            </div>)}
+          </div>
+        </div>
       </div>
     </section>
 
