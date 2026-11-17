@@ -34,6 +34,7 @@ function fake(
     count.push(1)
     const rows: unknown[][] = [
       [revision],
+      [], // No precautionary holds on this fixture.
       opts.existing ? [{ id: 90 }] : [],
       opts.signoff === false ? [] : [{ id: 51 }],
       opts.media ?? [media],
@@ -53,7 +54,7 @@ test('prepares private-only candidate after documentary signoff and media verifi
   const result = await preparePrivatePortfolioCandidates(fake(row, {}, calls),
     { id: 2, role: 'admin' }, 19, 'Reviewed documentary source')
   assert.deepEqual(result, { revisionId: 19, preparedCount: 1 })
-  assert.equal(calls.length, 8)
+  assert.equal(calls.length, 9)
 })
 
 test('missing signoff or insufficient/changed evidence blocks preparation', async () => {
