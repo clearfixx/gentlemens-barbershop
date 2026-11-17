@@ -275,6 +275,17 @@ async function run() {
       WHERE id = ${candidateId}
     `)
     assert.equal(afterPublicAttempt.rows[0]?.public_enabled, false)
+    // Emergency media withdrawal remains available after the barber moves.
+    const transferredLocation = add('locations', await payload.create({
+      collection: 'locations', overrideAccess: true,
+      data: {
+        name: 'Portfolio transfer CI', city: 'Test', address: 'CI avenue',
+        slug: `portfolio-transfer-${suffix}`, isActive: true,
+        timeZone: 'Europe/Kyiv', cancellationDeadlineMinutes: 60,
+      },
+    }))
+    await payload.update({ collection: 'barbers', id: barber.id,
+      overrideAccess: true, data: { location: Number(transferredLocation.id) } })
     const held = await placePrecautionaryPortfolioHold(payload, staff,
       Number(draft.id), staged.id, {
         kind: 'consent_concern', caseReference: 'case:ci-2026',
@@ -283,6 +294,8 @@ async function run() {
     assert.equal(held.withdrawnCandidates, 1)
     assert.deepEqual(await listPrecautionaryPortfolioHolds(payload, staff,
       Number(draft.id)), [staged.id])
+    await payload.update({ collection: 'barbers', id: barber.id,
+      overrideAccess: true, data: { location: Number(location.id) } })
     const withdrawn = await listPrivatePortfolioCandidates(payload, staff, Number(draft.id))
     assert.equal(withdrawn[0]?.status, 'withdrawn')
     await assert.rejects(placePrecautionaryPortfolioHold(payload, staff,
