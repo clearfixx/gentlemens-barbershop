@@ -59,6 +59,14 @@ export async function preparePrivatePortfolioCandidates(
       items = validatePortfolioSubmission((row.changes as Record<string, unknown>).portfolio)
     } catch { throw new PortfolioCandidateConflict('Invalid candidate item metadata') }
 
+    // A precautionary concern is a hard freeze, regardless of whether the
+    // claimant's right to withdraw consent has been verified yet.
+    const holds = await tx.execute(sql`
+      SELECT media_id FROM portfolio_media_precautionary_holds
+      WHERE revision_id = ${revisionId} LIMIT 1
+    `)
+    if (holds.rows.length) throw new PortfolioCandidateConflict('Portfolio contains a held image')
+
     const previous = await tx.execute(sql`
       SELECT id FROM barber_portfolio_publication_candidates
       WHERE revision_id = ${revisionId} LIMIT 1
