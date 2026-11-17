@@ -20,6 +20,7 @@ import { getPortfolioSignoffStatus } from '../src/lib/admin/portfolio-signoff-st
 import { preparePrivatePortfolioCandidates, withdrawPrivatePortfolioCandidate, PortfolioCandidateConflict } from '../src/lib/admin/private-portfolio-candidates.ts'
 import { listPrivatePortfolioCandidates } from '../src/lib/admin/private-portfolio-candidate-list.ts'
 import { placePrecautionaryPortfolioHold, listPrecautionaryPortfolioHolds, PortfolioHoldConflict } from '../src/lib/admin/portfolio-precautionary-holds.ts'
+import { recordPortfolioHoldCaseEvent, listPortfolioHoldCases, HoldCaseConflict } from '../src/lib/admin/portfolio-hold-cases.ts'
 
 /** Disposable full-schema integration: rejection must never mutate the public
  * barber record and must persist a single final decision under row locks.
@@ -296,6 +297,34 @@ async function run() {
       Number(draft.id)), [staged.id])
     await payload.update({ collection: 'barbers', id: barber.id,
       overrideAccess: true, data: { location: Number(location.id) } })
+    const triaged = await recordPortfolioHoldCaseEvent(payload, staff,
+      held.holdId, {
+        stage: 'investigating', assignedAdminId: Number(network.id),
+        note: 'Investigate reported consent uncertainty without claimant PII',
+      })
+    assert.equal(triaged.stage, 'investigating')
+    await assert.rejects(recordPortfolioHoldCaseEvent(payload, staff, held.holdId, {
+      stage: 'closed_administratively', assignedAdminId: Number(barberUser.id),
+      note: 'Not a current network administrator',
+    }), HoldCaseConflict)
+    const investigated = await listPortfolioHoldCases(payload, staff, Number(draft.id))
+    assert.equal(investigated[0]?.stage, 'investigating')
+    assert.equal(investigated[0]?.assignedAdminId, Number(network.id))
+    const closedCase = await recordPortfolioHoldCaseEvent(payload, staff,
+      held.holdId, {
+        stage: 'closed_administratively', assignedAdminId: Number(network.id),
+        note: 'Administrative review complete but media remains permanently held',
+      })
+    assert.equal(closedCase.stage, 'closed_administratively')
+    await assert.rejects(recordPortfolioHoldCaseEvent(payload, staff, held.holdId, {
+      stage: 'investigating', assignedAdminId: Number(network.id),
+      note: 'Attempt reopening a closed case',
+    }), HoldCaseConflict)
+    await assert.rejects(payload.db.drizzle.execute(sql`
+      DELETE FROM portfolio_hold_case_events WHERE hold_id = ${held.holdId}
+    `))
+    assert.equal((await listPrecautionaryPortfolioHolds(payload, staff,
+      Number(draft.id))).length, 1)
     const withdrawn = await listPrivatePortfolioCandidates(payload, staff, Number(draft.id))
     assert.equal(withdrawn[0]?.status, 'withdrawn')
     await assert.rejects(placePrecautionaryPortfolioHold(payload, staff,
@@ -485,12 +514,15 @@ async function run() {
       // Isolated CI teardown must clear the append-only fixture through a
       // temporarily disabled fixture-only trigger, never in application code.
       await payload.db.drizzle.transaction(async tx => {
+        await tx.execute(sql`ALTER TABLE portfolio_hold_case_events DISABLE TRIGGER portfolio_hold_case_events_immutable`)
         await tx.execute(sql`ALTER TABLE portfolio_media_precautionary_holds DISABLE TRIGGER portfolio_hold_immutable`)
         await tx.execute(sql`ALTER TABLE barber_portfolio_candidate_events DISABLE TRIGGER portfolio_candidate_event_immutable`)
         await tx.execute(sql`ALTER TABLE barber_portfolio_publication_candidates DISABLE TRIGGER portfolio_candidate_no_delete`)
         await tx.execute(sql`ALTER TABLE portfolio_media_evidence_events DISABLE TRIGGER portfolio_evidence_immutable`)
         await tx.execute(sql`ALTER TABLE portfolio_review_signoff_events DISABLE TRIGGER portfolio_signoff_immutable`)
         try {
+          await tx.execute(sql`DELETE FROM portfolio_hold_case_events
+            WHERE hold_id IN (SELECT id FROM portfolio_media_precautionary_holds WHERE media_id = ${stagedImageId})`)
           await tx.execute(sql`DELETE FROM portfolio_media_precautionary_holds
             WHERE media_id = ${stagedImageId}`)
           await tx.execute(sql`DELETE FROM barber_portfolio_candidate_events
@@ -502,6 +534,7 @@ async function run() {
           await tx.execute(sql`DELETE FROM portfolio_media_evidence_events
             WHERE media_id = ${stagedImageId}`)
         } finally {
+          await tx.execute(sql`ALTER TABLE portfolio_hold_case_events ENABLE TRIGGER portfolio_hold_case_events_immutable`)
           await tx.execute(sql`ALTER TABLE portfolio_media_precautionary_holds ENABLE TRIGGER portfolio_hold_immutable`)
           await tx.execute(sql`ALTER TABLE barber_portfolio_publication_candidates ENABLE TRIGGER portfolio_candidate_no_delete`)
           await tx.execute(sql`ALTER TABLE barber_portfolio_candidate_events ENABLE TRIGGER portfolio_candidate_event_immutable`)
