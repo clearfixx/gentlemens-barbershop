@@ -10,6 +10,8 @@ import { loadProfessionalReviewDetail } from '@/lib/admin/professional-review-de
 import { listPrivatePortfolioReviewMedia } from '@/lib/admin/private-portfolio-review-media'
 import { verifySubmittedPortfolioForStaff } from '@/lib/admin/verify-submitted-portfolio'
 import { listPortfolioEvidenceStatuses } from '@/lib/admin/portfolio-evidence-statuses'
+import { getPortfolioSignoffStatus } from '@/lib/admin/portfolio-signoff-status'
+import { PortfolioSignoffForm } from '@/components/admin/portfolio-signoff-form'
 import { PortfolioEvidenceReviewForm } from '@/components/admin/portfolio-evidence-review-form'
 import { ProfessionalRejectForm } from '@/components/admin/professional-reject-form'
 import { ProfessionalBiographyApprove } from '@/components/admin/professional-biography-approve'
@@ -60,6 +62,12 @@ export default async function ProfessionalReviewDetailPage({
     ? await listPortfolioEvidenceStatuses(payload, reviewActor, detail.id)
     : []
   const evidenceByMedia = new Map(evidenceStatuses.map(item => [item.mediaId, item.status]))
+  const signoff = integrity?.status === 'verified'
+    ? await getPortfolioSignoffStatus(payload, reviewActor, detail.id)
+    : null
+  const evidenceComplete = privateMedia.length > 0 && evidenceStatuses.length === privateMedia.length &&
+    evidenceStatuses.every(item => item.status === 'evidence_reviewed')
+
   const evidenceLabels = uk
     ? { needs_evidence: 'Потрібні матеріали', evidence_reviewed: 'Матеріали перевірено', rejected: 'Відхилено' }
     : { needs_evidence: 'More evidence needed', evidence_reviewed: 'Evidence reviewed', rejected: 'Rejected' }
@@ -163,6 +171,7 @@ export default async function ProfessionalReviewDetailPage({
                   : (uk ? 'Ще не перевірено' : 'Not reviewed')}</span>
               </figcaption>
               {scope.role === 'admin' && detail.status === 'pending' &&
+                signoff?.outcome !== 'review_complete' &&
                 <PortfolioEvidenceReviewForm revisionId={detail.id} mediaId={media.id} locale={locale}/>}
             </figure>)}
           </div>}
@@ -170,6 +179,19 @@ export default async function ProfessionalReviewDetailPage({
             ? 'Приватні зображення доступні лише авторизованим модераторам. Завантаження та публікація портфоліо залишаються вимкненими.'
             : 'Private images are visible only to authorized reviewers. Portfolio uploads and publication remain disabled.'}</p>
         </section>}
+        {detail.portfolioAssessment && integrity?.status === 'verified' && <>
+          {signoff && <div className="management-portfolio-integrity" role="status">
+            <strong>{signoff.outcome === 'review_complete'
+              ? (uk ? 'Перевірку документів завершено' : 'Documentation review completed')
+              : (uk ? 'Матеріали повернуто на уточнення' : 'More evidence requested')}</strong>
+            <p>{uk ? 'Це внутрішній запис модерації, не дозвіл на публікацію.' :
+              'This is an internal review record, not publication permission.'}</p>
+          </div>}
+          {scope.role === 'admin' && detail.status === 'pending' &&
+            signoff?.outcome !== 'review_complete' &&
+            <PortfolioSignoffForm revisionId={detail.id} locale={locale}
+              completeEvidence={evidenceComplete}/>}
+        </>}
         {detail.status === 'rejected' && detail.rejectionReason && <section className="management-panel management-booking-results">
           <h2>{uk ? 'Причина відхилення' : 'Rejection reason'}</h2>
           <p>{detail.rejectionReason}</p>
