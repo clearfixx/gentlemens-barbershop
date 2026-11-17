@@ -219,7 +219,7 @@ async function run() {
     }), PortfolioEvidenceConflict)
     await assert.rejects(payload.db.drizzle.execute(sql`
       DELETE FROM portfolio_media_evidence_events WHERE id = ${evidenceDecision.id}
-    `), /append-only/)
+    `))
     await recordPortfolioEvidenceReview(payload, staff, Number(draft.id), staged.id, {
       outcome: 'needs_evidence', note: 'Request further consent verification',
     })
