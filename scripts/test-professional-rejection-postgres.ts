@@ -19,6 +19,7 @@ import { signoffPortfolioReview, PortfolioSignoffConflict } from '../src/lib/adm
 import { getPortfolioSignoffStatus } from '../src/lib/admin/portfolio-signoff-status.ts'
 import { preparePrivatePortfolioCandidates, withdrawPrivatePortfolioCandidate, PortfolioCandidateConflict } from '../src/lib/admin/private-portfolio-candidates.ts'
 import { listPrivatePortfolioCandidates } from '../src/lib/admin/private-portfolio-candidate-list.ts'
+import { placePrecautionaryPortfolioHold, listPrecautionaryPortfolioHolds, PortfolioHoldConflict } from '../src/lib/admin/portfolio-precautionary-holds.ts'
 
 /** Disposable full-schema integration: rejection must never mutate the public
  * barber record and must persist a single final decision under row locks.
@@ -274,13 +275,26 @@ async function run() {
       WHERE id = ${candidateId}
     `)
     assert.equal(afterPublicAttempt.rows[0]?.public_enabled, false)
-    assert.deepEqual(await withdrawPrivatePortfolioCandidate(payload, staff,
-      candidateId, 'Withdraw candidate due to consent uncertainty'),
-      { id: candidateId, status: 'withdrawn' })
+    const held = await placePrecautionaryPortfolioHold(payload, staff,
+      Number(draft.id), staged.id, {
+        kind: 'consent_concern', caseReference: 'case:ci-2026',
+        reason: 'A precautionary consent concern requires immediate withdrawal',
+      })
+    assert.equal(held.withdrawnCandidates, 1)
+    assert.deepEqual(await listPrecautionaryPortfolioHolds(payload, staff,
+      Number(draft.id)), [staged.id])
     const withdrawn = await listPrivatePortfolioCandidates(payload, staff, Number(draft.id))
     assert.equal(withdrawn[0]?.status, 'withdrawn')
+    await assert.rejects(placePrecautionaryPortfolioHold(payload, staff,
+      Number(draft.id), staged.id, {
+        kind: 'consent_concern', caseReference: 'case:ci-2026',
+        reason: 'Repeated concern',
+      }), PortfolioHoldConflict)
     await assert.rejects(withdrawPrivatePortfolioCandidate(payload, staff,
       candidateId, 'Repeat withdrawal attempt'), PortfolioCandidateConflict)
+    await assert.rejects(preparePrivatePortfolioCandidates(payload, staff,
+      Number(draft.id), 'Attempt preparation after precautionary hold'),
+      PortfolioCandidateConflict)
     await assert.rejects(payload.db.drizzle.execute(sql`
       DELETE FROM barber_portfolio_candidate_events WHERE candidate_id = ${candidateId}
     `))
@@ -458,11 +472,14 @@ async function run() {
       // Isolated CI teardown must clear the append-only fixture through a
       // temporarily disabled fixture-only trigger, never in application code.
       await payload.db.drizzle.transaction(async tx => {
+        await tx.execute(sql`ALTER TABLE portfolio_media_precautionary_holds DISABLE TRIGGER portfolio_hold_immutable`)
         await tx.execute(sql`ALTER TABLE barber_portfolio_candidate_events DISABLE TRIGGER portfolio_candidate_event_immutable`)
         await tx.execute(sql`ALTER TABLE barber_portfolio_publication_candidates DISABLE TRIGGER portfolio_candidate_no_delete`)
         await tx.execute(sql`ALTER TABLE portfolio_media_evidence_events DISABLE TRIGGER portfolio_evidence_immutable`)
         await tx.execute(sql`ALTER TABLE portfolio_review_signoff_events DISABLE TRIGGER portfolio_signoff_immutable`)
         try {
+          await tx.execute(sql`DELETE FROM portfolio_media_precautionary_holds
+            WHERE media_id = ${stagedImageId}`)
           await tx.execute(sql`DELETE FROM barber_portfolio_candidate_events
             WHERE candidate_id IN (SELECT id FROM barber_portfolio_publication_candidates WHERE media_id = ${stagedImageId})`)
           await tx.execute(sql`DELETE FROM barber_portfolio_publication_candidates
@@ -472,6 +489,7 @@ async function run() {
           await tx.execute(sql`DELETE FROM portfolio_media_evidence_events
             WHERE media_id = ${stagedImageId}`)
         } finally {
+          await tx.execute(sql`ALTER TABLE portfolio_media_precautionary_holds ENABLE TRIGGER portfolio_hold_immutable`)
           await tx.execute(sql`ALTER TABLE barber_portfolio_publication_candidates ENABLE TRIGGER portfolio_candidate_no_delete`)
           await tx.execute(sql`ALTER TABLE barber_portfolio_candidate_events ENABLE TRIGGER portfolio_candidate_event_immutable`)
           await tx.execute(sql`ALTER TABLE portfolio_review_signoff_events ENABLE TRIGGER portfolio_signoff_immutable`)
