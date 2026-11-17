@@ -104,6 +104,15 @@ export async function recordPortfolioEvidenceReview(
       throw new PortfolioEvidenceConflict('Invalid submitted portfolio')
     }
     if (!items.some(item => item.mediaId === mediaId)) throw new PortfolioEvidenceConflict()
+    // Once documentation review was finalized, evidence history is sealed.
+    // A returned-for-evidence signoff remains actionable for corrections.
+    const final = await tx.execute(sql`
+      SELECT 1 FROM portfolio_review_signoff_events
+      WHERE revision_id = ${revisionId}
+        AND outcome = 'review_complete'::public.enum_portfolio_review_signoff_outcome
+      LIMIT 1
+    `)
+    if (final.rows.length) throw new PortfolioEvidenceConflict('Evidence review already finalized')
     const photos = await tx.execute(sql`
       SELECT id, barber_id, location_id, uploaded_by_id,
         mime_type, size_bytes, sha256, content
