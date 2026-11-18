@@ -61,6 +61,7 @@ export default async function ProfessionalReviewsPage({ params, searchParams }: 
       <Link href={`/${locale}/management/barbers`} className="management-sidebar__item"><Scissors size={17}/>{uk ? 'Барбери' : 'Barbers'}</Link>
       <Link href={`/${locale}/management/approvals`} className="management-sidebar__item"><ClipboardCheck size={17}/>{uk ? 'Тарифи' : 'Tariff approvals'}</Link>
       <Link href={base} aria-current="page" className="management-sidebar__item management-sidebar__item--active"><ClipboardCheck size={17}/>{uk ? 'Контент' : 'Content approvals'}</Link>
+      <Link href={`/${locale}/management/portfolio-cases`} className="management-sidebar__item"><ClipboardCheck size={17}/>{uk ? 'Справи щодо фото' : 'Photo cases'}</Link>
       <div className="management-sidebar__bottom"><Settings2 size={17}/>{scope.role === 'admin' ? (uk ? 'Адміністратор мережі' : 'Network admin') : (uk ? 'Керівник закладу' : 'Location manager')}</div>
     </aside>
     <div className="management-workspace">
@@ -72,6 +73,9 @@ export default async function ProfessionalReviewsPage({ params, searchParams }: 
             <p>{uk ? 'Окрема черга змін біографій, портфоліо, сертифікатів і соцпосилань.' : 'Review queue for biographies, portfolios, qualifications and social links.'}</p></div>
           <span className="management-scope">{uk ? 'Заявок' : 'Requests'}: {queue.totalDocs}</span>
         </div>
+        <p className="management-booking-note"><Link href={`/${locale}/management/portfolio-cases`} className="management-review-link">
+          {uk ? 'Перейти до черги звернень щодо фотографій' : 'Open photo concern case queue'}
+        </Link></p>
         <nav className="management-tabs" aria-label={uk ? 'Фільтр статусів' : 'Status filter'}>
           {statuses.map(status => <Link key={status} href={`${base}?status=${status}`}
             aria-current={status === queue.status ? 'page' : undefined}
