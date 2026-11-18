@@ -192,10 +192,10 @@ export default async function ProfessionalReviewDetailPage({
                 loading="lazy" referrerPolicy="no-referrer"/>
               <figcaption>{uk ? 'Приватний перегляд' : 'Private review'} · {media.mimeType}
                 {heldSet.has(media.id) && <strong className="management-evidence-state">
-                  {uk ? 'Запобіжне блокування активне' : 'Precautionary hold active'}</strong>
+                  {uk ? 'Запобіжне блокування активне' : 'Precautionary hold active'}</strong>}
                 {caseByMedia.has(media.id) && <span className="management-evidence-state">
                   {uk ? 'Справа' : 'Case'}: {caseNames[caseByMedia.get(media.id)!.stage]}
-                </span>}}
+                </span>}
                 <span className="management-evidence-state">{evidenceByMedia.has(media.id)
                   ? evidenceLabels[evidenceByMedia.get(media.id)!]
                   : (uk ? 'Ще не перевірено' : 'Not reviewed')}</span>
