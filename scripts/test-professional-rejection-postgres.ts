@@ -21,6 +21,7 @@ import { preparePrivatePortfolioCandidates, withdrawPrivatePortfolioCandidate, P
 import { listPrivatePortfolioCandidates } from '../src/lib/admin/private-portfolio-candidate-list.ts'
 import { placePrecautionaryPortfolioHold, listPrecautionaryPortfolioHolds, PortfolioHoldConflict } from '../src/lib/admin/portfolio-precautionary-holds.ts'
 import { recordPortfolioHoldCaseEvent, listPortfolioHoldCases, HoldCaseConflict } from '../src/lib/admin/portfolio-hold-cases.ts'
+import { loadPortfolioHoldQueue } from '../src/lib/admin/portfolio-hold-queue.ts'
 
 /** Disposable full-schema integration: rejection must never mutate the public
  * barber record and must persist a single final decision under row locks.
@@ -316,6 +317,24 @@ async function run() {
         note: 'Administrative review complete but media remains permanently held',
       })
     assert.equal(closedCase.stage, 'closed_administratively')
+    const closedQueue = await loadPortfolioHoldQueue(payload, staff, {
+      stage: 'closed_administratively', location: String(location.id),
+      assignee: String(network.id),
+    })
+    assert.equal(closedQueue.rows.filter(r => r.holdId === held.holdId).length, 1)
+    assert.equal(closedQueue.rows.find(r => r.holdId === held.holdId)?.revisionId,
+      Number(draft.id))
+    const openQueue = await loadPortfolioHoldQueue(payload, staff, { stage: 'open' })
+    assert.equal(openQueue.rows.some(r => r.holdId === held.holdId), false)
+    const unmatchedLocation = await loadPortfolioHoldQueue(payload, staff, {
+      location: String(transferredLocation.id), stage: 'closed_administratively',
+    })
+    assert.equal(unmatchedLocation.rows.some(r => r.holdId === held.holdId), false)
+    const revokedManagerQueue = await loadPortfolioHoldQueue(payload, {
+      id: managerId, role: 'location_admin',
+    }, { stage: 'closed_administratively' })
+    assert.equal(revokedManagerQueue.rows.length, 0)
+
     await assert.rejects(recordPortfolioHoldCaseEvent(payload, staff, held.holdId, {
       stage: 'investigating', assignedAdminId: Number(network.id),
       note: 'Attempt reopening a closed case',
