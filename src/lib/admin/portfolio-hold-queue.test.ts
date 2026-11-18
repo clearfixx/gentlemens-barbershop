@@ -23,12 +23,12 @@ test('filters are strict, optional numeric selectors allow empty GET values', ()
     stage: 'open', page: 1, locationId: null, assigneeId: null,
   })
   assert.deepEqual(parseHoldQueueFilters({ stage: 'escalated',
-    location: '03', assignee: '', page: '2' }), {
+    location: '3', assignee: '', page: '2' }), {
     stage: 'escalated', page: 2, locationId: 3, assigneeId: null,
   })
   for (const filters of [
     { stage: 'published' }, { page: '0' }, { page: '1000' },
-    { location: '-3' }, { assignee: '1.5' }, { assignee: '9007199254740993' },
+    { location: '-3' }, { location: '03' }, { assignee: '1.5' }, { assignee: '9007199254740993' },
   ]) assert.throws(() => parseHoldQueueFilters(filters), RangeError)
 })
 
