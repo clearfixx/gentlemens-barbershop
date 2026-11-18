@@ -155,3 +155,11 @@
 .management-candidate-note textarea{width:100%;resize:vertical;background:var(--m-paper);color:var(--m-ink);padding:12px;border:1px solid var(--m-border);border-radius:4px;font:inherit}
 .management-candidate-row button,.management-candidate-prepare{min-height:40px;padding:10px 14px;border:1px solid var(--m-ink);background:var(--m-ink);color:var(--m-card);border-radius:4px;cursor:pointer}
 .management-candidate-row button:disabled,.management-candidate-prepare:disabled{opacity:.55;cursor:not-allowed}
+
+.management-case-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto auto;align-items:end;gap:13px}
+.management-case-filters label{display:grid;gap:7px;font-size:12px;color:var(--m-muted)}
+.management-case-filters input,.management-case-filters select{min-width:0;width:100%;min-height:44px;padding:10px;border-radius:4px;border:1px solid var(--m-border);background:var(--m-paper);color:var(--m-ink);font:inherit}
+.management-case-filters button{min-height:44px;padding:10px 16px;border-radius:4px;border:1px solid var(--m-ink);background:var(--m-ink);color:var(--m-paper);cursor:pointer}
+.management-case-attention{display:inline-block;padding:5px 9px;border-radius:3px;border:1px solid var(--m-border);color:#895b35;background:#f4e7d2;font-size:11px}
+@media(max-width:1100px){.management-case-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:590px){.management-case-filters{grid-template-columns:1fr}}
