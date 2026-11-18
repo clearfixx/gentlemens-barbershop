@@ -115,7 +115,7 @@ export async function listPortfolioHoldCases(
   if (records.rows.length > 30) throw new Error('Unexpected number of cases')
   return records.rows.map(row => {
     const holdId = Number(row.hold_id), mediaId = Number(row.media_id)
-    const stage = row.stage ?? 'untriaged'
+    const stage = String(row.stage ?? 'untriaged')
     const assignedAdminId = row.assigned_admin_id === null ? null : Number(row.assigned_admin_id)
     if (![holdId, mediaId].every(n => Number.isSafeInteger(n) && n > 0) ||
       !['untriaged', 'investigating', 'awaiting_information', 'escalated',
