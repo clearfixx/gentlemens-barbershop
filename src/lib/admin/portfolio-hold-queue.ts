@@ -28,7 +28,7 @@ export function parseHoldQueueFilters(filters: HoldQueueFilters): {
     throw new RangeError('Invalid hold case stage')
   }
   const parseId = (input: string | undefined, label: string): number | null => {
-    if (input === undefined) return null
+    if (input === undefined || input === '') return null
     if (!/^[1-9][0-9]*$/.test(input) || !Number.isSafeInteger(Number(input))) {
       throw new RangeError(`Invalid ${label} filter`)
     }
