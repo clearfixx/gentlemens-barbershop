@@ -1,8 +1,9 @@
 import type { CollectionConfig } from 'payload'
 import { assertBookingStatusTransition } from '../../lib/booking/booking-lifecycle.ts'
 
-// Booking writes remain admin-only until server-side availability checks,
-// atomic slot reservation and guest identity validation are implemented.
+// All untrusted CMS/REST writes are disabled. Trusted booking creation uses
+// a validated domain service with overrideAccess and PostgreSQL slot constraints;
+// status mutations use atomic audited SQL operations instead of Payload CRUD.
 export const Bookings: CollectionConfig = {
   slug: 'bookings',
   hooks: {
@@ -21,9 +22,11 @@ export const Bookings: CollectionConfig = {
   admin: { useAsTitle: 'customerName', defaultColumns: ['customerName', 'location', 'barber', 'startsAt', 'status'] },
   access: {
     read: ({ req }) => req.user?.role === 'admin',
-    create: ({ req }) => req.user?.role === 'admin',
-    update: ({ req }) => req.user?.role === 'admin',
-    delete: ({ req }) => req.user?.role === 'admin',
+    // Even admins must use guarded booking services. Collection access is a
+    // separate untrusted HTTP boundary; overrideAccess is reserved for internal code.
+    create: () => false,
+    update: () => false,
+    delete: () => false,
   },
   fields: [
     { name: 'location', type: 'relationship', relationTo: 'locations', required: true },

@@ -19,6 +19,26 @@ import * as migration_20261115_030000_customer_avatar from './20261115_030000_cu
 
 import * as migration_20261115_110000_verified_reviews from './20261115_110000_verified_reviews';
 
+import * as migration_20261116_160000_admin_management_foundation from './20261116_160000_admin_management_foundation';
+
+import * as migration_20261116_180000_location_booking_audit_role from './20261116_180000_location_booking_audit_role';
+
+import * as migration_20261116_190000_barber_professional_revisions from './20261116_190000_barber_professional_revisions';
+
+import * as migration_20261116_200000_private_barber_portfolio_media from './20261116_200000_private_barber_portfolio_media';
+
+import * as migration_20261116_210000_submitted_portfolio_manifest from './20261116_210000_submitted_portfolio_manifest';
+
+import * as migration_20261117_090000_portfolio_evidence_review from './20261117_090000_portfolio_evidence_review';
+
+import * as migration_20261117_100000_portfolio_review_signoff from './20261117_100000_portfolio_review_signoff';
+
+import * as migration_20261117_110000_private_portfolio_candidates from './20261117_110000_private_portfolio_candidates';
+
+import * as migration_20261117_120000_portfolio_precautionary_holds from './20261117_120000_portfolio_precautionary_holds';
+
+import * as migration_20261117_130000_portfolio_hold_case_events from './20261117_130000_portfolio_hold_case_events';
+
 export const migrations = [
   {
     up: migration_20261110_050350.up,
@@ -74,5 +94,55 @@ export const migrations = [
     up: migration_20261115_110000_verified_reviews.up,
     down: migration_20261115_110000_verified_reviews.down,
     name: '20261115_110000_verified_reviews',
+  },
+  {
+    up: migration_20261116_160000_admin_management_foundation.up,
+    down: migration_20261116_160000_admin_management_foundation.down,
+    name: '20261116_160000_admin_management_foundation',
+  },
+  {
+    up: migration_20261116_180000_location_booking_audit_role.up,
+    down: migration_20261116_180000_location_booking_audit_role.down,
+    name: '20261116_180000_location_booking_audit_role',
+  },
+  {
+    up: migration_20261116_190000_barber_professional_revisions.up,
+    down: migration_20261116_190000_barber_professional_revisions.down,
+    name: '20261116_190000_barber_professional_revisions',
+  },
+  {
+    up: migration_20261116_200000_private_barber_portfolio_media.up,
+    down: migration_20261116_200000_private_barber_portfolio_media.down,
+    name: '20261116_200000_private_barber_portfolio_media',
+  },
+  {
+    up: migration_20261116_210000_submitted_portfolio_manifest.up,
+    down: migration_20261116_210000_submitted_portfolio_manifest.down,
+    name: '20261116_210000_submitted_portfolio_manifest',
+  },
+  {
+    up: migration_20261117_090000_portfolio_evidence_review.up,
+    down: migration_20261117_090000_portfolio_evidence_review.down,
+    name: '20261117_090000_portfolio_evidence_review',
+  },
+  {
+    up: migration_20261117_100000_portfolio_review_signoff.up,
+    down: migration_20261117_100000_portfolio_review_signoff.down,
+    name: '20261117_100000_portfolio_review_signoff',
+  },
+  {
+    up: migration_20261117_110000_private_portfolio_candidates.up,
+    down: migration_20261117_110000_private_portfolio_candidates.down,
+    name: '20261117_110000_private_portfolio_candidates',
+  },
+  {
+    up: migration_20261117_120000_portfolio_precautionary_holds.up,
+    down: migration_20261117_120000_portfolio_precautionary_holds.down,
+    name: '20261117_120000_portfolio_precautionary_holds',
+  },
+  {
+    up: migration_20261117_130000_portfolio_hold_case_events.up,
+    down: migration_20261117_130000_portfolio_hold_case_events.down,
+    name: '20261117_130000_portfolio_hold_case_events',
   },
 ];

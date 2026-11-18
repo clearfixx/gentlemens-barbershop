@@ -1,0 +1,250 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { headers } from 'next/headers'
+import { getPayload } from 'payload'
+import { notFound, redirect } from 'next/navigation'
+import config from '@/payload.config'
+import { isLocale } from '@/i18n/config'
+import { resolveLocationScope } from '@/lib/admin/location-access'
+import { loadProfessionalReviewDetail } from '@/lib/admin/professional-review-detail'
+import { listPrivatePortfolioReviewMedia } from '@/lib/admin/private-portfolio-review-media'
+import { verifySubmittedPortfolioForStaff } from '@/lib/admin/verify-submitted-portfolio'
+import { listPortfolioEvidenceStatuses } from '@/lib/admin/portfolio-evidence-statuses'
+import { getPortfolioSignoffStatus } from '@/lib/admin/portfolio-signoff-status'
+import { listPrivatePortfolioCandidates } from '@/lib/admin/private-portfolio-candidate-list'
+import { listPrecautionaryPortfolioHolds } from '@/lib/admin/portfolio-precautionary-holds'
+import { listPortfolioHoldCases } from '@/lib/admin/portfolio-hold-cases'
+import { PortfolioHoldCaseForm } from '@/components/admin/portfolio-hold-case-form'
+import { PortfolioMediaHoldForm } from '@/components/admin/portfolio-media-hold-form'
+import { PortfolioCandidateControls } from '@/components/admin/portfolio-candidate-controls'
+import { PortfolioSignoffForm } from '@/components/admin/portfolio-signoff-form'
+import { PortfolioEvidenceReviewForm } from '@/components/admin/portfolio-evidence-review-form'
+import { ProfessionalRejectForm } from '@/components/admin/professional-reject-form'
+import { ProfessionalBiographyApprove } from '@/components/admin/professional-biography-approve'
+import '../../approvals/management.css'
+
+export const dynamic = 'force-dynamic'
+export const metadata: Metadata = {
+  title: 'Деталі погодження | Gentlemen’s Barbershop',
+  robots: { index: false, follow: false },
+}
+
+export default async function ProfessionalReviewDetailPage({
+  params,
+}: { params: Promise<{ locale: string; id: string }> }) {
+  const { locale, id } = await params
+  if (!isLocale(locale)) notFound()
+  const uk = locale === 'uk'
+  const payload = await getPayload({ config })
+  const { user } = await payload.auth({ headers: await headers() })
+  if (!user) redirect(`/${locale}/auth`)
+  if (user.role !== 'admin' && user.role !== 'location_admin') notFound()
+  const scope = await resolveLocationScope(payload, {
+    id: Number(user.id), role: user.role,
+  }).catch(() => null)
+  if (!scope) notFound()
+  let detail: Awaited<ReturnType<typeof loadProfessionalReviewDetail>>
+  try {
+    detail = await loadProfessionalReviewDetail(payload, scope, id)
+  } catch (error) {
+    if (error instanceof RangeError ||
+      (error instanceof Error && /outside assigned|private|mismatch|not found/i.test(error.message))) {
+      notFound()
+    }
+    throw error
+  }
+  // Separate SQL authorization prevents viewing a draft image solely because
+  // the surrounding review page was previously authorized.
+  const reviewActor = { id: Number(user.id), role: user.role }
+  const integrity = detail.portfolioAssessment
+    ? await verifySubmittedPortfolioForStaff(payload, reviewActor, detail.id)
+    : null
+  // Do not show an unverified or tampered submission's photos.
+  const privateMedia = integrity?.status === 'verified'
+    ? await listPrivatePortfolioReviewMedia(payload, reviewActor, detail.id)
+    : []
+
+  const heldMedia = detail.portfolioAssessment
+    ? await listPrecautionaryPortfolioHolds(payload, reviewActor, detail.id)
+    : []
+  const heldSet = new Set(heldMedia)
+  const holdCases = heldMedia.length
+    ? await listPortfolioHoldCases(payload, reviewActor, detail.id)
+    : []
+  const caseByMedia = new Map(holdCases.map(item => [item.mediaId, item]))
+  const caseNames = uk
+    ? { untriaged: 'Не розподілено', investigating: 'Розслідується',
+      awaiting_information: 'Очікує інформації', escalated: 'Передано на перевірку',
+      closed_administratively: 'Адміністративно закрито (hold чинний)' }
+    : { untriaged: 'Untriaged', investigating: 'Investigating',
+      awaiting_information: 'Awaiting information', escalated: 'Escalated',
+      closed_administratively: 'Closed administratively (hold remains)' }
+
+  const evidenceStatuses = integrity?.status === 'verified'
+    ? await listPortfolioEvidenceStatuses(payload, reviewActor, detail.id)
+    : []
+  const evidenceByMedia = new Map(evidenceStatuses.map(item => [item.mediaId, item.status]))
+  const signoff = integrity?.status === 'verified'
+    ? await getPortfolioSignoffStatus(payload, reviewActor, detail.id)
+    : null
+  const candidates = integrity?.status === 'verified'
+    ? await listPrivatePortfolioCandidates(payload, reviewActor, detail.id)
+    : []
+  const evidenceComplete = privateMedia.length > 0 && heldMedia.length === 0 && evidenceStatuses.length === privateMedia.length &&
+    evidenceStatuses.every(item => item.status === 'evidence_reviewed')
+
+  const evidenceLabels = uk
+    ? { needs_evidence: 'Потрібні матеріали', evidence_reviewed: 'Матеріали перевірено', rejected: 'Відхилено' }
+    : { needs_evidence: 'More evidence needed', evidence_reviewed: 'Evidence reviewed', rejected: 'Rejected' }
+
+  const fieldNames: Record<string, string> = uk
+    ? { bio: 'Біографія', localizedBio: 'Переклад біографії' }
+    : { bio: 'Biography', localizedBio: 'Biography translation' }
+  const statuses: Record<string, string> = uk
+    ? { pending: 'Очікує', approved: 'Схвалено', rejected: 'Відхилено' }
+    : { pending: 'Pending', approved: 'Approved', rejected: 'Rejected' }
+
+  return <main className="management-shell management-detail-shell">
+    <aside className="management-sidebar">
+      <Link className="management-brand" href={`/${locale}/management`}>
+        GENTLEMEN’S <span>BARBERSHOP</span>
+      </Link>
+      <p className="management-sidebar__caption">{uk ? 'КЕРУВАННЯ' : 'MANAGEMENT'}</p>
+      <Link className="management-sidebar__item" href={`/${locale}/management`}>
+        {uk ? 'Огляд мережі' : 'Network overview'}
+      </Link>
+      <Link className="management-sidebar__item management-sidebar__item--active"
+        href={`/${locale}/management/professional-reviews`}>
+        {uk ? 'Погодження контенту' : 'Content reviews'}
+      </Link>
+    </aside>
+    <div className="management-workspace">
+      <div className="management-content">
+        <p className="management-eyebrow">GENTLEMEN’S / {uk ? 'ПРОФЕСІЙНИЙ КОНТЕНТ' : 'PROFESSIONAL CONTENT'}</p>
+        <Link href={`/${locale}/management/professional-reviews`} className="management-back-link">
+          {uk ? '← До списку заявок' : '← Back to review queue'}
+        </Link>
+        <div className="management-heading">
+          <div>
+            <h1>{uk ? 'Заявка на зміну профілю' : 'Professional profile review'} #{detail.id}</h1>
+            <p>{detail.barber.name} · {uk ? 'Заклад' : 'Location'} #{detail.locationId}</p>
+          </div>
+          <span className="management-scope">{statuses[detail.status]}</span>
+        </div>
+        <section className="management-panel" aria-labelledby="professional-detail-heading">
+          <h2 id="professional-detail-heading">
+            {uk ? 'Порівняння текстових змін' : 'Text changes comparison'}
+          </h2>
+          {detail.fields.length ? detail.fields.map(field => <div className="management-review-field" key={field.field}>
+            <h3>{fieldNames[field.field]}{field.field === 'localizedBio' && detail.localizedLocale
+              ? ` (${detail.localizedLocale.toUpperCase()})` : ''}</h3>
+            <div className="management-review-comparison">
+              <div><strong>{uk ? 'Було' : 'Previous'}</strong>
+                <p>{field.before ?? (uk ? 'Немає тексту або формат не підтримується' : 'No text or unsupported format')}</p>
+              </div>
+              <div><strong>{uk ? 'Запропоновано' : 'Proposed'}</strong>
+                <p>{field.after ?? (uk ? 'Немає тексту або формат не підтримується' : 'No text or unsupported format')}</p>
+              </div>
+            </div>
+          </div>) : <p className="management-empty">
+            {uk ? 'У заявці немає підтримуваних текстових змін.' : 'No supported text changes found.'}
+          </p>}
+          {detail.unsupportedChangeCount > 0 && <p className="management-review-warning">
+            {uk
+              ? `Інші зміни (${detail.unsupportedChangeCount}) приховані до впровадження безпечної перевірки медіа та структури даних.`
+              : `${detail.unsupportedChangeCount} other changes are hidden pending media and schema validation.`}
+          </p>}
+        </section>
+        {detail.portfolioAssessment && <section className="management-panel management-booking-results"
+          aria-labelledby="portfolio-review-assessment-heading">
+          <h2 id="portfolio-review-assessment-heading">{uk ? 'Перевірка портфоліо' : 'Portfolio review readiness'}</h2>
+          <p className="management-booking-note">{uk
+            ? 'Показано лише перевірку структури та наявність декларацій. Це не підтвердження авторських прав чи згоди клієнта.'
+            : 'Only structure and declarations are assessed. This does not verify copyright ownership or client consent.'}</p>
+          <div className="management-portfolio-assessment">
+            <p><strong>{detail.portfolioAssessment.itemCount}</strong> {uk ? 'робіт у заявці' : 'submitted items'}</p>
+            <p><strong>{detail.portfolioAssessment.evidence.rightsDeclarations}</strong> {uk ? 'декларацій прав' : 'rights declarations'}</p>
+            <p><strong>{detail.portfolioAssessment.evidence.clientConsentDeclarations}</strong> {uk ? 'декларацій згоди' : 'consent declarations'}</p>
+          </div>
+          <p className="management-review-warning">{detail.portfolioAssessment.structurallyValid
+            ? (uk ? 'Структура відповідає попередньому контракту. Незалежна перевірка медіа ще потрібна.'
+              : 'Structure matches the preliminary contract. Independent media verification is still required.')
+            : (uk ? 'У заявці відсутні потрібні декларації або є помилки структури.'
+              : 'The proposal is missing declarations or has structural issues.')}</p>
+          {integrity && <div className="management-portfolio-integrity" role="status">
+            <strong>{integrity.status === 'verified'
+              ? (uk ? 'Цілісність заявки підтверджено' : 'Submission integrity verified')
+              : integrity.status === 'not_submitted'
+                ? (uk ? 'Маніфест подання відсутній' : 'Submission manifest is missing')
+                : (uk ? 'Невідповідність у заявці' : 'Submission integrity mismatch')}</strong>
+            <p>{integrity.status === 'verified'
+              ? (uk ? 'Перевірено набір фото, контрольні суми файлів і зафіксований маніфест.'
+                : 'Image set, image checksums and submitted manifest match.')
+              : (uk ? 'Приватні фотографії приховані до усунення невідповідності. Схвалення портфоліо недоступне.'
+                : 'Private images are hidden until the discrepancy is resolved. Portfolio approval is unavailable.')}</p>
+          </div>}
+          {privateMedia.length > 0 && <div className="management-private-media-grid">
+            {privateMedia.map(media => <figure key={media.id}>
+              {/* Unoptimized deliberately: Next Image optimization may cache a private image. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/admin/professional-reviews/${detail.id}/private-media/${media.id}`}
+                alt={uk ? 'Приватна фотографія для модерації' : 'Private image for moderation'}
+                loading="lazy" referrerPolicy="no-referrer"/>
+              <figcaption>{uk ? 'Приватний перегляд' : 'Private review'} · {media.mimeType}
+                {heldSet.has(media.id) && <strong className="management-evidence-state">
+                  {uk ? 'Запобіжне блокування активне' : 'Precautionary hold active'}</strong>}
+                {caseByMedia.has(media.id) && <span className="management-evidence-state">
+                  {uk ? 'Справа' : 'Case'}: {caseNames[caseByMedia.get(media.id)!.stage]}
+                </span>}
+                <span className="management-evidence-state">{evidenceByMedia.has(media.id)
+                  ? evidenceLabels[evidenceByMedia.get(media.id)!]
+                  : (uk ? 'Ще не перевірено' : 'Not reviewed')}</span>
+              </figcaption>
+              {scope.role === 'admin' && caseByMedia.has(media.id) &&
+                <PortfolioHoldCaseForm item={caseByMedia.get(media.id)!} locale={locale}
+                  currentAdminId={Number(user.id)}/>}
+              {scope.role === 'admin' && !heldSet.has(media.id) &&
+                <PortfolioMediaHoldForm revisionId={detail.id} mediaId={media.id} locale={locale}/>}
+              {scope.role === 'admin' && detail.status === 'pending' &&
+                !heldSet.has(media.id) && signoff?.outcome !== 'review_complete' &&
+                <PortfolioEvidenceReviewForm revisionId={detail.id} mediaId={media.id} locale={locale}/>}
+            </figure>)}
+          </div>}
+          <p className="management-booking-note">{uk
+            ? 'Приватні зображення доступні лише авторизованим модераторам. Завантаження та публікація портфоліо залишаються вимкненими.'
+            : 'Private images are visible only to authorized reviewers. Portfolio uploads and publication remain disabled.'}</p>
+        </section>}
+        {detail.portfolioAssessment && integrity?.status === 'verified' && <>
+          {signoff && <div className="management-portfolio-integrity" role="status">
+            <strong>{signoff.outcome === 'review_complete'
+              ? (uk ? 'Перевірку документів завершено' : 'Documentation review completed')
+              : (uk ? 'Матеріали повернуто на уточнення' : 'More evidence requested')}</strong>
+            <p>{uk ? 'Це внутрішній запис модерації, не дозвіл на публікацію.' :
+              'This is an internal review record, not publication permission.'}</p>
+          </div>}
+          {scope.role === 'admin' && detail.status === 'pending' &&
+            signoff?.outcome !== 'review_complete' &&
+            <PortfolioSignoffForm revisionId={detail.id} locale={locale}
+              completeEvidence={evidenceComplete}/>}
+        </>}
+        {detail.portfolioAssessment && integrity?.status === 'verified' &&
+          scope.role === 'admin' &&
+          (candidates.length > 0 || (detail.status === 'pending' && signoff?.outcome === 'review_complete')) &&
+          <PortfolioCandidateControls
+            revisionId={detail.id} locale={locale} candidates={candidates}
+            canPrepare={detail.status === 'pending' && heldMedia.length === 0 && signoff?.outcome === 'review_complete'}/>}
+        {detail.status === 'rejected' && detail.rejectionReason && <section className="management-panel management-booking-results">
+          <h2>{uk ? 'Причина відхилення' : 'Rejection reason'}</h2>
+          <p>{detail.rejectionReason}</p>
+        </section>}
+        {scope.role === 'admin' && detail.status === 'pending' && detail.approvableKind &&
+          <ProfessionalBiographyApprove id={detail.id} locale={locale} kind={detail.approvableKind}/>}
+        {scope.role === 'admin' && detail.status === 'pending' &&
+          <ProfessionalRejectForm id={detail.id} locale={locale}/>}
+        <p className="management-booking-note">{uk
+          ? 'Можна схвалити звичайну біографію або перевірений переклад однією мовою. Фото, сертифікати та соцпосилання ще недоступні для публікації.'
+          : 'A verified plain biography or a single-language translation may be approved. Photos, certificates and social links cannot yet be published.'}</p>
+      </div>
+    </div>
+  </main>
+}

@@ -109,6 +109,42 @@ jobs:
         run: pnpm lint
       - name: Production build
         run: pnpm build
+      - name: PostgreSQL admin tariff transaction and concurrency integration
+        shell: bash
+        env:
+          ADMIN_APPROVAL_INTEGRATION: isolated
+          NODE_ENV: production
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/test-admin-approval-integration.ts
+      - name: Management dashboard PostgreSQL aggregates and location isolation
+        shell: bash
+        env:
+          ADMIN_APPROVAL_INTEGRATION: isolated
+          NODE_ENV: production
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/test-management-dashboard-integration.ts
+      - name: Professional content review PostgreSQL schema and RBAC smoke
+        shell: bash
+        env:
+          ADMIN_APPROVAL_INTEGRATION: isolated
+          NODE_ENV: production
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/test-professional-reviews-postgres.ts
+      - name: Professional proposal rejection PostgreSQL transaction and replay
+        shell: bash
+        env:
+          ADMIN_APPROVAL_INTEGRATION: isolated
+          NODE_ENV: production
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gentlemens_migration_bootstrap_ci
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/test-professional-rejection-postgres.ts
       - name: Verify first-admin bootstrap is one-time only
         shell: bash
         env:
@@ -1267,13 +1303,23 @@ jobs:
         run: |
           set -euo pipefail
           # This job tests the historical localization upgrade, not later
-          # Booking Management schema additions. Keep those migrations out of
-          # this isolated rehearsal; the main checks job applies all of them.
-          # The customer profile migration is also post-localization.
+          # Booking Management and Admin Management schema additions are newer
+          # than the historical localization baseline. The main checks job
+          # validates them on a current versioned production-mode database.
+          # Customer profile migrations are also post-localization.
           mkdir -p /tmp/booking-migrations-outside-historical-rehearsal
           mv src/migrations/*booking*.ts src/migrations/*barber_account_binding.ts \
             src/migrations/*customer_phone.ts src/migrations/*customer_avatar.ts \
             src/migrations/*verified_reviews.ts \
+            src/migrations/*admin_management_foundation.ts \
+            src/migrations/*barber_professional_revisions.ts \
+            src/migrations/*private_barber_portfolio_media.ts \
+            src/migrations/*submitted_portfolio_manifest.ts \
+            src/migrations/*portfolio_evidence_review.ts \
+            src/migrations/*portfolio_review_signoff.ts \
+            src/migrations/*private_portfolio_candidates.ts \
+            src/migrations/*portfolio_precautionary_holds.ts \
+            src/migrations/*portfolio_hold_case_events.ts \
             /tmp/booking-migrations-outside-historical-rehearsal/
           # Rehearse the committed, previously normalized localization files unchanged.
           mkdir -p /tmp/incremental-migration

@@ -48,7 +48,7 @@ export const Users: CollectionConfig = {
     },
     {
       name: 'role', type: 'select', required: true, defaultValue: 'customer',
-      options: ['customer', 'barber', 'admin'],
+      options: ['customer', 'barber', 'location_admin', 'admin'],
       access: {
         create: ({ req }) => req.user?.role === 'admin',
         update: ({ req }) => req.user?.role === 'admin',
