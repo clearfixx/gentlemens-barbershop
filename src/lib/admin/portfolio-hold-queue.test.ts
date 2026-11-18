@@ -15,7 +15,7 @@ function mock(rows: Record<string, unknown>[], total = 1): Repo {
   return { db: { drizzle: { execute: async () => {
     number++
     return { rows: number === 1 ? [{ total }] : rows }
-  } } } as unknown as Repo
+  } } } } as unknown as Repo
 }
 
 test('filters are strict, optional numeric selectors allow empty GET values', () => {
